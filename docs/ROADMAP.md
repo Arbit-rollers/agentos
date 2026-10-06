@@ -31,7 +31,7 @@ Legend: **AC n** = acceptance criterion n in PRD §28. **Screen n** = screen n i
 
 ## v0.1: Thin Vertical Slice
 
-### M0: Scaffolding
+### M0: Scaffolding ✅
 
 **Scope**
 - pnpm monorepo: `apps/web`, `apps/worker`, `packages/{db,core,model-gateway,mcp-gateway,policy,ui,i18n}`
@@ -48,7 +48,7 @@ Legend: **AC n** = acceptance criterion n in PRD §28. **Screen n** = screen n i
 
 ---
 
-### M1: Foundation
+### M1: Foundation ✅
 
 **Scope**
 - Tables: `users` (incl. `locale`), `workspaces`, `workspace_members` (owner only for now), `sessions`, `secrets`, `audit_logs`

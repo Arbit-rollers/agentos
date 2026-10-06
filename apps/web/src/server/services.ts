@@ -1,6 +1,6 @@
 import 'server-only';
 import { createDb } from '@agentos/db';
-import { createRedis, loadEnv } from '@agentos/core';
+import { createRedis, createSecretCipher, createSecretStore, loadEnv } from '@agentos/core';
 
 // Reuse connections across hot reloads in development.
 const globalForServices = globalThis as unknown as {
@@ -11,7 +11,8 @@ function createServices() {
   const env = loadEnv();
   const { db, sql } = createDb(env.DATABASE_URL);
   const redis = createRedis(env.REDIS_URL);
-  return { env, db, sql, redis };
+  const secrets = createSecretStore(db, createSecretCipher(env.AGENTOS_MASTER_KEY));
+  return { env, db, sql, redis, secrets };
 }
 
 export function getServices() {

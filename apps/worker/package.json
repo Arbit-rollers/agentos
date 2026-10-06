@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@agentos/core": "workspace:*",
+    "@agentos/db": "workspace:*",
     "bullmq": "^6.3.11",
     "tsx": "^4.23.15"
   }

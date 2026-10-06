@@ -8,8 +8,7 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   DATABASE_URL: z.url(),
   REDIS_URL: z.url(),
-  // Optional until M1 introduces the secret store; required from then on.
-  AGENTOS_MASTER_KEY: masterKey.optional(),
+  AGENTOS_MASTER_KEY: masterKey,
   OLLAMA_BASE_URL: z.url().default('http://localhost:11434'),
   APP_URL: z.url().default('http://localhost:3000'),
 });
