@@ -6,7 +6,7 @@ A multi-user operating system for persistent, personality-driven AI agents that 
 - Build plan: [`docs/ROADMAP.md`](docs/ROADMAP.md)
 - Reference screens: [`docs/AgentOS Dark-Mode AI Dashboard Collage.png`](<docs/AgentOS Dark-Mode AI Dashboard Collage.png>)
 
-**Status:** M2 (app shell, design system, en/tr, dashboard) done. Next: M3 agents + personality.
+**Status:** M3 (agents, personality engine, Create Agent wizard) done. Next: M4 model gateway.
 
 ## Repository layout
 
@@ -15,6 +15,7 @@ apps/web                 Next.js UI + API (App Router)
 apps/worker              BullMQ background workers
 packages/db              Drizzle schema, migrations, database client
 packages/core            Domain services shared by web and worker (env, queues, health, ...)
+packages/personality     Traits, presets, trait → directive compiler (pure; also runs in the browser)
 packages/model-gateway   Provider adapters, Smart Router, fallback chains (M4)
 packages/mcp-gateway     MCP client, discovery, tool registry (M5)
 packages/policy          Permissions, approvals, budgets (M5–M6)
@@ -75,4 +76,7 @@ CI (`.github/workflows/ci.yml`) runs all of these, plus E2E against Postgres (pg
 - **UI text lives in `packages/i18n/src/messages/{en,tr}.json`**, never hard-coded in components. English defines the keys; a test fails if Turkish is missing a key or a placeholder. Use `_` rather than `.` inside a key name: next-intl reads `.` as nesting. Server code returns error _codes_ (`invalid_email`, `EMAIL_TAKEN`), and the UI translates them.
 - **Locale:** a signed-in user's profile locale wins, then the `agentos_locale` cookie (the switcher on the auth pages), then `Accept-Language`, then English.
 - **Design system:** `packages/ui` holds shadcn-style components (Radix primitives + Tailwind + cva) and the tokens in `theme.css` (PRD §35). Use the tokens (`bg-surface`, `text-text-muted`, `text-primary` …) rather than raw colors. Chart series colors are `--color-series-1/2`, checked for color-blind separation on the dark surface.
+- **Personality is compiled, never free text.** `compilePersonality()` turns 0–100 trait scores into pre-written directive sentences plus runtime parameters. The same function powers the wizard preview and (M6) the runtime prompt, so the preview is exactly what the model gets. Adding a directive means adding its model text in `packages/personality` _and_ its UI text in both catalogs (a test enforces it); bump `COMPILER_VERSION` when output changes.
+- **Agent rules live in `packages/core/src/agents.ts`:** lifecycle transitions (`allowedActions`), readiness (role + job before leaving Draft), hierarchy (an agent reports only to a strictly higher-ranked type, which also rules out cycles), and auditing of every change, including per-trait before/after values.
+- **Don't export non-component values from `'use client'` files** if server code needs them; Next turns them into client references. Put shared constants in a plain module (see `components/agents/filters.ts`).
 - **Changing the schema:** edit `packages/db/src/schema`, run `pnpm db:generate`, then rename the new migration to something descriptive and update `migrations/meta/_journal.json` to match.

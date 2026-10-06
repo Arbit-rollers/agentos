@@ -1,0 +1,17 @@
+{
+  "name": "@agentos/personality",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Personality engine: traits, presets and the trait → runtime directive compiler (PRD §6). Pure and dependency-free so the UI can preview it.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@agentos/i18n": "workspace:*"
+  }
+}

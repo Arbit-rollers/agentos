@@ -15,6 +15,7 @@
     "@agentos/core": "workspace:*",
     "@agentos/db": "workspace:*",
     "@agentos/i18n": "workspace:*",
+    "@agentos/personality": "workspace:*",
     "@agentos/ui": "workspace:*",
     "cmdk": "^1.1.1",
     "lucide-react": "^1.52.0",

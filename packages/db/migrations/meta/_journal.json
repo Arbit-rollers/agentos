@@ -15,6 +15,20 @@
       "when": 1791316317115,
       "tag": "0001_user_display_name",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791317544659,
+      "tag": "0002_agents",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791317569606,
+      "tag": "0003_audit_agent_fk",
+      "breakpoints": true
     }
   ]
 }

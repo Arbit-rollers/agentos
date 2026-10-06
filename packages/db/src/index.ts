@@ -8,3 +8,4 @@ export * from './repos/workspaces';
 export * from './repos/sessions';
 export * from './repos/secrets';
 export * from './repos/audit';
+export * from './repos/agents';

@@ -13,6 +13,8 @@ import {
   PageHeader,
   StatTile,
 } from '@agentos/ui';
+import { AgentAvatar } from '@/components/agents/agent-avatar';
+import { AgentStatusBadge } from '@/components/agents/agent-status';
 import { Greeting } from '@/components/dashboard/greeting';
 import { RecentActivity } from '@/components/dashboard/recent-activity';
 import { TaskOverviewChart } from '@/components/dashboard/task-overview-chart';
@@ -31,7 +33,7 @@ export default async function DashboardPage() {
 
   const newAgent = (
     <Button asChild>
-      <Link href="/agents">
+      <Link href="/agents/new">
         <Plus aria-hidden />
         {t('newAgent')}
       </Link>
@@ -42,7 +44,7 @@ export default async function DashboardPage() {
     <>
       <PageHeader
         title={<Greeting name={user.displayName || user.email} />}
-        description={t('subtitleEmpty')}
+        description={summary.agents.total === 0 ? t('subtitleEmpty') : undefined}
         actions={newAgent}
       />
 
@@ -81,19 +83,40 @@ export default async function DashboardPage() {
 
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle>{t('activeAgents')}</CardTitle>
+          <CardTitle>{t('yourAgents')}</CardTitle>
           <Link href="/agents" className="text-sm text-primary hover:underline">
             {t('viewAll')}
           </Link>
         </CardHeader>
         <CardContent>
-          <EmptyState
-            icon={<Bot />}
-            title={t('agentsEmptyTitle')}
-            description={t('agentsEmptyDescription')}
-            action={newAgent}
-            className="py-6"
-          />
+          {summary.agentList.length === 0 ? (
+            <EmptyState
+              icon={<Bot />}
+              title={t('agentsEmptyTitle')}
+              description={t('agentsEmptyDescription')}
+              action={newAgent}
+              className="py-6"
+            />
+          ) : (
+            <ul className="flex gap-3 overflow-x-auto pb-1">
+              {summary.agentList.slice(0, 8).map((agent) => (
+                <li key={agent.id} className="w-56 shrink-0">
+                  <Link
+                    href={`/agents/${agent.id}`}
+                    className="flex items-center gap-3 rounded-lg border border-border bg-surface-2 p-3 hover:border-border-strong"
+                  >
+                    <AgentAvatar avatar={agent.avatar} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium">{agent.name}</span>
+                      <span className="mt-1 block">
+                        <AgentStatusBadge status={agent.status} />
+                      </span>
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
         </CardContent>
       </Card>
 

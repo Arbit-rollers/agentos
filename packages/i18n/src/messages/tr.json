@@ -59,7 +59,27 @@
     "INVALID_CREDENTIALS": "E-posta veya şifre hatalı.",
     "EMAIL_TAKEN": "Bu e-posta adresiyle kayıtlı bir hesap zaten var.",
     "ACCOUNT_DISABLED": "Bu hesap devre dışı bırakılmış.",
-    "generic": "Bir sorun oluştu. Lütfen tekrar deneyin."
+    "generic": "Bir sorun oluştu. Lütfen tekrar deneyin.",
+    "agent_name_required": "Ajan için bir ad girin.",
+    "agent_name_too_long": "Ad en fazla 80 karakter olabilir.",
+    "description_required": "Bu ajanın ne için olduğunu açıklayın.",
+    "description_too_long": "Açıklama en fazla 500 karakter olabilir.",
+    "agent_type_required": "Bir ajan türü seçin.",
+    "invalid_avatar": "Galeriden bir avatar seçin.",
+    "tag_too_long": "Etiketler en fazla 32 karakter olabilir.",
+    "too_many_tags": "En fazla 10 etiket kullanın.",
+    "invalid_parent": "Bu çalışma alanından bir ajan seçin.",
+    "parent_rank": "Bir ajan yalnızca daha üst düzey bir ajana bağlı olabilir (Uzman → Yönetici → Ana Orkestratör).",
+    "children_rank": "Bu ajana bağlı başka ajanlar var; onların daha alt düzeyde kalması gerekir.",
+    "role_too_long": "Rol en fazla 200 karakter olabilir.",
+    "job_too_long": "Görev tanımı en fazla 4.000 karakter olabilir.",
+    "item_too_long": "Her satır en fazla 300 karakter olabilir.",
+    "too_many_items": "En fazla 20 satır kullanın.",
+    "role_required": "Ajanın rolünü girin.",
+    "job_required": "Ajanın görevini tanımlayın.",
+    "INVALID_TRANSITION": "Ajanın mevcut durumunda bu mümkün değil.",
+    "MODEL_REQUIRED": "Bu ajanı etkinleştirmeden önce bir yapay zekâ modeli seçin (M4 sürümünde).",
+    "NOT_FOUND": "Bu öğe yok ya da erişim izniniz yok."
   },
   "dashboard": {
     "greetingMorning": "Günaydın, {name}",
@@ -89,7 +109,8 @@
     "showTable": "Tablo olarak göster",
     "showChart": "Grafik olarak göster",
     "tableCaption": "Son 7 günde günlük tamamlanan ve başarısız görevler",
-    "day": "Gün"
+    "day": "Gün",
+    "yourAgents": "Ajanlarınız"
   },
   "activity": {
     "user_registered": "Hesap oluşturuldu",
@@ -102,7 +123,11 @@
     "secret_updated": "Gizli anahtar güncellendi",
     "secret_deleted": "Gizli anahtar silindi",
     "user_profile_updated": "Profil güncellendi",
-    "unknown": "{action}"
+    "unknown": "{action}",
+    "agent_created": "Ajan oluşturuldu",
+    "agent_updated": "Ajan güncellendi",
+    "agent_personality_changed": "Ajan kişiliği değiştirildi",
+    "agent_status_changed": "Ajan durumu değiştirildi"
   },
   "outcome": {
     "success": "Başarılı",
@@ -158,5 +183,243 @@
   "languages": {
     "en": "English",
     "tr": "Türkçe"
+  },
+  "agents": {
+    "title": "Ajanlar",
+    "subtitle": "Yapay zekâ ajanlarınızı oluşturun, yapılandırın ve yönetin.",
+    "newAgent": "Yeni Ajan",
+    "emptyTitle": "Burada ajan yok",
+    "emptyDescription": "Bir ajan oluşturun; ona bir rol, bir kişilik ve yakında bir yapay zekâ modeli ve araçlar verin.",
+    "filters": {
+      "all": "Tümü",
+      "active": "Aktif",
+      "configured": "Yapılandırıldı",
+      "draft": "Taslaklar",
+      "paused": "Duraklatıldı",
+      "archived": "Arşivlendi"
+    },
+    "status": {
+      "draft": "Taslak",
+      "configured": "Yapılandırıldı",
+      "active": "Aktif",
+      "paused": "Duraklatıldı",
+      "archived": "Arşivlendi"
+    },
+    "types": {
+      "master_orchestrator": "Ana Orkestratör",
+      "manager": "Yönetici Ajan",
+      "specialist": "Uzman Ajan",
+      "system": "Sistem Ajanı"
+    },
+    "typeHints": {
+      "master_orchestrator": "Hedefleri parçalara ayırır ve diğer ajanlara dağıtır",
+      "manager": "Uzman ajanlardan oluşan bir ekibi yönetir",
+      "specialist": "Belirli görevlere odaklanır",
+      "system": "Dahili yardımcı ajan"
+    },
+    "reportsTo": "Bağlı olduğu ajan",
+    "noParent": "Hiçbiri (en üst düzey)",
+    "directReports": "Doğrudan bağlı ajanlar",
+    "noDirectReports": "Henüz bu ajana bağlı bir ajan yok.",
+    "role": "Rol",
+    "job": "Görev tanımı",
+    "goals": "Hedefler",
+    "constraints": "Kısıtlar",
+    "none": "Yok",
+    "tags": "Etiketler",
+    "personality": "Kişilik",
+    "runtimeDirectives": "Çalışma yönergeleri",
+    "traitsLabel": "Özellik puanları",
+    "version": "Sürüm {version}",
+    "edit": "Düzenle",
+    "editPersonality": "Kişiliği düzenle",
+    "actions": {
+      "activate": "Etkinleştir",
+      "pause": "Duraklat",
+      "resume": "Devam ettir",
+      "archive": "Arşivle",
+      "restore": "Geri yükle"
+    },
+    "activateNeedsModel": "Ajanların çalışabilmesi için bir yapay zekâ modeline ihtiyacı var. Model seçimi M4 sürümünde geliyor.",
+    "archivedNotice": "Bu ajan arşivlendi. Değişiklik yapmak için geri yükleyin.",
+    "updated": "Güncellendi: {time}",
+    "hierarchy": "Hiyerarşi"
+  },
+  "wizard": {
+    "title": "Yeni Ajan Oluştur",
+    "editTitle": "{name} düzenleniyor",
+    "stepsLabel": "Kurulum adımları",
+    "steps": {
+      "basic": "Temel Bilgiler",
+      "personality": "Model ve Kişilik",
+      "tools": "MCP Araçları",
+      "permissions": "İzinler",
+      "review": "Gözden Geçir"
+    },
+    "next": "İleri",
+    "back": "Geri",
+    "saving": "Kaydediliyor…",
+    "basicTitle": "Temel Bilgiler",
+    "basicDescription": "Ajanınıza net bir kimlik ve amaç verin.",
+    "name": "Ad",
+    "namePlaceholder": "örn. Viral Havacılık Direktörü",
+    "description": "Açıklama",
+    "descriptionPlaceholder": "Bu ajanın ne için olduğunu bir iki cümleyle yazın.",
+    "agentType": "Ajan türü",
+    "avatar": "Avatar",
+    "chooseAvatar": "{name} avatarını seç",
+    "tags": "Etiketler",
+    "tagPlaceholder": "Etiket yazıp Enter'a basın",
+    "removeTag": "{tag} etiketini kaldır",
+    "roleTitle": "Rol ve görev",
+    "roleDescription": "Rol, ajanın ne yaptığıdır. Bir sonraki adımdaki kişilik ise bunu nasıl yaptığıdır.",
+    "role": "Rol",
+    "rolePlaceholder": "örn. Havacılık Doğruluk Kontrolcüsü",
+    "job": "Görev tanımı",
+    "jobPlaceholder": "Bu ajanın sorumlu olduğu işi tanımlayın.",
+    "goals": "Hedefler",
+    "constraints": "Kısıtlar",
+    "onePerLine": "Her satıra bir tane.",
+    "requiredToCreate": "Ajan oluşturulmadan önce gereklidir.",
+    "personalityTitle": "Kişilik",
+    "personalityDescription": "Kişilik, ajanın nasıl çalıştığını değiştirir. Neye izni olduğunu asla değiştirmez.",
+    "preset": "Hazır ayar",
+    "behaviorPreview": "Davranış önizlemesi",
+    "previewHint": "Bu puanların modele eklediği talimatlar.",
+    "noDirectives": "Dengeli: model varsayılan davranışını korur.",
+    "parameters": "Çalışma ayarları",
+    "aiBrainTitle": "Yapay Zekâ Beyni",
+    "aiBrainComingSoon": "Bu ajanın sağlayıcısını, modelini, yedek modellerini ve bütçesini M4 sürümünde burada seçeceksiniz.",
+    "toolsComingSoon": "MCP sunucularını bağlayıp bu ajanın araçlarını M5 sürümünde burada seçeceksiniz.",
+    "permissionsComingSoon": "Her araç için Otomatik izin, Onay gerekli veya Engelli ayarını M5 sürümünde burada yapacaksınız.",
+    "reviewTitle": "Gözden Geçir",
+    "reviewDescription": "Ayrıntıları kontrol edin, ardından ajanı oluşturun.",
+    "missing": "Ajanı oluşturmadan önce şunları tamamlayın:",
+    "saveDraft": "Taslak olarak kaydet",
+    "create": "Ajanı oluştur",
+    "saveChanges": "Değişiklikleri kaydet",
+    "editStep": "Düzenle",
+    "levels": {
+      "low": "Düşük",
+      "standard": "Standart",
+      "high": "Yüksek"
+    },
+    "lengths": {
+      "short": "Kısa",
+      "medium": "Orta",
+      "long": "Uzun"
+    },
+    "parameterNames": {
+      "verification": "Doğrulama",
+      "escalation": "Kullanıcıya danışma",
+      "autonomy": "Özerklik",
+      "responseLength": "Yanıt uzunluğu",
+      "alternatives": "Değerlendirilen alternatifler"
+    },
+    "done": "Bitti"
+  },
+  "traits": {
+    "analytical": {
+      "name": "Analitik",
+      "hint": "Sorunları parçalara ayırır ve kanıta dayanarak düşünür."
+    },
+    "creative": {
+      "name": "Yaratıcı",
+      "hint": "Daha çok ve daha sıra dışı fikir üretir."
+    },
+    "skeptical": {
+      "name": "Şüpheci",
+      "hint": "İddiaları doğrular ve varsayımları sorgular."
+    },
+    "assertive": {
+      "name": "İddialı",
+      "hint": "Görüşünü doğrudan söyler ve itiraz eder."
+    },
+    "empathetic": {
+      "name": "Empatik",
+      "hint": "Kullanıcının durumunu anlar ve üslubunu uyarlar."
+    },
+    "cautious": {
+      "name": "Temkinli",
+      "hint": "Geri alınamaz adımlardan kaçınır, belirsizlikte danışır."
+    },
+    "concise": {
+      "name": "Öz",
+      "hint": "Kısa yanıtları tercih eder."
+    },
+    "detailed": {
+      "name": "Ayrıntılı",
+      "hint": "Örnekli, kapsamlı yanıtları tercih eder."
+    },
+    "autonomous": {
+      "name": "Özerk",
+      "hint": "Sormadan ilerler — onay kurallarını asla aşmaz."
+    },
+    "collaborative": {
+      "name": "İş birlikçi",
+      "hint": "İş devreder ve diğer ajanlardan inceleme ister."
+    },
+    "proactive": {
+      "name": "Proaktif",
+      "hint": "İstenmeden sonraki adımları önerir."
+    },
+    "experimental": {
+      "name": "Deneysel",
+      "hint": "Bütçe izin verdiğinde alternatifleri dener."
+    },
+    "persistent": {
+      "name": "Azimli",
+      "hint": "Vazgeçmeden önce yeniden dener."
+    },
+    "formal": {
+      "name": "Resmî",
+      "hint": "Profesyonel bir dil kullanır."
+    },
+    "humorous": {
+      "name": "Esprili",
+      "hint": "Uygun yerlerde hafif mizah yapar."
+    }
+  },
+  "presets": {
+    "analyst": "Analist",
+    "creative_director": "Kreatif Direktör",
+    "executive_assistant": "Yönetici Asistanı",
+    "skeptical_reviewer": "Şüpheci Denetçi",
+    "researcher": "Araştırmacı",
+    "engineer": "Mühendis",
+    "operator": "Operatör",
+    "coach": "Koç",
+    "custom": "Özel"
+  },
+  "directives": {
+    "analytical_high": "Sorunları parçalara ayırır, alternatifleri karşılaştırır ve gerekçesini kanıtlarla açıklar.",
+    "analytical_low": "Kapsamlı analiz yerine hızlı ve pratik değerlendirmeyi tercih eder.",
+    "creative_high": "Sıra dışı olanlar da dahil, birbirinden farklı birkaç seçenek sunar.",
+    "creative_low": "Kanıtlanmış, alışılmış yaklaşımlara bağlı kalır.",
+    "skeptical_high": "İddiaları kullanmadan önce doğrular, varsayımları sorgular ve ne kadar emin olduğunu belirtir.",
+    "skeptical_low": "Açıkça yanlış olmadıkça verilen bilgiyi olduğu gibi kabul eder.",
+    "assertive_high": "Önerilerini doğrudan söyler ve katılmadığında itiraz eder.",
+    "assertive_low": "Seçenekleri tarafsız sunar ve sizin tercihinize uyar.",
+    "empathetic_high": "Durumunuzu dikkate alır ve üslubunu ihtiyaçlarınıza göre uyarlar.",
+    "empathetic_low": "Tarafsız, nesnel bir üslup kullanır.",
+    "cautious_high": "Geri alınabilir adımları tercih eder, harekete geçmeden önce kontrol eder ve emin olmadığında size danışır.",
+    "cautious_low": "Hızlı ilerler, geri alınabilir adımlarda makul riski kabul eder.",
+    "length_short": "Yanıtları kısa tutar: önce cevabı verir, gereksiz ayrıntıya girmez.",
+    "length_long": "Kapsamlıdır: ayrıntılara, örneklere ve uç durumlara yer verir.",
+    "autonomous_high": "İzin verilen adımları sormadan uygular. Onay gerektiren işlemler yine onay gerektirir.",
+    "autonomous_low": "Her önemli adımdan önce size danışır.",
+    "collaborative_high": "İşi diğer ajanlara devretmeyi ve onlardan inceleme istemeyi tercih eder, çıktılarını birleştirir.",
+    "collaborative_low": "Bağımsız çalışır, diğer ajanları yalnızca gerektiğinde dahil eder.",
+    "proactive_high": "Sonraki adımları öngörür ve istenmeden önerir.",
+    "proactive_low": "İsteneni yapar, fazladan iş üstlenmez.",
+    "experimental_high": "Bütçe ve korumalı ortam kuralları izin verdiğinde alternatif yaklaşımları dener ve sonuçları karşılaştırır.",
+    "experimental_low": "Yerleşik yöntemleri kullanır, deneme yanılmadan kaçınır.",
+    "persistent_high": "Başarısızlık bildirmeden önce yeniden dener ve farklı yollar arar.",
+    "persistent_low": "Sürekli yeniden denemek yerine engelleri erkenden bildirir.",
+    "formal_high": "Resmî ve profesyonel bir dil kullanır.",
+    "formal_low": "Rahat, sohbet havasında bir dil kullanır.",
+    "humorous_high": "Uygun yerlerde hafif mizah yapar.",
+    "humorous_subtle": "Mizahı ölçülü ve profesyonel tutar.",
+    "humorous_low": "Mizahtan kaçınır."
   }
 }

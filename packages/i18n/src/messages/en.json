@@ -59,7 +59,27 @@
     "INVALID_CREDENTIALS": "Incorrect email or password.",
     "EMAIL_TAKEN": "An account with this email already exists.",
     "ACCOUNT_DISABLED": "This account is disabled.",
-    "generic": "Something went wrong. Please try again."
+    "generic": "Something went wrong. Please try again.",
+    "agent_name_required": "Enter a name for the agent.",
+    "agent_name_too_long": "Name must be at most 80 characters.",
+    "description_required": "Describe what this agent is for.",
+    "description_too_long": "Description must be at most 500 characters.",
+    "agent_type_required": "Choose an agent type.",
+    "invalid_avatar": "Choose an avatar from the gallery.",
+    "tag_too_long": "Tags must be at most 32 characters.",
+    "too_many_tags": "Use at most 10 tags.",
+    "invalid_parent": "Choose an agent from this workspace.",
+    "parent_rank": "An agent can only report to a higher-level agent (Specialist → Manager → Master Orchestrator).",
+    "children_rank": "Other agents report to this one; they must stay lower-level than it.",
+    "role_too_long": "Role must be at most 200 characters.",
+    "job_too_long": "Job definition must be at most 4,000 characters.",
+    "item_too_long": "Each line must be at most 300 characters.",
+    "too_many_items": "Use at most 20 lines.",
+    "role_required": "Enter the agent's role.",
+    "job_required": "Describe the agent's job.",
+    "INVALID_TRANSITION": "That isn't possible in the agent's current state.",
+    "MODEL_REQUIRED": "Choose an AI model before activating this agent (available in M4).",
+    "NOT_FOUND": "This item doesn't exist or you don't have access to it."
   },
   "dashboard": {
     "greetingMorning": "Good morning, {name}",
@@ -89,7 +109,8 @@
     "showTable": "Show as table",
     "showChart": "Show as chart",
     "tableCaption": "Completed and failed tasks per day, last 7 days",
-    "day": "Day"
+    "day": "Day",
+    "yourAgents": "Your agents"
   },
   "activity": {
     "user_registered": "Account created",
@@ -102,7 +123,11 @@
     "secret_updated": "Secret updated",
     "secret_deleted": "Secret deleted",
     "user_profile_updated": "Profile updated",
-    "unknown": "{action}"
+    "unknown": "{action}",
+    "agent_created": "Agent created",
+    "agent_updated": "Agent updated",
+    "agent_personality_changed": "Agent personality changed",
+    "agent_status_changed": "Agent status changed"
   },
   "outcome": {
     "success": "Success",
@@ -158,5 +183,243 @@
   "languages": {
     "en": "English",
     "tr": "Türkçe"
+  },
+  "agents": {
+    "title": "Agents",
+    "subtitle": "Create, configure and supervise your AI agents.",
+    "newAgent": "New Agent",
+    "emptyTitle": "No agents here",
+    "emptyDescription": "Create an agent to give it a role, a personality and, soon, an AI model and tools.",
+    "filters": {
+      "all": "All",
+      "active": "Active",
+      "configured": "Configured",
+      "draft": "Drafts",
+      "paused": "Paused",
+      "archived": "Archived"
+    },
+    "status": {
+      "draft": "Draft",
+      "configured": "Configured",
+      "active": "Active",
+      "paused": "Paused",
+      "archived": "Archived"
+    },
+    "types": {
+      "master_orchestrator": "Master Orchestrator",
+      "manager": "Manager Agent",
+      "specialist": "Specialist Agent",
+      "system": "System Agent"
+    },
+    "typeHints": {
+      "master_orchestrator": "Breaks down goals and delegates to other agents",
+      "manager": "Leads a team of specialist agents",
+      "specialist": "Focused on specific tasks",
+      "system": "Internal utility agent"
+    },
+    "reportsTo": "Reports to",
+    "noParent": "No one (top level)",
+    "directReports": "Direct reports",
+    "noDirectReports": "No agents report to this one yet.",
+    "role": "Role",
+    "job": "Job definition",
+    "goals": "Goals",
+    "constraints": "Constraints",
+    "none": "None",
+    "tags": "Tags",
+    "personality": "Personality",
+    "runtimeDirectives": "Runtime directives",
+    "traitsLabel": "Trait scores",
+    "version": "Version {version}",
+    "edit": "Edit",
+    "editPersonality": "Edit personality",
+    "actions": {
+      "activate": "Activate",
+      "pause": "Pause",
+      "resume": "Resume",
+      "archive": "Archive",
+      "restore": "Restore"
+    },
+    "activateNeedsModel": "Agents need an AI model before they can run. Model selection arrives in M4.",
+    "archivedNotice": "This agent is archived. Restore it to make changes.",
+    "updated": "Updated {time}",
+    "hierarchy": "Hierarchy"
+  },
+  "wizard": {
+    "title": "Create New Agent",
+    "editTitle": "Edit {name}",
+    "stepsLabel": "Setup steps",
+    "steps": {
+      "basic": "Basic Info",
+      "personality": "Model & Personality",
+      "tools": "MCP Tools",
+      "permissions": "Permissions",
+      "review": "Review"
+    },
+    "next": "Next",
+    "back": "Back",
+    "saving": "Saving…",
+    "basicTitle": "Basic Information",
+    "basicDescription": "Give your agent a clear identity and purpose.",
+    "name": "Name",
+    "namePlaceholder": "e.g. Viral Aviation Director",
+    "description": "Description",
+    "descriptionPlaceholder": "What this agent is for, in a sentence or two.",
+    "agentType": "Agent type",
+    "avatar": "Avatar",
+    "chooseAvatar": "Choose avatar {name}",
+    "tags": "Tags",
+    "tagPlaceholder": "Add a tag and press Enter",
+    "removeTag": "Remove tag {tag}",
+    "roleTitle": "Role & job",
+    "roleDescription": "Role is what the agent does. Personality, on the next step, is how it does it.",
+    "role": "Role",
+    "rolePlaceholder": "e.g. Aviation Fact Checker",
+    "job": "Job definition",
+    "jobPlaceholder": "Describe the work this agent is responsible for.",
+    "goals": "Goals",
+    "constraints": "Constraints",
+    "onePerLine": "One per line.",
+    "requiredToCreate": "Required before the agent can be created.",
+    "personalityTitle": "Personality",
+    "personalityDescription": "Personality changes how the agent works. It never changes what the agent is allowed to do.",
+    "preset": "Preset",
+    "behaviorPreview": "Behavior preview",
+    "previewHint": "Instructions these scores add for the model.",
+    "noDirectives": "Balanced: the model keeps its default behaviour.",
+    "parameters": "Runtime settings",
+    "aiBrainTitle": "AI Brain",
+    "aiBrainComingSoon": "Choose this agent's provider, model, fallbacks and budget here in M4.",
+    "toolsComingSoon": "Connect MCP servers and choose this agent's tools here in M5.",
+    "permissionsComingSoon": "Set Auto allow, Approval required or Blocked for each tool here in M5.",
+    "reviewTitle": "Review",
+    "reviewDescription": "Check the details, then create the agent.",
+    "missing": "Complete these before creating the agent:",
+    "saveDraft": "Save as draft",
+    "create": "Create agent",
+    "saveChanges": "Save changes",
+    "editStep": "Edit",
+    "levels": {
+      "low": "Low",
+      "standard": "Standard",
+      "high": "High"
+    },
+    "lengths": {
+      "short": "Short",
+      "medium": "Medium",
+      "long": "Long"
+    },
+    "parameterNames": {
+      "verification": "Verification",
+      "escalation": "Escalation",
+      "autonomy": "Autonomy",
+      "responseLength": "Response length",
+      "alternatives": "Alternatives considered"
+    },
+    "done": "Done"
+  },
+  "traits": {
+    "analytical": {
+      "name": "Analytical",
+      "hint": "Breaks problems down and reasons from evidence."
+    },
+    "creative": {
+      "name": "Creative",
+      "hint": "Generates more, and more unusual, ideas."
+    },
+    "skeptical": {
+      "name": "Skeptical",
+      "hint": "Verifies claims and challenges assumptions."
+    },
+    "assertive": {
+      "name": "Assertive",
+      "hint": "States views directly and pushes back."
+    },
+    "empathetic": {
+      "name": "Empathetic",
+      "hint": "Reads the user's situation and adapts tone."
+    },
+    "cautious": {
+      "name": "Cautious",
+      "hint": "Avoids irreversible steps and escalates uncertainty."
+    },
+    "concise": {
+      "name": "Concise",
+      "hint": "Prefers short answers."
+    },
+    "detailed": {
+      "name": "Detailed",
+      "hint": "Prefers thorough answers with examples."
+    },
+    "autonomous": {
+      "name": "Autonomous",
+      "hint": "Proceeds without asking — never past approval rules."
+    },
+    "collaborative": {
+      "name": "Collaborative",
+      "hint": "Delegates and asks other agents for review."
+    },
+    "proactive": {
+      "name": "Proactive",
+      "hint": "Suggests next steps unprompted."
+    },
+    "experimental": {
+      "name": "Experimental",
+      "hint": "Tries alternatives when budget allows."
+    },
+    "persistent": {
+      "name": "Persistent",
+      "hint": "Retries before giving up."
+    },
+    "formal": {
+      "name": "Formal",
+      "hint": "Professional register."
+    },
+    "humorous": {
+      "name": "Humorous",
+      "hint": "Light humour where it fits."
+    }
+  },
+  "presets": {
+    "analyst": "Analyst",
+    "creative_director": "Creative Director",
+    "executive_assistant": "Executive Assistant",
+    "skeptical_reviewer": "Skeptical Reviewer",
+    "researcher": "Researcher",
+    "engineer": "Engineer",
+    "operator": "Operator",
+    "coach": "Coach",
+    "custom": "Custom"
+  },
+  "directives": {
+    "analytical_high": "Breaks problems into parts, compares alternatives and explains its reasoning with evidence.",
+    "analytical_low": "Favours quick, practical judgement over exhaustive analysis.",
+    "creative_high": "Offers several distinct options, including unconventional ones.",
+    "creative_low": "Sticks to proven, conventional approaches.",
+    "skeptical_high": "Verifies claims before relying on them, challenges assumptions and says how confident it is.",
+    "skeptical_low": "Takes provided information at face value unless it is clearly wrong.",
+    "assertive_high": "States recommendations directly and pushes back when it disagrees.",
+    "assertive_low": "Presents options neutrally and defers to your preference.",
+    "empathetic_high": "Acknowledges your situation and adapts its tone to your needs.",
+    "empathetic_low": "Keeps a neutral, matter-of-fact tone.",
+    "cautious_high": "Prefers reversible steps, double-checks before acting and checks with you when uncertain.",
+    "cautious_low": "Moves quickly and accepts reasonable risk on reversible steps.",
+    "length_short": "Keeps responses short: leads with the answer and skips filler.",
+    "length_long": "Is thorough: includes detail, examples and edge cases.",
+    "autonomous_high": "Carries out permitted steps without asking. Actions that need approval still need approval.",
+    "autonomous_low": "Checks in with you before each significant step.",
+    "collaborative_high": "Prefers delegating to and asking review from other agents, and combines their work.",
+    "collaborative_low": "Works independently and involves other agents only when necessary.",
+    "proactive_high": "Anticipates next steps and suggests them without being asked.",
+    "proactive_low": "Does what is asked and doesn't volunteer extra work.",
+    "experimental_high": "When budgets and sandbox rules allow, tries alternative approaches and compares results.",
+    "experimental_low": "Uses established methods and avoids trial and error.",
+    "persistent_high": "Retries and tries alternative routes before reporting a failure.",
+    "persistent_low": "Reports blockers early instead of retrying repeatedly.",
+    "formal_high": "Uses a formal, professional register.",
+    "formal_low": "Uses a relaxed, conversational register.",
+    "humorous_high": "Uses light humour where it fits.",
+    "humorous_subtle": "Keeps any humour subtle and professional.",
+    "humorous_low": "Avoids humour."
   }
 }
