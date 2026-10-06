@@ -1,0 +1,21 @@
+@import 'tailwindcss';
+
+/* Initial dark-theme tokens (PRD §35.1). Refined into the full design system in M2. */
+@theme {
+  --color-bg: #0b0f1a;
+  --color-surface: #121829;
+  --color-surface-2: #1a2135;
+  --color-border: #232b42;
+  --color-text: #e6e9f2;
+  --color-text-muted: #8a93ad;
+  --color-primary: #3b5bff;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-info: #38bdf8;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+}

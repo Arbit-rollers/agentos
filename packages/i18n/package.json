@@ -1,0 +1,14 @@
+{
+  "name": "@agentos/i18n",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "UI message catalogs: en (default), tr (PRD §33).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run --passWithNoTests"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "@agentos/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Domain services shared by web and worker: env, queues, health, agents, tasks, audit (PRD §24).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@agentos/db": "workspace:*",
+    "bullmq": "^6.3.11",
+    "ioredis": "^6.0.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^24"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "@agentos/model-gateway",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Provider adapters, Smart Router, fallback chains, cost tracking (PRD §7, §24).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run --passWithNoTests"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "@agentos/policy",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Permissions, approvals, budgets, risk classification (PRD §9, §10, §18, §24).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run --passWithNoTests"
+  }
+}

@@ -1,0 +1,59 @@
+name: agentos
+
+x-app-env: &app-env
+  DATABASE_URL: postgres://agentos:agentos@postgres:5432/agentos
+  REDIS_URL: redis://redis:6379
+  OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+  AGENTOS_MASTER_KEY: ${AGENTOS_MASTER_KEY:-}
+  APP_URL: ${APP_URL:-http://localhost:3000}
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: agentos
+      POSTGRES_PASSWORD: agentos
+      POSTGRES_DB: agentos
+    ports: ['5432:5432']
+    volumes: [postgres-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U agentos']
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:8-alpine
+    ports: ['6379:6379']
+    volumes: [redis-data:/data]
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      retries: 10
+
+  migrate:
+    build: { context: ., target: worker }
+    command: ['pnpm', 'db:migrate']
+    environment: *app-env
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  worker:
+    build: { context: ., target: worker }
+    environment: *app-env
+    extra_hosts: ['host.docker.internal:host-gateway']
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+
+  web:
+    build: { context: ., target: web }
+    environment: *app-env
+    ports: ['3000:3000']
+    extra_hosts: ['host.docker.internal:host-gateway']
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+
+volumes:
+  postgres-data:
+  redis-data:
