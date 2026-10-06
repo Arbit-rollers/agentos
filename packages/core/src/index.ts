@@ -55,3 +55,16 @@ export {
 export type { AdapterFactory, ProviderDeps, ProviderInput } from './providers';
 export { buildSystemPrompt, canAgentRun, runAgentPrompt, saveAgentModelConfig } from './models';
 export type { ModelConfigInput, PromptRunResult } from './models';
+export {
+  completeMcpAuthorization,
+  createMcpConnection,
+  executeAgentTool,
+  refreshMcpConnection,
+  removeMcpConnection,
+  setAgentPermissions,
+  setAgentTools,
+  setMcpConnectionEnabled,
+  startMcpAuthorization,
+  updateToolDefaults,
+} from './mcp';
+export type { McpConnectionInput, McpDeps, ToolCallOutcome } from './mcp';

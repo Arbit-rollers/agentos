@@ -2,6 +2,7 @@
 import { sql } from 'drizzle-orm';
 import {
   type AnyPgColumn,
+  boolean,
   customType,
   index,
   integer,
@@ -193,6 +194,13 @@ export const agents = pgTable(
       .notNull()
       .default(sql`'{}'::text[]`),
     status: agentStatus('status').notNull().default('draft'),
+    /** PRD §10: which high-risk tool categories always need human approval. */
+    approvalPolicy: jsonb('approval_policy')
+      .$type<{ requireApprovalForHighRisk: boolean; categories: string[] }>()
+      .notNull()
+      .default(
+        sql`'{"requireApprovalForHighRisk":true,"categories":["send_email","calendar_write","publish_social","payments","delete_files","run_code","change_permissions"]}'::jsonb`,
+      ),
     createdAt: createdAt(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -366,4 +374,118 @@ export const runEvents = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index('run_events_run_idx').on(t.runId, t.createdAt)],
+);
+
+// ---------------------------------------------------------------------------
+// M5: MCP Hub — connections, discovered tools, per-agent tool permissions (PRD §8, §9)
+// ---------------------------------------------------------------------------
+
+export const mcpTransport = pgEnum('mcp_transport', ['streamable_http', 'sse']);
+export const mcpAuthType = pgEnum('mcp_auth_type', ['none', 'bearer', 'headers', 'oauth']);
+export const mcpStatus = pgEnum('mcp_status', ['connected', 'error', 'needs_auth', 'untested']);
+export const permissionMode = pgEnum('permission_mode', [
+  'AUTO_ALLOW',
+  'APPROVAL_REQUIRED',
+  'BLOCKED',
+]);
+
+export type McpServerInfo = {
+  name: string;
+  version: string;
+  title?: string;
+  instructions?: string;
+};
+export type McpResourceRow = { uri: string; name: string; description?: string; mimeType?: string };
+
+/** A workspace's MCP server (PRD §8). Credentials and OAuth state live in `secrets`. */
+export const mcpConnections = pgTable(
+  'mcp_connections',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    ownerUserId: uuid('owner_user_id')
+      .notNull()
+      .references(() => users.id),
+    name: text('name').notNull(),
+    /** Catalog template key (e.g. `github`) or `custom`. */
+    serverType: text('server_type').notNull().default('custom'),
+    transport: mcpTransport('transport').notNull(),
+    endpoint: text('endpoint').notNull(),
+    authType: mcpAuthType('auth_type').notNull(),
+    secretId: uuid('secret_id').references(() => secrets.id, { onDelete: 'set null' }),
+    status: mcpStatus('status').notNull().default('untested'),
+    enabled: boolean('enabled').notNull().default(true),
+    serverInfo: jsonb('server_info').$type<McpServerInfo>(),
+    resources: jsonb('resources')
+      .$type<McpResourceRow[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    /** SHA-256 of the OAuth `state` while an authorization is in progress. */
+    oauthStateHash: text('oauth_state_hash'),
+    lastCheckedAt: timestamp('last_checked_at', { withTimezone: true }),
+    lastError: text('last_error'),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('mcp_connections_workspace_idx').on(t.workspaceId),
+    uniqueIndex('mcp_connections_oauth_state_key').on(t.oauthStateHash),
+  ],
+);
+
+export const mcpTools = pgTable(
+  'mcp_tools',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    connectionId: uuid('connection_id')
+      .notNull()
+      .references(() => mcpConnections.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    title: text('title'),
+    description: text('description').notNull().default(''),
+    /** JSON Schema as published by the server (PRD §8.3: normalized and stored). */
+    inputSchema: jsonb('input_schema').$type<Record<string, unknown>>().notNull(),
+    annotations: jsonb('annotations')
+      .$type<Record<string, boolean>>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    riskCategory: text('risk_category'),
+    /** Workspace default; agents may only be the same or stricter (PRD §9). */
+    defaultPermission: permissionMode('default_permission').notNull(),
+    enabled: boolean('enabled').notNull().default(true),
+    /** False when the server stopped listing the tool; it can't run until it reappears. */
+    available: boolean('available').notNull().default(true),
+    discoveredAt: timestamp('discovered_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('mcp_tools_connection_name_key').on(t.connectionId, t.name)],
+);
+
+export const agentToolPermissions = pgTable(
+  'agent_tool_permissions',
+  {
+    agentId: uuid('agent_id')
+      .notNull()
+      .references(() => agents.id, { onDelete: 'cascade' }),
+    toolId: uuid('tool_id')
+      .notNull()
+      .references(() => mcpTools.id, { onDelete: 'cascade' }),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    permissionMode: permissionMode('permission_mode').notNull(),
+    /** Future constraints (PRD §9): read-only, allowed folders/domains, rate limits… */
+    constraints: jsonb('constraints')
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.agentId, t.toolId] }),
+    index('agent_tool_permissions_tool_idx').on(t.toolId),
+  ],
 );

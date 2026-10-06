@@ -9,6 +9,8 @@ import {
   createAgent,
   runAgentPrompt,
   saveAgentModelConfig,
+  setAgentPermissions,
+  setAgentTools,
   updateAgentBasics,
   updatePersonality,
   type AgentAction,
@@ -170,4 +172,42 @@ export async function runPromptAction(
       fieldErrors: error.details,
     };
   }
+}
+
+/** Wizard step 3 (Screen 5): the agent's tool selection. */
+export async function saveToolsAction(
+  agentId: string,
+  _: AgentFormState,
+  formData: FormData,
+): Promise<AgentFormState> {
+  const { ctx } = await requireSession();
+  const toolIds = formData.getAll('toolIds').filter((v): v is string => typeof v === 'string');
+  return run(async () => {
+    await setAgentTools(getServices().db, ctx, agentId, toolIds);
+    return `/agents/${agentId}/setup/permissions`;
+  });
+}
+
+/** Wizard step 4 (Screen 6): per-tool modes and the high-risk approval policy. */
+export async function savePermissionsAction(
+  agentId: string,
+  _: AgentFormState,
+  formData: FormData,
+): Promise<AgentFormState> {
+  const { ctx } = await requireSession();
+  const modes: Record<string, string> = {};
+  for (const [key, value] of formData.entries()) {
+    if (key.startsWith('mode:') && typeof value === 'string') modes[key.slice(5)] = value;
+  }
+  const approvalPolicy = {
+    requireApprovalForHighRisk: formData.get('requireApprovalForHighRisk') === 'on',
+    categories: formData.getAll('categories').filter((v): v is string => typeof v === 'string'),
+  };
+  return run(async () => {
+    await setAgentPermissions(getServices().db, ctx, agentId, {
+      modes: modes as never,
+      approvalPolicy: approvalPolicy as never,
+    });
+    return `/agents/${agentId}/setup/review`;
+  });
 }

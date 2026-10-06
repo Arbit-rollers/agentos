@@ -18,5 +18,11 @@ export default defineConfig({
       url: 'http://127.0.0.1:4010/openai/v1/models',
       reuseExistingServer: !process.env.CI,
     },
+    {
+      // Reference MCP server (no auth, bearer, OAuth with an auto-approving login, SSE).
+      command: 'pnpm --filter @agentos/mcp-gateway fake-mcp',
+      url: 'http://127.0.0.1:4020/.well-known/oauth-authorization-server',
+      reuseExistingServer: !process.env.CI,
+    },
   ],
 });

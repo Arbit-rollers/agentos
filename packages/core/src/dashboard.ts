@@ -2,6 +2,7 @@ import {
   countAgentsByStatus,
   listAgents,
   listAuditLogs,
+  listMcpConnections,
   runStats,
   type Agent,
   type AuditLog,
@@ -36,8 +37,8 @@ function lastDays(now: Date, days: number): TaskOverviewDay[] {
 const STRIP_ORDER: Agent['status'][] = ['active', 'paused', 'configured', 'draft'];
 
 /**
- * Data for the dashboard (PRD §4, Screen 1). Tasks and MCP connections don't exist yet;
- * their counts are wired in as those tables land (M5, v0.2) and are zero until then.
+ * Data for the dashboard (PRD §4, Screen 1). Tasks don't exist yet (v0.2); their counts are
+ * zero until then.
  */
 export async function getDashboardSummary(
   db: Database,
@@ -45,10 +46,11 @@ export async function getDashboardSummary(
   now = new Date(),
 ): Promise<DashboardSummary> {
   const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-  const [counts, agents, stats] = await Promise.all([
+  const [counts, agents, stats, mcp] = await Promise.all([
     countAgentsByStatus(db, ctx),
     listAgents(db, ctx, { statuses: STRIP_ORDER }),
     runStats(db, ctx, weekAgo),
+    listMcpConnections(db, ctx),
   ]);
   const finished = stats.completed + stats.failed;
   return {
@@ -59,7 +61,9 @@ export async function getDashboardSummary(
     },
     agentList: agents.sort((a, b) => STRIP_ORDER.indexOf(a.status) - STRIP_ORDER.indexOf(b.status)),
     tasks: { running: 0 },
-    mcpConnections: { connected: 0 },
+    mcpConnections: {
+      connected: mcp.filter((c) => c.enabled && c.status === 'connected').length,
+    },
     successRate: finished > 0 ? stats.completed / finished : null,
     usage: {
       inputTokens: stats.inputTokens,

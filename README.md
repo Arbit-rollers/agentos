@@ -6,7 +6,7 @@ A multi-user operating system for persistent, personality-driven AI agents that 
 - Build plan: [`docs/ROADMAP.md`](docs/ROADMAP.md)
 - Reference screens: [`docs/AgentOS Dark-Mode AI Dashboard Collage.png`](<docs/AgentOS Dark-Mode AI Dashboard Collage.png>)
 
-**Status:** M4 (model gateway: AI providers, per-agent models, Smart Router, fallback chains, runs) done. Next: M5 MCP Hub.
+**Status:** M5 (MCP Hub, OAuth, tool discovery, per-agent tool permissions, policy enforcement) done. Next: M6 runtime, chat and approvals.
 
 ## Repository layout
 
@@ -82,5 +82,8 @@ CI (`.github/workflows/ci.yml`) runs all of these, plus E2E against Postgres (pg
 - **Model calls go through `invokeModel()` (`packages/model-gateway`).** It plans candidates from the agent's strategy, skips models that can't serve the request (task type, context size, per-task budget), falls back only on outages, rate limits and timeouts, and reports every decision as an event that `runAgentPrompt()` stores in `run_events`. Configuration errors (bad key, unknown model) are never hidden behind a fallback.
 - **Provider SDKs:** official SDKs only (`openai`, `@anthropic-ai/sdk`, `@google/genai`); OpenAI, Ollama and OpenAI-compatible servers share one adapter. Current Claude models reject `temperature`, so sampling parameters are sent only to models the capability registry marks as accepting them. Claude Fable 5.1 / Opus 5.5 / Opus 5 / Sonnet 5.5 requests opt into Anthropic's server-side refusal fallback; any model switch it makes is recorded as `model.provider_fallback`.
 - **Testing without API keys:** `pnpm --filter @agentos/model-gateway fake-provider` serves OpenAI-compatible (`/openai/v1`, also usable as an Ollama endpoint at `/openai`) and Anthropic (`/anthropic`) APIs on port 4010. Models named `*-down` return 503, `*-limited` 429. Playwright starts it automatically.
+- **Every tool call goes through `executeAgentTool()` (`packages/core/src/mcp.ts`).** It evaluates `@agentos/policy` server-side on each call: tools an agent was never granted, disabled tools/servers and BLOCKED tools are refused and audited; APPROVAL_REQUIRED (or a high-risk category the agent's approval policy covers) is refused until the approval inbox lands in M6. An agent's mode can never be looser than the tool's workspace default, and connecting a server grants nothing to any agent.
+- **MCP credentials** (bearer token, custom headers, OAuth client registration and tokens) live in the secret store per connection. OAuth: `startMcpAuthorization()` returns the server's sign-in URL; `/api/mcp/oauth/callback` resolves the `state` only inside the signed-in user's workspace. Tokens refresh automatically through the official MCP SDK.
+- **Testing MCP:** `pnpm --filter @agentos/mcp-gateway fake-mcp` runs a reference MCP server (built from the SDK) on port 4020: `/mcp` (no auth), `/secure/mcp` (bearer `test-token`), `/oauth/mcp` (OAuth with an auto-approving login), `/sse` (legacy transport). Playwright starts it automatically.
 - **Dev server caches services on `globalThis`** to survive hot reloads; restart `pnpm dev` after changing `apps/web/src/server/services.ts`.
 - **Changing the schema:** edit `packages/db/src/schema`, run `pnpm db:generate`, then rename the new migration to something descriptive and update `migrations/meta/_journal.json` to match.

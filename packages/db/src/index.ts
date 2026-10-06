@@ -12,3 +12,4 @@ export * from './repos/agents';
 export * from './repos/providers';
 export * from './repos/model-configs';
 export * from './repos/runs';
+export * from './repos/mcp';

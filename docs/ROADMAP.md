@@ -141,7 +141,7 @@ Legend: **AC n** = acceptance criterion n in PRD §28. **Screen n** = screen n i
 
 ---
 
-### M5: MCP Hub + Tool Permissions
+### M5: MCP Hub + Tool Permissions ✅
 
 **Scope**
 - Tables: `mcp_connections`, `mcp_tools`, `agent_tool_permissions`
@@ -157,6 +157,11 @@ Legend: **AC n** = acceptance criterion n in PRD §28. **Screen n** = screen n i
 **Screens:** 2, 3, 5, 6
 
 **Covers:** AC 13, 14, 15, 16
+
+**As built (notes)**
+- OAuth 2.1 (discovery, dynamic client registration, PKCE, refresh) is in M5, as decided with the product owner.
+- The enforced tool-call path (`executeAgentTool`) exists now; APPROVAL_REQUIRED calls are refused until M6 adds approval requests and the inbox. Tool calls are recorded in `audit_logs`; the `tool_calls` table arrives with the runtime in M6.
+- Agents get an `approval_policy` (high-risk categories that always need approval), edited on wizard step 4.
 
 **Definition of done**
 - Connect a test remote MCP server (repo includes a small fixture server); tools appear in Hub and Detail.
@@ -277,7 +282,7 @@ Legend: **AC n** = acceptance criterion n in PRD §28. **Screen n** = screen n i
 | Needed by | Question |
 |-----------|----------|
 | ~~M3~~ | ~~Avatar source~~ → **Decided in M3:** built-in preset gallery (12 icon avatars, stored as `preset:<key>`). Uploads can be added later without a schema change. |
-| M5 | Which MCP servers are "Available" featured cards (Google Workspace, GitHub, Notion, Slack, Instagram, YouTube, …)? Built-in catalog or user-added only? |
+| ~~M5~~ | ~~Available catalog~~ → **Decided in M5:** curated templates (Google Workspace, GitHub, Notion, Slack, Linear, Instagram, YouTube) that pre-fill name and OAuth; the user pastes the server URL from the provider's docs (no guessed URLs). |
 | M6 | Rich output cards (script / storyboard / video): generic card schema, or domain-specific renderers? |
 | v0.2 | Event/condition triggers ("when new file arrives"): which event sources first? |
 | v0.3 | Embedding model default: cloud or local (e.g. Ollama `nomic-embed-text`)? |

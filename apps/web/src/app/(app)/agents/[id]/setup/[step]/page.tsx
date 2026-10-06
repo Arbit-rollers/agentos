@@ -1,16 +1,15 @@
-import { Plug, ShieldCheck } from 'lucide-react';
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { findAgent } from '@agentos/db';
+import { findAgent, listAgentToolGrants, listMcpConnections, listMcpTools } from '@agentos/db';
 import { normalizeTraits } from '@agentos/personality';
-import { Card, EmptyState } from '@agentos/ui';
 import { BasicsForm } from '@/components/agents/wizard/basics-form';
+import { PermissionsStep } from '@/components/agents/wizard/permissions-step';
 import { PersonalityEditor } from '@/components/agents/wizard/personality-editor';
 import { Review } from '@/components/agents/wizard/review';
-import { WIZARD_STEPS, stepHref, type WizardStep } from '@/components/agents/wizard/steps';
+import { WIZARD_STEPS, type WizardStep } from '@/components/agents/wizard/steps';
+import { ToolsStep } from '@/components/agents/wizard/tools-step';
 import { WizardFrame } from '@/components/agents/wizard/wizard-frame';
-import { WizardNav } from '@/components/agents/wizard/wizard-nav';
 import { loadAgentOr404, parentOptionsByType } from '@/server/agents';
 import { brainOptions, brainValue } from '@/server/models';
 import { requireSession } from '@/server/session';
@@ -28,7 +27,6 @@ export default async function AgentSetupPage({ params }: Params) {
   const { ctx } = await requireSession();
   const agent = await loadAgentOr404(ctx, id);
   if (agent.status === 'archived') redirect(`/agents/${id}`);
-  const t = await getTranslations('wizard');
 
   let body;
   switch (step as WizardStep) {
@@ -45,25 +43,50 @@ export default async function AgentSetupPage({ params }: Params) {
         />
       );
       break;
-    case 'tools':
-    case 'permissions':
-      // Arrive with the MCP Hub in M5.
+    case 'tools': {
+      const [connections, tools, grants] = await Promise.all([
+        listMcpConnections(getServices().db, ctx),
+        listMcpTools(getServices().db, ctx),
+        listAgentToolGrants(getServices().db, ctx, id),
+      ]);
+      // Only tools that can actually run are offered; existing grants stay visible.
       body = (
-        <>
-          <Card>
-            <EmptyState
-              icon={step === 'tools' ? <Plug /> : <ShieldCheck />}
-              title={t(`steps.${step as 'tools'}`)}
-              description={t(step === 'tools' ? 'toolsComingSoon' : 'permissionsComingSoon')}
-            />
-          </Card>
-          <WizardNav
-            backHref={stepHref(id, step === 'tools' ? 'personality' : 'tools')}
-            nextHref={stepHref(id, step === 'tools' ? 'permissions' : 'review')}
-          />
-        </>
+        <ToolsStep
+          agentId={id}
+          initial={grants.map((g) => g.tool.id)}
+          servers={connections
+            .filter((c) => c.enabled)
+            .map((c) => ({
+              id: c.id,
+              name: c.name,
+              serverType: c.serverType,
+              connected: c.status === 'connected',
+              tools: tools
+                .filter((tool) => tool.connectionId === c.id && tool.enabled && tool.available)
+                .map((tool) => ({ id: tool.id, name: tool.name, description: tool.description })),
+            }))}
+        />
       );
       break;
+    }
+    case 'permissions': {
+      const grants = await listAgentToolGrants(getServices().db, ctx, id);
+      body = (
+        <PermissionsStep
+          agentId={id}
+          approvalPolicy={agent.approvalPolicy}
+          grants={grants.map((g) => ({
+            toolId: g.tool.id,
+            name: g.tool.name,
+            description: g.tool.description,
+            serverName: g.connection.name,
+            mode: g.permissionMode,
+            workspaceDefault: g.tool.defaultPermission,
+          }))}
+        />
+      );
+      break;
+    }
     case 'review': {
       const parent = agent.parentAgentId
         ? await findAgent(getServices().db, ctx, agent.parentAgentId)

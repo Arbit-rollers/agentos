@@ -24,6 +24,7 @@ export type AgentFields = Partial<
     | 'goals'
     | 'constraints'
     | 'status'
+    | 'approvalPolicy'
   >
 >;
 
