@@ -205,6 +205,9 @@ importers:
       '@agentos/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
+      '@agentos/personality':
+        specifier: workspace:*
+        version: link:../../packages/personality
       '@agentos/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -269,6 +272,9 @@ importers:
       '@agentos/i18n':
         specifier: workspace:*
         version: link:../i18n
+      '@agentos/personality':
+        specifier: workspace:*
+        version: link:../personality
       '@node-rs/argon2':
         specifier: ~2.2.1
         version: 2.2.1
@@ -310,6 +316,12 @@ importers:
   packages/mcp-gateway: {}
 
   packages/model-gateway: {}
+
+  packages/personality:
+    devDependencies:
+      '@agentos/i18n':
+        specifier: workspace:*
+        version: link:../i18n
 
   packages/policy: {}
 

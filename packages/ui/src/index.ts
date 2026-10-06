@@ -5,7 +5,7 @@ export type { ButtonProps } from './button';
 export { Card, CardContent, CardHeader, CardTitle } from './card';
 export { Dialog, DialogClose, DialogContent, DialogTrigger } from './dialog';
 export { EmptyState } from './empty-state';
-export { Field, Input, inputClassName } from './field';
+export { Field, Input, Textarea, inputClassName } from './field';
 export { FilterTabs } from './filter-tabs';
 export type { FilterTab } from './filter-tabs';
 export { Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger } from './menu';

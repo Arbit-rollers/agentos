@@ -1,8 +1,10 @@
 // Tables are added milestone by milestone (see docs/ROADMAP.md).
 import { sql } from 'drizzle-orm';
 import {
+  type AnyPgColumn,
   customType,
   index,
+  integer,
   jsonb,
   pgEnum,
   pgTable,
@@ -124,8 +126,7 @@ export const auditLogs = pgTable(
     /** Null only for events with no resolvable workspace (e.g. login with unknown email). */
     workspaceId: uuid('workspace_id').references(() => workspaces.id, { onDelete: 'cascade' }),
     actorUserId: uuid('actor_user_id').references(() => users.id, { onDelete: 'set null' }),
-    /** FK added when the agents table lands (M3). */
-    agentId: uuid('agent_id'),
+    agentId: uuid('agent_id').references((): AnyPgColumn => agents.id, { onDelete: 'set null' }),
     action: text('action').notNull(),
     targetType: text('target_type'),
     targetId: text('target_id'),
@@ -138,3 +139,75 @@ export const auditLogs = pgTable(
   },
   (t) => [index('audit_logs_workspace_created_idx').on(t.workspaceId, t.createdAt)],
 );
+
+// ---------------------------------------------------------------------------
+// M3: Agents + personality (PRD §5, §6, §23)
+// ---------------------------------------------------------------------------
+
+export const agentType = pgEnum('agent_type', [
+  'master_orchestrator',
+  'manager',
+  'specialist',
+  'system',
+]);
+export const agentStatus = pgEnum('agent_status', [
+  'draft',
+  'configured',
+  'active',
+  'paused',
+  'archived',
+]);
+
+export const agents = pgTable(
+  'agents',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    ownerUserId: uuid('owner_user_id')
+      .notNull()
+      .references(() => users.id),
+    /** Reporting line (PRD §5.1). Same workspace, strictly higher-ranked type. */
+    parentAgentId: uuid('parent_agent_id').references((): AnyPgColumn => agents.id, {
+      onDelete: 'set null',
+    }),
+    agentType: agentType('agent_type').notNull(),
+    name: text('name').notNull(),
+    description: text('description').notNull().default(''),
+    /** `preset:<key>` for the built-in gallery; uploads arrive later. */
+    avatar: text('avatar').notNull().default('preset:bot'),
+    tags: text('tags')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    role: text('role').notNull().default(''),
+    jobDefinition: text('job_definition').notNull().default(''),
+    goals: text('goals')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    constraints: text('constraints')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    status: agentStatus('status').notNull().default('draft'),
+    createdAt: createdAt(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('agents_workspace_status_idx').on(t.workspaceId, t.status),
+    index('agents_parent_idx').on(t.parentAgentId),
+  ],
+);
+
+export const agentPersonalities = pgTable('agent_personalities', {
+  agentId: uuid('agent_id')
+    .primaryKey()
+    .references(() => agents.id, { onDelete: 'cascade' }),
+  preset: text('preset').notNull(),
+  traitScores: jsonb('trait_scores').$type<Record<string, number>>().notNull(),
+  /** Incremented on every change; changes are audited with before/after scores (PRD §6.6). */
+  version: integer('version').notNull().default(1),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});

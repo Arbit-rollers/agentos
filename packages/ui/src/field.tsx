@@ -8,6 +8,15 @@ export function Input({ className, ...props }: ComponentProps<'input'>) {
   return <input className={cn(inputClassName, className)} {...props} />;
 }
 
+export function Textarea({ className, ...props }: ComponentProps<'textarea'>) {
+  return (
+    <textarea
+      className={cn(inputClassName, 'h-auto min-h-20 resize-y py-2 leading-relaxed', className)}
+      {...props}
+    />
+  );
+}
+
 /** Label + control + hint/error. Pass the control's id as `htmlFor`. */
 export function Field({
   label,

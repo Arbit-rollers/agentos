@@ -34,3 +34,16 @@ export type { AuthenticatedSession, Locale, SessionToken } from './auth';
 export { updateProfile } from './profile';
 export { getDashboardSummary } from './dashboard';
 export type { DashboardSummary, TaskOverviewDay } from './dashboard';
+export {
+  AGENT_TYPES,
+  allowedActions,
+  changeAgentStatus,
+  completeAgentSetup,
+  createAgent,
+  eligibleParents,
+  hasModelConfiguration,
+  readinessErrors,
+  updateAgentBasics,
+  updatePersonality,
+} from './agents';
+export type { AgentAction, AgentBasicsInput } from './agents';

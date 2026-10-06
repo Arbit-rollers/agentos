@@ -1,9 +1,19 @@
-import { listAuditLogs, type AuditLog, type Database, type TenantContext } from '@agentos/db';
+import {
+  countAgentsByStatus,
+  listAgents,
+  listAuditLogs,
+  type Agent,
+  type AuditLog,
+  type Database,
+  type TenantContext,
+} from '@agentos/db';
 
 export type TaskOverviewDay = { date: string; completed: number; failed: number };
 
 export type DashboardSummary = {
-  agents: { active: number; paused: number };
+  agents: { active: number; paused: number; total: number };
+  /** Non-archived agents for the dashboard strip, most useful first (active, paused, …). */
+  agentList: Agent[];
   tasks: { running: number };
   mcpConnections: { connected: number };
   /** Share of finished runs that succeeded; null until there are runs. */
@@ -21,17 +31,28 @@ function lastDays(now: Date, days: number): TaskOverviewDay[] {
   });
 }
 
+const STRIP_ORDER: Agent['status'][] = ['active', 'paused', 'configured', 'draft'];
+
 /**
- * Data for the dashboard (PRD §4, Screen 1). Agents, tasks, MCP connections and runs don't
- * exist yet; their counts are wired in as those tables land (M3, M5, M6) and are zero until then.
+ * Data for the dashboard (PRD §4, Screen 1). Tasks, MCP connections and runs don't exist
+ * yet; their counts are wired in as those tables land (M5, M6) and are zero until then.
  */
 export async function getDashboardSummary(
   db: Database,
   ctx: TenantContext,
   now = new Date(),
 ): Promise<DashboardSummary> {
+  const [counts, agents] = await Promise.all([
+    countAgentsByStatus(db, ctx),
+    listAgents(db, ctx, { statuses: STRIP_ORDER }),
+  ]);
   return {
-    agents: { active: 0, paused: 0 },
+    agents: {
+      active: counts.active,
+      paused: counts.paused,
+      total: counts.active + counts.paused + counts.configured + counts.draft,
+    },
+    agentList: agents.sort((a, b) => STRIP_ORDER.indexOf(a.status) - STRIP_ORDER.indexOf(b.status)),
     tasks: { running: 0 },
     mcpConnections: { connected: 0 },
     successRate: null,

@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Domain services shared by web and worker: env, queues, health, agents, tasks, audit (PRD \u00a724).",
+  "description": "Domain services shared by web and worker: env, queues, health, agents, tasks, audit (PRD §24).",
   "exports": {
     ".": "./src/index.ts"
   },
@@ -14,6 +14,7 @@
   "dependencies": {
     "@agentos/db": "workspace:*",
     "@agentos/i18n": "workspace:*",
+    "@agentos/personality": "workspace:*",
     "@node-rs/argon2": "~2.2.1",
     "bullmq": "^6.3.11",
     "ioredis": "^6.0.0",

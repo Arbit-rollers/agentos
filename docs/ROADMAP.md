@@ -86,7 +86,7 @@ Legend: **AC n** = acceptance criterion n in PRD §28. **Screen n** = screen n i
 
 ---
 
-### M3: Agents + Personality
+### M3: Agents + Personality ✅
 
 **Scope**
 - Tables: `agents` (+ `avatar`, `description`, `tags`), `agent_personalities`
@@ -270,7 +270,7 @@ Legend: **AC n** = acceptance criterion n in PRD §28. **Screen n** = screen n i
 
 | Needed by | Question |
 |-----------|----------|
-| M3 | Avatar source: upload only, preset gallery, or AI-generated avatars? |
+| ~~M3~~ | ~~Avatar source~~ → **Decided in M3:** built-in preset gallery (12 icon avatars, stored as `preset:<key>`). Uploads can be added later without a schema change. |
 | M5 | Which MCP servers are "Available" featured cards (Google Workspace, GitHub, Notion, Slack, Instagram, YouTube, …)? Built-in catalog or user-added only? |
 | M6 | Rich output cards (script / storyboard / video): generic card schema, or domain-specific renderers? |
 | v0.2 | Event/condition triggers ("when new file arrives"): which event sources first? |
