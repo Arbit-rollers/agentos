@@ -78,8 +78,32 @@
     "role_required": "Ajanın rolünü girin.",
     "job_required": "Ajanın görevini tanımlayın.",
     "INVALID_TRANSITION": "Ajanın mevcut durumunda bu mümkün değil.",
-    "MODEL_REQUIRED": "Bu ajanı etkinleştirmeden önce bir yapay zekâ modeli seçin (M4 sürümünde).",
-    "NOT_FOUND": "Bu öğe yok ya da erişim izniniz yok."
+    "MODEL_REQUIRED": "Bu ajanı etkinleştirmeden önce bir yapay zekâ modeli seçin.",
+    "NOT_FOUND": "Bu öğe yok ya da erişim izniniz yok.",
+    "provider_required": "Bir sağlayıcı seçin.",
+    "provider_name_required": "Bu sağlayıcıya bir ad verin.",
+    "provider_name_too_long": "Ad en fazla 60 karakter olabilir.",
+    "api_key_required": "API anahtarını girin.",
+    "endpoint_required": "Uç nokta URL'sini girin.",
+    "invalid_endpoint": "Tam bir http:// veya https:// URL'si girin.",
+    "model_required": "Bir model seçin.",
+    "unknown_model": "Bu sağlayıcı bu modeli sunmuyor. Listeyi yenilemek için sağlayıcıyı test edin.",
+    "duplicate_route": "Her görev türünün yalnızca bir yönlendirmesi olabilir.",
+    "too_many_fallbacks": "En fazla 5 yedek kullanın.",
+    "invalid_temperature": "Sıcaklık 0 ile 2 arasında olmalıdır.",
+    "invalid_max_output": "En fazla çıktı 1 ile 128.000 token arasında olmalıdır.",
+    "prompt_required": "Bir istem yazın.",
+    "prompt_too_long": "İstem en fazla 20.000 karakter olabilir.",
+    "PROVIDER_IN_USE": "Bu sağlayıcıyı kullanan ajanlar var. Önce onları başka bir modele geçirin.",
+    "MODEL_CALL_FAILED": "Model çağrısı başarısız oldu.",
+    "provider_auth": "Sağlayıcı API anahtarını reddetti.",
+    "provider_rate_limit": "Sağlayıcı istekleri sınırlıyor.",
+    "provider_timeout": "Sağlayıcı zaman aşımına uğradı.",
+    "provider_unavailable": "Sağlayıcıya ulaşılamadı.",
+    "provider_bad_request": "Sağlayıcı isteği reddetti.",
+    "provider_not_found": "Sağlayıcı bu modeli veya uç noktayı tanımıyor.",
+    "provider_unknown": "Beklenmeyen sağlayıcı hatası.",
+    "no_eligible_model": "Bu ajanın modellerinden hiçbiri bu görev türünü işleyemiyor."
   },
   "dashboard": {
     "greetingMorning": "Günaydın, {name}",
@@ -127,7 +151,10 @@
     "agent_created": "Ajan oluşturuldu",
     "agent_updated": "Ajan güncellendi",
     "agent_personality_changed": "Ajan kişiliği değiştirildi",
-    "agent_status_changed": "Ajan durumu değiştirildi"
+    "agent_status_changed": "Ajan durumu değiştirildi",
+    "provider_connected": "Yapay zekâ sağlayıcısı bağlandı",
+    "provider_removed": "Yapay zekâ sağlayıcısı kaldırıldı",
+    "agent_model_changed": "Ajan modeli değiştirildi"
   },
   "outcome": {
     "success": "Başarılı",
@@ -178,7 +205,10 @@
     "languageHint": "Burada ne seçerseniz seçin, ajanlar sohbetin dilinde yanıt verir.",
     "save": "Değişiklikleri kaydet",
     "saving": "Kaydediliyor…",
-    "saved": "Kaydedildi."
+    "saved": "Kaydedildi.",
+    "profileTab": "Profil",
+    "providersTab": "Yapay Zekâ Sağlayıcıları",
+    "sectionsLabel": "Ayar bölümleri"
   },
   "languages": {
     "en": "English",
@@ -240,7 +270,7 @@
       "archive": "Arşivle",
       "restore": "Geri yükle"
     },
-    "activateNeedsModel": "Ajanların çalışabilmesi için bir yapay zekâ modeline ihtiyacı var. Model seçimi M4 sürümünde geliyor.",
+    "activateNeedsModel": "Bu ajanı etkinleştirmeden önce bir yapay zekâ modeli seçin (Düzenle → Model ve Kişilik).",
     "archivedNotice": "Bu ajan arşivlendi. Değişiklik yapmak için geri yükleyin.",
     "updated": "Güncellendi: {time}",
     "hierarchy": "Hiyerarşi"
@@ -289,7 +319,7 @@
     "noDirectives": "Dengeli: model varsayılan davranışını korur.",
     "parameters": "Çalışma ayarları",
     "aiBrainTitle": "Yapay Zekâ Beyni",
-    "aiBrainComingSoon": "Bu ajanın sağlayıcısını, modelini, yedek modellerini ve bütçesini M4 sürümünde burada seçeceksiniz.",
+    "aiBrainComingSoon": "Bu ajanın hangi modelle düşündüğü. Değiştirmek ajanın rolünü, kişiliğini veya araçlarını asla değiştirmez.",
     "toolsComingSoon": "MCP sunucularını bağlayıp bu ajanın araçlarını M5 sürümünde burada seçeceksiniz.",
     "permissionsComingSoon": "Her araç için Otomatik izin, Onay gerekli veya Engelli ayarını M5 sürümünde burada yapacaksınız.",
     "reviewTitle": "Gözden Geçir",
@@ -421,5 +451,149 @@
     "humorous_high": "Uygun yerlerde hafif mizah yapar.",
     "humorous_subtle": "Mizahı ölçülü ve profesyonel tutar.",
     "humorous_low": "Mizahtan kaçınır."
+  },
+  "providers": {
+    "title": "Yapay Zekâ Sağlayıcıları",
+    "subtitle": "Model sağlayıcılarını bir kez bağlayın; bu çalışma alanındaki tüm ajanlar kullanabilir.",
+    "add": "Sağlayıcı ekle",
+    "adding": "Bağlanıyor…",
+    "empty": "Henüz bağlı bir yapay zekâ sağlayıcısı yok.",
+    "emptyHint": "Ajanlarınızın düşünebilmesi için en az bir sağlayıcı ekleyin.",
+    "provider": "Sağlayıcı",
+    "name": "Ad",
+    "namePlaceholder": "örn. Şirket OpenAI",
+    "apiKey": "API anahtarı",
+    "apiKeyHint": "Şifreli saklanır. İstemlerde, kayıtlarda veya bu sayfada bir daha görünmez.",
+    "apiKeyOptional": "API anahtarı (isteğe bağlı)",
+    "endpoint": "Uç nokta URL'si",
+    "endpointHintOllama": "Ollama'nın çalıştığı adres, örn. http://localhost:11434",
+    "endpointHintCompatible": "OpenAI uyumlu API'nin /v1 ile biten temel URL'si",
+    "test": "Test et",
+    "testing": "Test ediliyor…",
+    "remove": "Kaldır",
+    "models": "{count, plural, =0 {Model yok} one {# model} other {# model}}",
+    "lastChecked": "Kontrol: {time}",
+    "neverChecked": "Henüz kontrol edilmedi",
+    "status": {
+      "connected": "Bağlı",
+      "error": "Hata",
+      "untested": "Test edilmedi"
+    },
+    "kinds": {
+      "openai": "OpenAI",
+      "anthropic": "Anthropic",
+      "google": "Google",
+      "ollama": "Ollama (yerel)",
+      "openai_compatible": "OpenAI uyumlu"
+    },
+    "errorCodes": {
+      "auth": "API anahtarı reddedildi.",
+      "rate_limit": "Sağlayıcı istek sınırına ulaşıldı.",
+      "timeout": "Sağlayıcı zamanında yanıt vermedi.",
+      "unavailable": "Sağlayıcıya ulaşılamadı.",
+      "bad_request": "Sağlayıcı isteği reddetti.",
+      "not_found": "Uç nokta bulunamadı — URL'yi kontrol edin.",
+      "unknown": "Beklenmeyen sağlayıcı hatası."
+    }
+  },
+  "brain": {
+    "title": "Yapay Zekâ Beyni",
+    "description": "Bu ajanın hangi modelle düşündüğü. Değiştirmek ajanın rolünü, kişiliğini veya araçlarını asla değiştirmez.",
+    "noProviders": "Önce bir yapay zekâ sağlayıcısı bağlayın.",
+    "noProvidersHint": "Ayarlar'dan OpenAI, Anthropic, Google, yerel bir Ollama veya OpenAI uyumlu bir uç nokta ekleyin.",
+    "goToProviders": "Yapay Zekâ Sağlayıcılarına git",
+    "strategy": "Strateji",
+    "strategies": {
+      "fixed": "Sabit model",
+      "smart_router": "Akıllı Yönlendirici",
+      "fallback_chain": "Yedek zinciri"
+    },
+    "strategyHints": {
+      "fixed": "Her zaman tek bir model kullanır.",
+      "smart_router": "Görev türüne göre model seçer; eşleşmeyen görevler ana modeli kullanır.",
+      "fallback_chain": "Ana modeli kullanır; çalışmıyorsa, sınıra takıldıysa veya çok yavaşsa sıradakini dener."
+    },
+    "primary": "Ana model",
+    "providerLabel": "Sağlayıcı",
+    "modelLabel": "Model",
+    "chooseProvider": "Bir sağlayıcı seçin",
+    "chooseModel": "Bir model seçin",
+    "none": "Ayarlanmadı",
+    "temperature": "Sıcaklık",
+    "temperatureUnsupported": "Bu model sıcaklık ayarını kabul etmiyor.",
+    "maxOutput": "En fazla çıktı token'ı",
+    "maxOutputHint": "Sağlayıcının varsayılanı için boş bırakın.",
+    "fallbacks": "Yedek modeller",
+    "fallbacksHint": "Bir model çalışmadığında, sınıra takıldığında, zaman aşımına uğradığında, girdiye sığmadığında veya görev bütçesini aşacağında sırayla denenir.",
+    "addFallback": "Yedek ekle",
+    "remove": "Kaldır",
+    "routes": "Yönlendirmeler",
+    "routesHint": "Ana modeli kullanmak için görev türünü boş bırakın.",
+    "useDefault": "Ana modeli kullan",
+    "categories": {
+      "general": "Genel",
+      "research": "Araştırma",
+      "reasoning": "Karmaşık akıl yürütme",
+      "fast": "Hızlı / ucuz",
+      "private": "Gizli (yalnızca yerel modeller)",
+      "vision": "Görsel"
+    },
+    "budget": "Bütçe",
+    "dailyUsd": "Günlük sınır (USD)",
+    "perTaskUsd": "Görev başına sınır (USD)",
+    "onExceed": "Aşıldığında",
+    "onExceedOptions": {
+      "stop": "Durdur",
+      "request_approval": "Onay iste"
+    },
+    "budgetHint": "Görev başına sınır, tahmini maliyeti daha yüksek olan modelleri atlar. Günlük sınırlar, ajanlar görev çalıştırdığında uygulanır (M6).",
+    "local": "yerel",
+    "pricePerM": "1M token başına ${input} / ${output}",
+    "priceUnknown": "fiyat bilinmiyor"
+  },
+  "runs": {
+    "tryTitle": "Bu ajanı dene",
+    "tryHint": "Ajanın model stratejisi üzerinden bir test istemi gönderin. Her test bir çalıştırma olarak kaydedilir.",
+    "prompt": "İstem",
+    "promptPlaceholder": "Ajana bir şey sorun…",
+    "category": "Görev türü",
+    "send": "Gönder",
+    "sending": "Düşünüyor…",
+    "response": "Yanıt",
+    "servedBy": "Yanıtlayan: {model}",
+    "tokens": "{input} giriş · {output} çıkış",
+    "cost": "~${cost}",
+    "costUnknown": "maliyet bilinmiyor",
+    "recentRuns": "Son çalıştırmalar",
+    "noRuns": "Henüz çalıştırma yok.",
+    "status": {
+      "running": "Çalışıyor",
+      "completed": "Tamamlandı",
+      "failed": "Başarısız"
+    },
+    "events": {
+      "selected": "{target} seçildi: {reason}",
+      "skipped": "{target} atlandı: {reason}",
+      "fallback": "{target} başarısız ({reason}); yedeğe geçiliyor",
+      "provider_fallback": "Sağlayıcı modeli değiştirdi: {from} → {to}",
+      "completed": "{target} üzerinde tamamlandı",
+      "failed": "Çalıştırma başarısız: {reason}"
+    },
+    "reasons": {
+      "fixed": "sabit model",
+      "fallback_chain": "yedek zincirinin ana modeli",
+      "route": "{category} yönlendirmesi",
+      "default_route": "{category} için yönlendirme yok, ana model kullanılıyor",
+      "unsupported_modality": "bu görev türünü işleyemiyor",
+      "context_limit": "girdi çok büyük",
+      "cost_threshold": "görev bütçesinin üzerinde"
+    },
+    "aiBrainNotSet": "Henüz model seçilmedi.",
+    "configureBrain": "Model seç",
+    "fallbacksLabel": "Yedekler",
+    "routesLabel": "Yönlendirmeler",
+    "budgetLabel": "Bütçe",
+    "perTask": "Görev başına {amount}",
+    "daily": "Günlük {amount}"
   }
 }

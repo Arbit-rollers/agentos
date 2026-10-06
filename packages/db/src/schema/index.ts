@@ -5,6 +5,7 @@ import {
   customType,
   index,
   integer,
+  numeric,
   jsonb,
   pgEnum,
   pgTable,
@@ -211,3 +212,158 @@ export const agentPersonalities = pgTable('agent_personalities', {
   version: integer('version').notNull().default(1),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+// ---------------------------------------------------------------------------
+// M4: Model gateway — provider connections, per-agent model config, runs (PRD §7, §22, §23)
+// ---------------------------------------------------------------------------
+
+export const providerKind = pgEnum('provider_kind', [
+  'openai',
+  'anthropic',
+  'google',
+  'ollama',
+  'openai_compatible',
+]);
+export const connectionStatus = pgEnum('connection_status', ['connected', 'error', 'untested']);
+export const modelStrategy = pgEnum('model_strategy', ['fixed', 'smart_router', 'fallback_chain']);
+export const runStatus = pgEnum('run_status', ['running', 'completed', 'failed']);
+
+export type DiscoveredModelRow = {
+  id: string;
+  displayName?: string;
+  contextWindow?: number;
+  maxOutputTokens?: number;
+};
+
+/** A workspace's AI provider account (PRD §7.4). Credentials live in `secrets`, never here. */
+export const providerConnections = pgTable(
+  'provider_connections',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    provider: providerKind('provider').notNull(),
+    name: text('name').notNull(),
+    endpoint: text('endpoint'),
+    secretId: uuid('secret_id').references(() => secrets.id, { onDelete: 'set null' }),
+    status: connectionStatus('status').notNull().default('untested'),
+    /** Models discovered from the provider's model list on the last successful test. */
+    models: jsonb('models')
+      .$type<DiscoveredModelRow[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    lastCheckedAt: timestamp('last_checked_at', { withTimezone: true }),
+    lastError: text('last_error'),
+    createdAt: createdAt(),
+  },
+  (t) => [index('provider_connections_workspace_idx').on(t.workspaceId)],
+);
+
+export type ModelParameters = { temperature?: number; maxOutputTokens?: number };
+export type BudgetPolicy = {
+  dailyUsd?: number;
+  perTaskUsd?: number;
+  onExceed: 'stop' | 'request_approval';
+};
+
+/** One per agent; independent of the agent's identity, personality and tools (PRD §7). */
+export const modelConfigs = pgTable('model_configs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  workspaceId: uuid('workspace_id')
+    .notNull()
+    .references(() => workspaces.id, { onDelete: 'cascade' }),
+  agentId: uuid('agent_id')
+    .notNull()
+    .unique()
+    .references(() => agents.id, { onDelete: 'cascade' }),
+  strategy: modelStrategy('strategy').notNull(),
+  primaryConnectionId: uuid('primary_connection_id')
+    .notNull()
+    .references(() => providerConnections.id),
+  primaryModel: text('primary_model').notNull(),
+  parameters: jsonb('parameters')
+    .$type<ModelParameters>()
+    .notNull()
+    .default(sql`'{}'::jsonb`),
+  budgetPolicy: jsonb('budget_policy')
+    .$type<BudgetPolicy>()
+    .notNull()
+    .default(sql`'{"onExceed":"stop"}'::jsonb`),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const modelRoutes = pgTable('model_routes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  modelConfigId: uuid('model_config_id')
+    .notNull()
+    .references(() => modelConfigs.id, { onDelete: 'cascade' }),
+  taskCategory: text('task_category').notNull(),
+  connectionId: uuid('connection_id')
+    .notNull()
+    .references(() => providerConnections.id),
+  model: text('model').notNull(),
+  priority: integer('priority').notNull(),
+});
+
+export const modelFallbacks = pgTable('model_fallbacks', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  modelConfigId: uuid('model_config_id')
+    .notNull()
+    .references(() => modelConfigs.id, { onDelete: 'cascade' }),
+  connectionId: uuid('connection_id')
+    .notNull()
+    .references(() => providerConnections.id),
+  model: text('model').notNull(),
+  priority: integer('priority').notNull(),
+});
+
+/** One execution (PRD §22: every run gets a run_id). Tasks link here from M6/v0.2. */
+export const runs = pgTable(
+  'runs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    agentId: uuid('agent_id')
+      .notNull()
+      .references(() => agents.id, { onDelete: 'cascade' }),
+    taskId: uuid('task_id'),
+    kind: text('kind').notNull(),
+    status: runStatus('status').notNull().default('running'),
+    strategy: modelStrategy('strategy'),
+    taskCategory: text('task_category'),
+    provider: providerKind('provider'),
+    model: text('model'),
+    inputTokens: integer('input_tokens').notNull().default(0),
+    outputTokens: integer('output_tokens').notNull().default(0),
+    /** Estimated USD; null when the model's pricing is unknown. */
+    costUsd: numeric('cost_usd', { precision: 12, scale: 6, mode: 'number' }),
+    error: text('error'),
+    startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
+    endedAt: timestamp('ended_at', { withTimezone: true }),
+  },
+  (t) => [
+    index('runs_workspace_started_idx').on(t.workspaceId, t.startedAt),
+    index('runs_agent_started_idx').on(t.agentId, t.startedAt),
+  ],
+);
+
+/** Ordered, structured record of what happened in a run: routing, fallbacks, usage. */
+export const runEvents = pgTable(
+  'run_events',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    runId: uuid('run_id')
+      .notNull()
+      .references(() => runs.id, { onDelete: 'cascade' }),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    type: text('type').notNull(),
+    payload: jsonb('payload').$type<Record<string, unknown>>().notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index('run_events_run_idx').on(t.runId, t.createdAt)],
+);

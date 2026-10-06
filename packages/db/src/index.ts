@@ -9,3 +9,6 @@ export * from './repos/sessions';
 export * from './repos/secrets';
 export * from './repos/audit';
 export * from './repos/agents';
+export * from './repos/providers';
+export * from './repos/model-configs';
+export * from './repos/runs';

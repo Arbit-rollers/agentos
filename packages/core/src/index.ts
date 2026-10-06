@@ -41,9 +41,17 @@ export {
   completeAgentSetup,
   createAgent,
   eligibleParents,
-  hasModelConfiguration,
   readinessErrors,
   updateAgentBasics,
   updatePersonality,
 } from './agents';
 export type { AgentAction, AgentBasicsInput } from './agents';
+export {
+  adapterForConnection,
+  createProviderConnection,
+  removeProviderConnection,
+  testProviderConnection,
+} from './providers';
+export type { AdapterFactory, ProviderDeps, ProviderInput } from './providers';
+export { buildSystemPrompt, canAgentRun, runAgentPrompt, saveAgentModelConfig } from './models';
+export type { ModelConfigInput, PromptRunResult } from './models';

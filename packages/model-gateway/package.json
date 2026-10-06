@@ -5,10 +5,21 @@
   "type": "module",
   "description": "Provider adapters, Smart Router, fallback chains, cost tracking (PRD §7, §24).",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./testing": "./src/testing/fake-provider.ts"
   },
   "scripts": {
     "typecheck": "tsc -p .",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "fake-provider": "tsx src/testing/serve.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.131.0",
+    "@google/genai": "2.27.0",
+    "openai": "7.28.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24",
+    "tsx": "^4.23.15"
   }
 }

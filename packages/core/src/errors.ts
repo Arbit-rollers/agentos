@@ -5,7 +5,9 @@ export type AppErrorCode =
   | 'ACCOUNT_DISABLED'
   | 'NOT_FOUND'
   | 'INVALID_TRANSITION'
-  | 'MODEL_REQUIRED';
+  | 'MODEL_REQUIRED'
+  | 'PROVIDER_IN_USE'
+  | 'MODEL_CALL_FAILED';
 
 /** Expected, user-facing failures. Anything else is a bug and should surface as a 500. */
 export class AppError extends Error {

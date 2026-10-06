@@ -111,7 +111,7 @@ Legend: **AC n** = acceptance criterion n in PRD §28. **Screen n** = screen n i
 
 ---
 
-### M4: Model Gateway
+### M4: Model Gateway ✅
 
 **Scope**
 - Tables: `provider_connections`, `model_configs`, `model_routes`, `model_fallbacks`, `model_capabilities`
@@ -125,6 +125,12 @@ Legend: **AC n** = acceptance criterion n in PRD §28. **Screen n** = screen n i
 - Audit: model config changes
 
 **Covers:** AC 6, 7, 8, 9, 10, 11, 12
+
+**As built (deviations from the scope above)**
+- The capability registry is code (`packages/model-gateway/src/registry.ts`: published Anthropic prices and limits) plus each connection's discovered model list stored on `provider_connections.models`, instead of a `model_capabilities` table. Unknown prices show as "cost unknown", never estimated.
+- `runs` and `run_events` were introduced here (planned for M6) so routing and fallback events have a home; M6 extends them for tasks and tool calls.
+- Streaming and tool calling move to M6 with the agent runtime; M4 adds a "Try this agent" test prompt on the agent page.
+- Daily budgets are stored but enforced in M6; the per-task limit already skips models whose estimated cost is higher.
 
 **Definition of done**
 - Agent A on a cloud model and agent B on local Ollama both answer a test prompt.

@@ -13,7 +13,10 @@ function flatten(tree: Tree, prefix = ''): Map<string, string> {
   return out;
 }
 
-const placeholders = (text: string) => [...text.matchAll(/\{(\w+)/g)].map((m) => m[1]).sort();
+// ICU arguments look like {name} or {name, plural, ...}; plural branch text ({No models})
+// is translated content, not an argument.
+const placeholders = (text: string) =>
+  [...new Set([...text.matchAll(/\{(\w+)(?=[},])/g)].map((m) => m[1]))].sort();
 
 const reference = flatten(messages.en as unknown as Tree);
 
