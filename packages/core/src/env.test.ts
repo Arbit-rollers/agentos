@@ -4,6 +4,7 @@ import { loadEnv } from './env';
 const base = {
   DATABASE_URL: 'postgres://agentos:agentos@localhost:5432/agentos',
   REDIS_URL: 'redis://localhost:6379',
+  AGENTOS_MASTER_KEY: Buffer.alloc(32, 1).toString('base64'),
 };
 
 describe('loadEnv', () => {
@@ -11,7 +12,6 @@ describe('loadEnv', () => {
     const env = loadEnv(base);
     expect(env.NODE_ENV).toBe('development');
     expect(env.OLLAMA_BASE_URL).toBe('http://localhost:11434');
-    expect(env.AGENTOS_MASTER_KEY).toBeUndefined();
   });
 
   it('accepts a 32-byte base64 master key', () => {
@@ -25,6 +25,6 @@ describe('loadEnv', () => {
   });
 
   it('reports every missing required variable', () => {
-    expect(() => loadEnv({})).toThrow(/DATABASE_URL[\s\S]*REDIS_URL/);
+    expect(() => loadEnv({})).toThrow(/DATABASE_URL[\s\S]*REDIS_URL[\s\S]*AGENTOS_MASTER_KEY/);
   });
 });

@@ -5,8 +5,16 @@ export const QUEUES = {
   system: 'system',
 } as const;
 
-export type SystemJob = { name: 'ping'; data: { requestedAt: string } };
 export type PingResult = { pong: true; requestedAt: string; processedAt: string };
+
+/** Jobs on the `system` queue: name → payload and result. */
+export type SystemJobs = {
+  ping: { data: { requestedAt: string }; result: PingResult };
+  'sessions.cleanup': { data: Record<string, never>; result: { deleted: number } };
+};
+export type SystemJobName = keyof SystemJobs;
+export type SystemJobData = SystemJobs[SystemJobName]['data'];
+export type SystemJobResult = SystemJobs[SystemJobName]['result'];
 
 /**
  * BullMQ workers require `maxRetriesPerRequest: null` on their connection. Connection errors
@@ -29,7 +37,7 @@ export function createRedis(redisUrl: string, label = 'redis'): Redis {
 }
 
 export function createSystemQueue(connection: Redis) {
-  return new Queue<SystemJob['data'], PingResult, SystemJob['name']>(QUEUES.system, {
+  return new Queue<SystemJobData, SystemJobResult, SystemJobName>(QUEUES.system, {
     connection,
   });
 }
