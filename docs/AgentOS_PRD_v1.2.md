@@ -24,6 +24,7 @@ LLM and remote MCP connectivity
 | 7 | §33 (new) | Internationalization: English + Turkish from day one. |
 | 8 | §34 (new) | Release plan: thin vertical slice v0.1, then v0.2–v0.6. Supersedes §27 "all MUST ship at once" and maps onto §30 phases. |
 | 9 | §35 (new) | Design system derived from the approved dark-mode visuals. |
+| 10 | §23 | `users.display_name` added (dashboard greeting, Screen 1); set at sign-up and in Settings → Profile. |
 
 ### 0.2 Locked v1.2 Decisions
 
@@ -1388,6 +1389,7 @@ Each run receives a unique `run_id`.
 ``` text
 id
 email
+display_name      (v1.2)
 password_hash / auth_provider
 locale            (v1.2: en | tr)
 status

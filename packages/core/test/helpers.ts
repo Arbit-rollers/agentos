@@ -15,7 +15,11 @@ let counter = 0;
 /** Registers a fresh user and returns their authenticated session. */
 export async function createUser(db: ReturnType<typeof useTestDb>['db'], email?: string) {
   const address = email ?? `user${++counter}@example.com`;
-  const { token } = await register(db, { email: address, password: 'correct horse battery' });
+  const { token } = await register(db, {
+    displayName: 'Test User',
+    email: address,
+    password: 'correct horse battery',
+  });
   const session = await authenticate(db, token);
   if (!session) throw new Error('registration did not produce a session');
   return { token, ...session };

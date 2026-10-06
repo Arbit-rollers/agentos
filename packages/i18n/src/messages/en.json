@@ -1,0 +1,162 @@
+{
+  "common": {
+    "appName": "AgentOS",
+    "comingIn": "Coming in {milestone}"
+  },
+  "nav": {
+    "label": "Main navigation",
+    "dashboard": "Dashboard",
+    "agents": "Agents",
+    "mcpHub": "MCP Hub",
+    "tasks": "Tasks",
+    "workflows": "Workflows",
+    "knowledge": "Knowledge",
+    "memory": "Memory",
+    "approvals": "Approvals",
+    "schedules": "Schedules",
+    "logs": "Logs",
+    "analytics": "Analytics",
+    "settings": "Settings"
+  },
+  "shell": {
+    "skipToContent": "Skip to content",
+    "search": "Search agents, tasks, tools…",
+    "openNavigation": "Open navigation",
+    "notifications": "Notifications",
+    "noNotifications": "You're all caught up.",
+    "accountMenu": "Account menu",
+    "signOut": "Sign out"
+  },
+  "command": {
+    "title": "Command palette",
+    "placeholder": "Type a page name…",
+    "empty": "No results.",
+    "goTo": "Go to"
+  },
+  "auth": {
+    "loginTitle": "Sign in to AgentOS",
+    "registerTitle": "Create your AgentOS account",
+    "name": "Name",
+    "email": "Email",
+    "password": "Password",
+    "passwordHint": "At least 10 characters.",
+    "signIn": "Sign in",
+    "signingIn": "Signing in…",
+    "createAccount": "Create account",
+    "creatingAccount": "Creating account…",
+    "newHere": "New to AgentOS?",
+    "createAccountLink": "Create an account",
+    "haveAccount": "Already have an account?",
+    "signInLink": "Sign in"
+  },
+  "errors": {
+    "invalid_email": "Enter a valid email address.",
+    "password_too_short": "Password must be at least 10 characters.",
+    "password_too_long": "Password must be at most 256 characters.",
+    "name_required": "Enter your name.",
+    "name_too_long": "Name must be at most 80 characters.",
+    "invalid_locale": "Choose a supported language.",
+    "INVALID_CREDENTIALS": "Incorrect email or password.",
+    "EMAIL_TAKEN": "An account with this email already exists.",
+    "ACCOUNT_DISABLED": "This account is disabled.",
+    "generic": "Something went wrong. Please try again."
+  },
+  "dashboard": {
+    "greetingMorning": "Good morning, {name}",
+    "greetingAfternoon": "Good afternoon, {name}",
+    "greetingEvening": "Good evening, {name}",
+    "subtitleEmpty": "Let's set up your AI agent team.",
+    "newAgent": "New Agent",
+    "stats": {
+      "activeAgents": "Active agents",
+      "paused": "{count} paused",
+      "runningTasks": "Running tasks",
+      "mcpConnections": "MCP connections",
+      "successRate": "Success rate",
+      "noRuns": "No runs yet"
+    },
+    "activeAgents": "Active agents",
+    "viewAll": "View all",
+    "agentsEmptyTitle": "No agents yet",
+    "agentsEmptyDescription": "Create your first agent: give it a role, a personality and an AI model.",
+    "recentActivity": "Recent activity",
+    "activityEmpty": "Nothing has happened yet.",
+    "taskOverview": "Task overview",
+    "last7Days": "Last 7 days",
+    "completed": "Completed",
+    "failed": "Failed",
+    "tasksEmpty": "No tasks in the last 7 days.",
+    "showTable": "Show as table",
+    "showChart": "Show as chart",
+    "tableCaption": "Completed and failed tasks per day, last 7 days",
+    "day": "Day"
+  },
+  "activity": {
+    "user_registered": "Account created",
+    "workspace_created": "Workspace created",
+    "auth_login": "Signed in",
+    "auth_login_failure": "Failed sign-in attempt",
+    "auth_login_denied": "Sign-in blocked",
+    "auth_logout": "Signed out",
+    "secret_created": "Secret stored",
+    "secret_updated": "Secret updated",
+    "secret_deleted": "Secret deleted",
+    "user_profile_updated": "Profile updated",
+    "unknown": "{action}"
+  },
+  "outcome": {
+    "success": "Success",
+    "failure": "Failed",
+    "denied": "Denied"
+  },
+  "pages": {
+    "agents": {
+      "description": "Create, configure and supervise your AI agents."
+    },
+    "mcpHub": {
+      "description": "Connect MCP servers and give agents access to their tools."
+    },
+    "tasks": {
+      "description": "Create, monitor and automate tasks for your agents."
+    },
+    "workflows": {
+      "description": "Build multi-agent workflows with MCP tools and automation."
+    },
+    "knowledge": {
+      "description": "Documents, URLs and SOPs your agents can learn from."
+    },
+    "memory": {
+      "description": "Inspect, edit and delete what your agents remember."
+    },
+    "approvals": {
+      "description": "Review risky actions before your agents take them."
+    },
+    "schedules": {
+      "description": "Run tasks and workflows on a schedule."
+    },
+    "logs": {
+      "description": "Every run, tool call and decision your agents make."
+    },
+    "analytics": {
+      "description": "Token usage, cost and agent performance."
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Manage your profile and preferences.",
+    "profile": "Profile",
+    "profileDescription": "How you appear in AgentOS and which language it uses.",
+    "displayName": "Name",
+    "email": "Email",
+    "emailHint": "Your sign-in email can't be changed yet.",
+    "language": "Language",
+    "languageHint": "Agents reply in the language of the conversation, whatever you choose here.",
+    "save": "Save changes",
+    "saving": "Saving…",
+    "saved": "Saved."
+  },
+  "languages": {
+    "en": "English",
+    "tr": "Türkçe"
+  }
+}

@@ -8,6 +8,13 @@
       "when": 1791315733945,
       "tag": "0000_m1_foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791316317115,
+      "tag": "0001_user_display_name",
+      "breakpoints": true
     }
   ]
 }

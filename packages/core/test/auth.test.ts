@@ -42,16 +42,30 @@ describe('register', () => {
   it('rejects duplicate emails case-insensitively', async () => {
     await createUser(db, 'bob@example.com');
     await expectAppError(
-      register(db, { email: 'BOB@example.com', password: PASSWORD }),
+      register(db, { displayName: 'Bob', email: 'BOB@example.com', password: PASSWORD }),
       'EMAIL_TAKEN',
     );
   });
 
-  it('validates email and password length', async () => {
-    await expect(register(db, { email: 'nope', password: 'short' })).rejects.toMatchObject({
+  it('reports validation failures as translatable codes', async () => {
+    await expect(
+      register(db, { displayName: ' ', email: 'nope', password: 'short' }),
+    ).rejects.toMatchObject({
       code: 'VALIDATION',
-      details: { email: expect.any(Array), password: expect.any(Array) },
+      details: {
+        displayName: ['name_required'],
+        email: ['invalid_email'],
+        password: ['password_too_short'],
+      },
     });
+  });
+
+  it('keeps a supported locale and falls back to English otherwise', async () => {
+    const input = { displayName: 'Ayşe', password: PASSWORD };
+    const tr = await register(db, { ...input, email: 'ayse@example.com', locale: 'tr' });
+    expect((await authenticate(db, tr.token))?.user.locale).toBe('tr');
+    const xx = await register(db, { ...input, email: 'xx@example.com', locale: 'xx' });
+    expect((await authenticate(db, xx.token))?.user.locale).toBe('en');
   });
 });
 

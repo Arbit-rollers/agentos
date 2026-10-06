@@ -31,3 +31,6 @@ export {
   register,
 } from './auth';
 export type { AuthenticatedSession, Locale, SessionToken } from './auth';
+export { updateProfile } from './profile';
+export { getDashboardSummary } from './dashboard';
+export type { DashboardSummary, TaskOverviewDay } from './dashboard';

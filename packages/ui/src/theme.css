@@ -1,0 +1,45 @@
+/*
+ * AgentOS design tokens (PRD §35). Dark is the only v0.1 theme; values live in custom
+ * properties so a light theme can override them later without touching components.
+ */
+@theme {
+  --color-bg: #0b0f1a;
+  --color-surface: #121829;
+  --color-surface-2: #1a2135;
+  --color-surface-3: #222a40;
+  --color-border: #232b42;
+  --color-border-strong: #2f3956;
+  --color-text: #e6e9f2;
+  --color-text-muted: #8a93ad;
+  --color-text-subtle: #6b7490;
+  --color-primary: #3b5bff;
+  --color-primary-hover: #5272ff;
+  --color-primary-fg: #ffffff;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-info: #38bdf8;
+
+  /* Chart series (validated for CVD separation on --color-surface; see dataviz notes). */
+  --color-series-1: #3987e5;
+  --color-series-2: #d95926;
+  --color-grid: #232b42;
+
+  --radius-card: 0.75rem;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+  body {
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}

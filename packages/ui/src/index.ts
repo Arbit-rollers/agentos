@@ -1,3 +1,21 @@
-// AgentOS design system components (PRD §35).
-// Implemented in later milestones; see docs/ROADMAP.md.
-export {};
+export { cn } from './cn';
+export { Avatar } from './avatar';
+export { Button, buttonVariants } from './button';
+export type { ButtonProps } from './button';
+export { Card, CardContent, CardHeader, CardTitle } from './card';
+export { Dialog, DialogClose, DialogContent, DialogTrigger } from './dialog';
+export { EmptyState } from './empty-state';
+export { Field, Input, inputClassName } from './field';
+export { FilterTabs } from './filter-tabs';
+export type { FilterTab } from './filter-tabs';
+export { Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger } from './menu';
+export { PageHeader } from './page-header';
+export { Select } from './select';
+export type { SelectOption } from './select';
+export { Slider } from './slider';
+export { StatTile } from './stat-tile';
+export { StatusBadge } from './status-badge';
+export type { StatusTone } from './status-badge';
+export { Stepper } from './stepper';
+export { Switch } from './switch';
+export { Table, TableCell, TableHead, TableHeaderCell, TableRow } from './table';
