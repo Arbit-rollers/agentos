@@ -17,6 +17,7 @@ import {
   type Workspace,
   type WorkspaceRole,
 } from '@agentos/db';
+import { locales, type Locale } from '@agentos/i18n';
 import { z } from 'zod';
 import { recordAudit } from './audit';
 import { AppError } from './errors';
@@ -26,22 +27,31 @@ export const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 /** Sessions are extended on use once less than half of their lifetime remains. */
 const SESSION_RENEW_THRESHOLD_MS = SESSION_TTL_MS / 2;
 
-export const SUPPORTED_LOCALES = ['en', 'tr'] as const;
-export type Locale = (typeof SUPPORTED_LOCALES)[number];
+export { locales as SUPPORTED_LOCALES, type Locale } from '@agentos/i18n';
 
+// Validation messages are stable codes; the UI translates them (PRD §33).
 const email = z
   .string()
   .trim()
   .toLowerCase()
-  .pipe(z.email({ error: 'Enter a valid email address.' }));
+  .pipe(z.email({ error: 'invalid_email' }));
+
+export const displayNameSchema = z
+  .string()
+  .trim()
+  .min(1, { error: 'name_required' })
+  .max(80, { error: 'name_too_long' });
+
+export const localeSchema = z.enum(locales, { error: 'invalid_locale' });
 
 const registerSchema = z.object({
+  displayName: displayNameSchema,
   email,
   password: z
     .string()
-    .min(10, { error: 'Password must be at least 10 characters.' })
-    .max(256, { error: 'Password must be at most 256 characters.' }),
-  locale: z.enum(SUPPORTED_LOCALES).default('en'),
+    .min(10, { error: 'password_too_short' })
+    .max(256, { error: 'password_too_long' }),
+  locale: localeSchema.catch('en'),
 });
 
 const loginSchema = z.object({ email, password: z.string().min(1).max(256) });
@@ -50,14 +60,14 @@ export type SessionToken = { token: string; expiresAt: Date };
 
 export type AuthenticatedSession = {
   ctx: TenantContext;
-  user: Pick<User, 'id' | 'email' | 'locale'>;
+  user: Pick<User, 'id' | 'email' | 'displayName'> & { locale: Locale };
   workspace: Pick<Workspace, 'id' | 'name'>;
   role: WorkspaceRole;
   /** Set when the session was extended; the caller should re-issue the cookie. */
   renewedExpiresAt?: Date;
 };
 
-function parse<T extends z.ZodType>(schema: T, input: unknown): z.infer<T> {
+export function parse<T extends z.ZodType>(schema: T, input: unknown): z.infer<T> {
   const result = schema.safeParse(input);
   if (!result.success) {
     throw new AppError('VALIDATION', 'Invalid input', z.flattenError(result.error).fieldErrors);
@@ -83,7 +93,7 @@ async function startSession(db: Database, userId: string, workspaceId: string, n
  */
 export async function register(
   db: Database,
-  input: { email: unknown; password: unknown; locale?: unknown },
+  input: { displayName: unknown; email: unknown; password: unknown; locale?: unknown },
   now = new Date(),
 ): Promise<SessionToken> {
   const data = parse(registerSchema, input);
@@ -94,6 +104,7 @@ export async function register(
 
   const { user, workspace } = await withTransaction(db, async (tx) => {
     const user = await insertUser(tx, {
+      displayName: data.displayName,
       email: data.email,
       passwordHash,
       locale: data.locale,
@@ -205,7 +216,12 @@ export async function authenticate(
 
   return {
     ctx: { userId: user.id, workspaceId: membership.workspace.id },
-    user: { id: user.id, email: user.email, locale: user.locale },
+    user: {
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      locale: localeSchema.catch('en').parse(user.locale),
+    },
     workspace: { id: membership.workspace.id, name: membership.workspace.name },
     role: membership.role,
     ...(renewedExpiresAt && { renewedExpiresAt }),

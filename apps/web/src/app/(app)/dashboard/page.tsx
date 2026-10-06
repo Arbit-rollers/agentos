@@ -1,38 +1,121 @@
-import { listAuditLogs } from '@agentos/db';
+import { Activity, Bot, CircleCheck, Plug, Plus } from 'lucide-react';
+import type { Metadata } from 'next';
+import Link from 'next/link';
+import { getFormatter, getTranslations } from 'next-intl/server';
+import { getDashboardSummary } from '@agentos/core';
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  EmptyState,
+  PageHeader,
+  StatTile,
+} from '@agentos/ui';
+import { Greeting } from '@/components/dashboard/greeting';
+import { RecentActivity } from '@/components/dashboard/recent-activity';
+import { TaskOverviewChart } from '@/components/dashboard/task-overview-chart';
 import { requireSession } from '@/server/session';
 import { getServices } from '@/server/services';
 
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getTranslations('nav'))('dashboard') };
+}
+
 export default async function DashboardPage() {
-  const { ctx } = await requireSession();
-  const events = await listAuditLogs(getServices().db, ctx, { limit: 20 });
+  const { ctx, user } = await requireSession();
+  const summary = await getDashboardSummary(getServices().db, ctx);
+  const t = await getTranslations('dashboard');
+  const format = await getFormatter();
+
+  const newAgent = (
+    <Button asChild>
+      <Link href="/agents">
+        <Plus aria-hidden />
+        {t('newAgent')}
+      </Link>
+    </Button>
+  );
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
-        <p className="text-text-muted">The full dashboard arrives in M2. Recent activity:</p>
+    <>
+      <PageHeader
+        title={<Greeting name={user.displayName || user.email} />}
+        description={t('subtitleEmpty')}
+        actions={newAgent}
+      />
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatTile
+          icon={<Bot />}
+          label={t('stats.activeAgents')}
+          value={format.number(summary.agents.active)}
+          detail={
+            summary.agents.paused > 0
+              ? t('stats.paused', { count: summary.agents.paused })
+              : undefined
+          }
+        />
+        <StatTile
+          icon={<Activity />}
+          label={t('stats.runningTasks')}
+          value={format.number(summary.tasks.running)}
+        />
+        <StatTile
+          icon={<Plug />}
+          label={t('stats.mcpConnections')}
+          value={format.number(summary.mcpConnections.connected)}
+        />
+        <StatTile
+          icon={<CircleCheck />}
+          label={t('stats.successRate')}
+          value={
+            summary.successRate === null
+              ? '—'
+              : format.number(summary.successRate, { style: 'percent' })
+          }
+          detail={summary.successRate === null ? t('stats.noRuns') : undefined}
+        />
       </div>
-      <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
-        {events.map((event) => (
-          <li key={event.id} className="flex items-center justify-between px-4 py-3 text-sm">
-            <span className="font-mono">{event.action}</span>
-            <span className="flex items-center gap-3">
-              <span
-                className={
-                  event.outcome === 'success'
-                    ? 'rounded-full bg-success/15 px-2 py-0.5 text-success'
-                    : 'rounded-full bg-danger/15 px-2 py-0.5 text-danger'
-                }
-              >
-                {event.outcome}
-              </span>
-              <time className="text-text-muted" dateTime={event.createdAt.toISOString()}>
-                {event.createdAt.toLocaleString('en')}
-              </time>
-            </span>
-          </li>
-        ))}
-      </ul>
-    </div>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>{t('activeAgents')}</CardTitle>
+          <Link href="/agents" className="text-sm text-primary hover:underline">
+            {t('viewAll')}
+          </Link>
+        </CardHeader>
+        <CardContent>
+          <EmptyState
+            icon={<Bot />}
+            title={t('agentsEmptyTitle')}
+            description={t('agentsEmptyDescription')}
+            action={newAgent}
+            className="py-6"
+          />
+        </CardContent>
+      </Card>
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('recentActivity')}</CardTitle>
+          </CardHeader>
+          <CardContent className="pb-2">
+            <RecentActivity events={summary.recentActivity} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('taskOverview')}</CardTitle>
+            <span className="text-xs text-text-muted">{t('last7Days')}</span>
+          </CardHeader>
+          <CardContent>
+            <TaskOverviewChart days={summary.taskOverview} />
+          </CardContent>
+        </Card>
+      </div>
+    </>
   );
 }

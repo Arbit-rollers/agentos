@@ -1,26 +1,15 @@
-import { expect, test, type Page } from '@playwright/test';
-
-const PASSWORD = 'correct horse battery';
-const uniqueEmail = (name: string) =>
-  `${name}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`;
-
-async function registerUser(page: Page, email: string) {
-  await page.goto('/register');
-  await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Password').fill(PASSWORD);
-  await page.getByRole('button', { name: 'Create account' }).click();
-  await expect(page).toHaveURL(/\/dashboard$/);
-}
+import { expect, test } from '@playwright/test';
+import { PASSWORD, registerUser, signOut, uniqueEmail } from './helpers';
 
 test('register, sign out and sign back in (AC 1)', async ({ page }) => {
-  const email = uniqueEmail('alice');
-  await registerUser(page, email);
+  const email = await registerUser(page, uniqueEmail('alice'), 'Alice');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Alice');
+  await expect(page.getByText('Account created')).toBeVisible();
+  await page.getByRole('button', { name: 'Account menu' }).click();
   await expect(page.getByTestId('user-email')).toHaveText(email);
-  await expect(page.getByText('Personal')).toBeVisible();
-  await expect(page.getByText('user.registered')).toBeVisible();
+  await page.keyboard.press('Escape');
 
-  await page.getByRole('button', { name: 'Sign out' }).click();
-  await expect(page).toHaveURL(/\/login$/);
+  await signOut(page);
   await page.goto('/dashboard');
   await expect(page).toHaveURL(/\/login$/);
 
@@ -28,7 +17,7 @@ test('register, sign out and sign back in (AC 1)', async ({ page }) => {
   await page.getByLabel('Password').fill(PASSWORD);
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
-  await expect(page.getByText('auth.login').first()).toBeVisible();
+  await expect(page.getByText('Signed in').first()).toBeVisible();
 });
 
 test('shows errors for bad credentials and invalid sign-up input', async ({ page }) => {
@@ -44,12 +33,13 @@ test('shows errors for bad credentials and invalid sign-up input', async ({ page
   await page.getByLabel('Email').fill('not-an-email');
   await page.getByLabel('Password').fill('short');
   await page.getByRole('button', { name: 'Create account' }).click();
+  await expect(page.getByText('Enter your name.')).toBeVisible();
   await expect(page.getByText('Enter a valid email address.')).toBeVisible();
   await expect(page.getByText('Password must be at least 10 characters.')).toBeVisible();
 });
 
 test('the session cookie is httpOnly', async ({ page, context }) => {
-  await registerUser(page, uniqueEmail('cookie'));
+  await registerUser(page);
   const cookie = (await context.cookies()).find((c) => c.name === 'agentos_session');
   expect(cookie?.httpOnly).toBe(true);
   expect(cookie?.sameSite).toBe('Lax');

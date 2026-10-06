@@ -68,7 +68,7 @@ Legend: **AC n** = acceptance criterion n in PRD §28. **Screen n** = screen n i
 
 ---
 
-### M2: App Shell, Design System, i18n, Dashboard
+### M2: App Shell, Design System, i18n, Dashboard ✅
 
 **Scope**
 - Design tokens (PRD §35) in Tailwind config; dark theme

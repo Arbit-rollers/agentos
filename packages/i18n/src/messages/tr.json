@@ -1,0 +1,162 @@
+{
+  "common": {
+    "appName": "AgentOS",
+    "comingIn": "{milestone} sürümünde geliyor"
+  },
+  "nav": {
+    "label": "Ana menü",
+    "dashboard": "Gösterge Paneli",
+    "agents": "Ajanlar",
+    "mcpHub": "MCP Merkezi",
+    "tasks": "Görevler",
+    "workflows": "İş Akışları",
+    "knowledge": "Bilgi",
+    "memory": "Hafıza",
+    "approvals": "Onaylar",
+    "schedules": "Zamanlamalar",
+    "logs": "Kayıtlar",
+    "analytics": "Analitik",
+    "settings": "Ayarlar"
+  },
+  "shell": {
+    "skipToContent": "İçeriğe geç",
+    "search": "Ajan, görev, araç ara…",
+    "openNavigation": "Menüyü aç",
+    "notifications": "Bildirimler",
+    "noNotifications": "Yeni bildirim yok.",
+    "accountMenu": "Hesap menüsü",
+    "signOut": "Çıkış yap"
+  },
+  "command": {
+    "title": "Komut paleti",
+    "placeholder": "Sayfa adı yazın…",
+    "empty": "Sonuç bulunamadı.",
+    "goTo": "Git"
+  },
+  "auth": {
+    "loginTitle": "AgentOS'a giriş yapın",
+    "registerTitle": "AgentOS hesabınızı oluşturun",
+    "name": "Ad",
+    "email": "E-posta",
+    "password": "Şifre",
+    "passwordHint": "En az 10 karakter.",
+    "signIn": "Giriş yap",
+    "signingIn": "Giriş yapılıyor…",
+    "createAccount": "Hesap oluştur",
+    "creatingAccount": "Hesap oluşturuluyor…",
+    "newHere": "AgentOS'ta yeni misiniz?",
+    "createAccountLink": "Hesap oluşturun",
+    "haveAccount": "Zaten hesabınız var mı?",
+    "signInLink": "Giriş yapın"
+  },
+  "errors": {
+    "invalid_email": "Geçerli bir e-posta adresi girin.",
+    "password_too_short": "Şifre en az 10 karakter olmalıdır.",
+    "password_too_long": "Şifre en fazla 256 karakter olabilir.",
+    "name_required": "Adınızı girin.",
+    "name_too_long": "Ad en fazla 80 karakter olabilir.",
+    "invalid_locale": "Desteklenen bir dil seçin.",
+    "INVALID_CREDENTIALS": "E-posta veya şifre hatalı.",
+    "EMAIL_TAKEN": "Bu e-posta adresiyle kayıtlı bir hesap zaten var.",
+    "ACCOUNT_DISABLED": "Bu hesap devre dışı bırakılmış.",
+    "generic": "Bir sorun oluştu. Lütfen tekrar deneyin."
+  },
+  "dashboard": {
+    "greetingMorning": "Günaydın, {name}",
+    "greetingAfternoon": "İyi günler, {name}",
+    "greetingEvening": "İyi akşamlar, {name}",
+    "subtitleEmpty": "Haydi yapay zekâ ajan ekibinizi kuralım.",
+    "newAgent": "Yeni Ajan",
+    "stats": {
+      "activeAgents": "Aktif ajanlar",
+      "paused": "{count} duraklatıldı",
+      "runningTasks": "Çalışan görevler",
+      "mcpConnections": "MCP bağlantıları",
+      "successRate": "Başarı oranı",
+      "noRuns": "Henüz çalıştırma yok"
+    },
+    "activeAgents": "Aktif ajanlar",
+    "viewAll": "Tümünü gör",
+    "agentsEmptyTitle": "Henüz ajan yok",
+    "agentsEmptyDescription": "İlk ajanınızı oluşturun: ona bir rol, bir kişilik ve bir yapay zekâ modeli verin.",
+    "recentActivity": "Son etkinlikler",
+    "activityEmpty": "Henüz bir etkinlik yok.",
+    "taskOverview": "Görev özeti",
+    "last7Days": "Son 7 gün",
+    "completed": "Tamamlanan",
+    "failed": "Başarısız",
+    "tasksEmpty": "Son 7 günde görev yok.",
+    "showTable": "Tablo olarak göster",
+    "showChart": "Grafik olarak göster",
+    "tableCaption": "Son 7 günde günlük tamamlanan ve başarısız görevler",
+    "day": "Gün"
+  },
+  "activity": {
+    "user_registered": "Hesap oluşturuldu",
+    "workspace_created": "Çalışma alanı oluşturuldu",
+    "auth_login": "Giriş yapıldı",
+    "auth_login_failure": "Başarısız giriş denemesi",
+    "auth_login_denied": "Giriş engellendi",
+    "auth_logout": "Çıkış yapıldı",
+    "secret_created": "Gizli anahtar kaydedildi",
+    "secret_updated": "Gizli anahtar güncellendi",
+    "secret_deleted": "Gizli anahtar silindi",
+    "user_profile_updated": "Profil güncellendi",
+    "unknown": "{action}"
+  },
+  "outcome": {
+    "success": "Başarılı",
+    "failure": "Başarısız",
+    "denied": "Reddedildi"
+  },
+  "pages": {
+    "agents": {
+      "description": "Yapay zekâ ajanlarınızı oluşturun, yapılandırın ve yönetin."
+    },
+    "mcpHub": {
+      "description": "MCP sunucularını bağlayın ve ajanlara araçlarına erişim verin."
+    },
+    "tasks": {
+      "description": "Ajanlarınız için görev oluşturun, izleyin ve otomatikleştirin."
+    },
+    "workflows": {
+      "description": "MCP araçları ve otomasyonla çok ajanlı iş akışları kurun."
+    },
+    "knowledge": {
+      "description": "Ajanlarınızın öğrenebileceği belgeler, bağlantılar ve SOP'ler."
+    },
+    "memory": {
+      "description": "Ajanlarınızın hatırladıklarını inceleyin, düzenleyin ve silin."
+    },
+    "approvals": {
+      "description": "Riskli işlemleri ajanlarınız gerçekleştirmeden önce inceleyin."
+    },
+    "schedules": {
+      "description": "Görevleri ve iş akışlarını zamanlanmış olarak çalıştırın."
+    },
+    "logs": {
+      "description": "Ajanlarınızın her çalıştırması, araç çağrısı ve kararı."
+    },
+    "analytics": {
+      "description": "Token kullanımı, maliyet ve ajan performansı."
+    }
+  },
+  "settings": {
+    "title": "Ayarlar",
+    "subtitle": "Profilinizi ve tercihlerinizi yönetin.",
+    "profile": "Profil",
+    "profileDescription": "AgentOS'ta nasıl görüneceğiniz ve hangi dili kullanacağı.",
+    "displayName": "Ad",
+    "email": "E-posta",
+    "emailHint": "Giriş e-postanız şimdilik değiştirilemez.",
+    "language": "Dil",
+    "languageHint": "Burada ne seçerseniz seçin, ajanlar sohbetin dilinde yanıt verir.",
+    "save": "Değişiklikleri kaydet",
+    "saving": "Kaydediliyor…",
+    "saved": "Kaydedildi."
+  },
+  "languages": {
+    "en": "English",
+    "tr": "Türkçe"
+  }
+}
