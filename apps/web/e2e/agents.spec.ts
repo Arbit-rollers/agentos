@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { createAgentDraft, nextButton, nextLink, registerUser } from './helpers';
+import { createAgentDraft, nextButton, registerUser } from './helpers';
 
 test.describe('agents (M3)', () => {
   test.beforeEach(async ({ page }) => {
@@ -22,11 +22,11 @@ test.describe('agents (M3)', () => {
     await expect(page.getByText('Verifies claims before relying on them')).toBeVisible();
     await nextButton(page).click();
 
-    // Steps 3–4 are placeholders until M5.
-    await expect(page.getByText(/choose this agent's tools here in M5/)).toBeVisible();
-    await nextLink(page).click();
+    // Steps 3–4 with no MCP servers connected: the agent continues without tools.
+    await expect(page.getByText('No MCP servers connected yet.')).toBeVisible();
+    await nextButton(page).click();
     await expect(page).toHaveURL(new RegExp(`/agents/${id}/setup/permissions$`));
-    await nextLink(page).click();
+    await nextButton(page).click();
 
     await expect(page).toHaveURL(new RegExp(`/agents/${id}/setup/review$`));
     await expect(page.getByText('Aviation Fact Checker')).toBeVisible();

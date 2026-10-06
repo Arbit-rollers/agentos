@@ -8,7 +8,6 @@ import type { NavKey } from '@/components/shell/nav-items';
 // Sections that are in the navigation but not built yet, with the roadmap milestone that
 // delivers each (docs/ROADMAP.md). A real page at the same path replaces its entry here.
 const UPCOMING = {
-  mcp: { nav: 'mcpHub', milestone: 'M5' },
   tasks: { nav: 'tasks', milestone: 'v0.2' },
   workflows: { nav: 'workflows', milestone: 'v0.5' },
   knowledge: { nav: 'knowledge', milestone: 'v0.3' },

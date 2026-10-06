@@ -10,7 +10,16 @@ const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
 const nextConfig: NextConfig = {
   // Workspace packages ship TypeScript source.
-  transpilePackages: ['@agentos/core', '@agentos/db', '@agentos/i18n', '@agentos/ui'],
+  transpilePackages: [
+    '@agentos/core',
+    '@agentos/db',
+    '@agentos/i18n',
+    '@agentos/ui',
+    '@agentos/personality',
+    '@agentos/policy',
+    '@agentos/model-gateway',
+    '@agentos/mcp-gateway',
+  ],
   serverExternalPackages: ['bullmq', 'ioredis', 'postgres', '@node-rs/argon2'],
 };
 

@@ -5,10 +5,23 @@
   "type": "module",
   "description": "MCP client: connections, discovery, tool registry, execution, health (PRD §8, §24).",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./testing": "./src/testing/fake-mcp-server.ts"
   },
   "scripts": {
     "typecheck": "tsc -p .",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "fake-mcp": "tsx src/testing/serve.ts"
+  },
+  "dependencies": {
+    "@agentos/policy": "workspace:*",
+    "@modelcontextprotocol/sdk": "1.32.1"
+  },
+  "devDependencies": {
+    "@types/express": "5.0.6",
+    "@types/node": "^24",
+    "express": "5.2.1",
+    "tsx": "^4.23.15",
+    "zod": "^4.6.5"
   }
 }

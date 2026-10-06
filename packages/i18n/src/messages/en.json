@@ -103,7 +103,29 @@
     "provider_bad_request": "The provider rejected the request.",
     "provider_not_found": "The provider doesn't know this model or endpoint.",
     "provider_unknown": "Unexpected provider error.",
-    "no_eligible_model": "None of this agent's models can handle this task type."
+    "no_eligible_model": "None of this agent's models can handle this task type.",
+    "mcp_name_required": "Give this server a name.",
+    "mcp_name_too_long": "Name must be at most 80 characters.",
+    "token_required": "Enter the token.",
+    "invalid_headers": "Use one 'Name: value' header per line (Host and Content-Length aren't allowed).",
+    "mcp_auth": "The server's sign-in failed.",
+    "unknown_tool": "That tool isn't available in this workspace.",
+    "tool_not_granted": "This agent doesn't have that tool.",
+    "permission_looser_than_default": "An agent can't be less restricted than the workspace default.",
+    "invalid_permission": "Choose a valid permission.",
+    "MCP_UNAVAILABLE": "The MCP server couldn't be reached.",
+    "TOOL_BLOCKED": "This tool is blocked for this agent.",
+    "APPROVAL_REQUIRED": "This action needs approval.",
+    "not_granted": "The agent wasn't granted this tool.",
+    "blocked": "Blocked by permission settings.",
+    "tool_disabled": "This tool is disabled.",
+    "connection_disabled": "This MCP server is disabled.",
+    "approval_required": "Approval required.",
+    "high_risk_category": "High-risk action: approval required.",
+    "mcp_auth_err": "Sign-in required.",
+    "mcp_unavailable": "Couldn't reach the MCP server.",
+    "mcp_timeout": "The MCP server timed out.",
+    "mcp_protocol": "The MCP server returned an unexpected response."
   },
   "dashboard": {
     "greetingMorning": "Good morning, {name}",
@@ -154,7 +176,19 @@
     "agent_status_changed": "Agent status changed",
     "provider_connected": "AI provider connected",
     "provider_removed": "AI provider removed",
-    "agent_model_changed": "Agent model changed"
+    "agent_model_changed": "Agent model changed",
+    "mcp_connected": "MCP server connected",
+    "mcp_authorized": "MCP server signed in",
+    "mcp_removed": "MCP server disconnected",
+    "mcp_enabled": "MCP server enabled",
+    "mcp_disabled": "MCP server disabled",
+    "mcp_tool_defaults_changed": "Tool default permission changed",
+    "agent_tools_changed": "Agent tools changed",
+    "agent_permissions_changed": "Agent permissions changed",
+    "tool_called": "Tool called",
+    "tool_called_failure": "Tool call failed",
+    "tool_blocked": "Tool call blocked",
+    "tool_approval_required": "Tool call needs approval"
   },
   "outcome": {
     "success": "Success",
@@ -164,9 +198,6 @@
   "pages": {
     "agents": {
       "description": "Create, configure and supervise your AI agents."
-    },
-    "mcpHub": {
-      "description": "Connect MCP servers and give agents access to their tools."
     },
     "tasks": {
       "description": "Create, monitor and automate tasks for your agents."
@@ -595,5 +626,185 @@
     "budgetLabel": "Budget",
     "perTask": "{amount} per task",
     "daily": "{amount} per day"
+  },
+  "mcp": {
+    "title": "MCP Hub",
+    "subtitle": "Connect and manage your MCP servers. Give agents access to powerful tools.",
+    "connect": "Connect MCP Server",
+    "filters": {
+      "all": "All",
+      "connected": "Connected",
+      "available": "Available",
+      "custom": "Custom",
+      "providers": "AI Providers"
+    },
+    "filtersLabel": "MCP Hub sections",
+    "status": {
+      "connected": "Connected",
+      "error": "Error",
+      "needs_auth": "Needs sign-in",
+      "untested": "Not tested",
+      "disabled": "Disabled"
+    },
+    "tools": "{count, plural, =0 {No tools} one {# tool} other {# tools}}",
+    "manage": "Manage",
+    "connectTemplate": "Connect",
+    "aiProvider": "AI Provider",
+    "emptyTitle": "No MCP servers yet",
+    "emptyDescription": "Connect a server to discover its tools. Nothing is shared with agents until you grant it.",
+    "templates": {
+      "google_workspace": {
+        "name": "Google Workspace",
+        "description": "Gmail, Docs, Drive, Sheets, Calendar and more."
+      },
+      "github": {
+        "name": "GitHub",
+        "description": "Repositories, issues, pull requests and Actions."
+      },
+      "notion": {
+        "name": "Notion",
+        "description": "Pages, databases and search."
+      },
+      "slack": {
+        "name": "Slack",
+        "description": "Messages, channels and search."
+      },
+      "linear": {
+        "name": "Linear",
+        "description": "Issues, projects and cycles."
+      },
+      "instagram": {
+        "name": "Instagram",
+        "description": "Analytics, content and publishing."
+      },
+      "youtube": {
+        "name": "YouTube",
+        "description": "Search, analytics and uploads."
+      }
+    },
+    "templateHint": "Paste the server URL from the provider's MCP documentation.",
+    "form": {
+      "title": "Connect an MCP server",
+      "templateTitle": "Connect {name}",
+      "name": "Name",
+      "endpoint": "Server URL",
+      "endpointHint": "The MCP endpoint, e.g. https://example.com/mcp",
+      "transport": "Transport",
+      "transports": {
+        "streamable_http": "Streamable HTTP (recommended)",
+        "sse": "HTTP + SSE (legacy)"
+      },
+      "authType": "Authentication",
+      "authTypes": {
+        "none": "None",
+        "bearer": "Bearer token",
+        "headers": "Custom headers",
+        "oauth": "OAuth (sign in)"
+      },
+      "token": "Token",
+      "tokenHint": "Stored encrypted; never shown again.",
+      "headers": "Headers",
+      "headersHint": "One per line, e.g. X-API-Key: abc123. Stored encrypted.",
+      "oauthHint": "You'll be sent to the server to sign in, then brought back here.",
+      "submit": "Connect",
+      "submitting": "Connecting…",
+      "cancel": "Cancel"
+    },
+    "detail": {
+      "tabs": {
+        "overview": "Overview",
+        "tools": "Tools",
+        "authentication": "Authentication",
+        "settings": "Settings",
+        "logs": "Logs"
+      },
+      "test": "Test Connection",
+      "testing": "Testing…",
+      "disconnect": "Disconnect",
+      "confirmDisconnect": "Click again to disconnect",
+      "server": "Server",
+      "transport": "Transport",
+      "endpoint": "Endpoint",
+      "lastChecked": "Last check",
+      "never": "Never",
+      "resources": "Resources",
+      "noResources": "This server publishes no resources.",
+      "assignedAgents": "Assigned agents",
+      "noAgents": "No agent uses this server yet.",
+      "searchTools": "Search tools…",
+      "refreshTools": "Refresh Tools",
+      "refreshing": "Refreshing…",
+      "toolName": "Tool",
+      "description": "Description",
+      "permission": "Default permission",
+      "enabled": "Enabled",
+      "unavailable": "No longer offered by the server",
+      "defaultsHint": "Workspace defaults. Agents can be given the same or a stricter setting, never a looser one.",
+      "authType": "Method",
+      "reauthorize": "Sign in again",
+      "authOk": "Signed in.",
+      "needsAuth": "Sign-in required before tools can be used.",
+      "settingsEnabled": "Connection enabled",
+      "settingsEnabledHint": "When off, no agent can call this server's tools.",
+      "noLogs": "No activity yet.",
+      "oauthError": "Sign-in failed. Try again.",
+      "connectedNotice": "Connected. Tools discovered."
+    },
+    "errorCodes": {
+      "auth": "The server rejected the credentials or needs sign-in.",
+      "unavailable": "Couldn't reach the server.",
+      "timeout": "The server didn't answer in time.",
+      "protocol": "The server didn't respond like an MCP server — check the URL and transport.",
+      "tool_not_found": "Tool not found."
+    }
+  },
+  "permissions": {
+    "AUTO_ALLOW": "Auto allow",
+    "APPROVAL_REQUIRED": "Approval required",
+    "BLOCKED": "Blocked"
+  },
+  "riskCategories": {
+    "send_email": "Send emails",
+    "calendar_write": "Create calendar events",
+    "publish_social": "Publish to social media",
+    "payments": "Make payments",
+    "delete_files": "Delete files",
+    "run_code": "Run external code",
+    "change_permissions": "Change permissions"
+  },
+  "toolsStep": {
+    "serversTitle": "MCP Connections",
+    "serversHint": "Select which MCP servers and tools this agent can use.",
+    "search": "Search MCP servers or tools…",
+    "available": "Available MCP servers",
+    "selectAll": "Select all",
+    "selected": "{selected}/{total} selected",
+    "toolsOf": "{name} tools",
+    "noServers": "No MCP servers connected yet.",
+    "noServersHint": "Connect one in the MCP Hub, then come back.",
+    "goToHub": "Go to MCP Hub",
+    "noneSelected": "No tools selected — the agent will work without tools."
+  },
+  "permissionsStep": {
+    "title": "Tool Permissions",
+    "hint": "Set what this agent is allowed to do with each tool.",
+    "filtersLabel": "Filter tools by permission",
+    "filters": {
+      "all": "All Tools",
+      "AUTO_ALLOW": "Auto Allow",
+      "APPROVAL_REQUIRED": "Approval Required",
+      "BLOCKED": "Blocked"
+    },
+    "approvalTitle": "Approval Settings",
+    "approvalToggle": "Require approval for high-risk actions",
+    "approvalHint": "The agent will request approval for sensitive actions.",
+    "highRisk": "High-risk actions",
+    "noTools": "This agent has no tools. Choose some on the previous step, or continue without.",
+    "capped": "Workspace default: {mode}"
+  },
+  "agentTools": {
+    "title": "Tools",
+    "none": "No tools granted.",
+    "manage": "Manage tools"
   }
 }

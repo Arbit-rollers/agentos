@@ -14,7 +14,9 @@ function createServices() {
   const secrets = createSecretStore(db, createSecretCipher(env.AGENTOS_MASTER_KEY));
   /** Model providers decrypt keys through the secret store only at call time. */
   const providerDeps = { secrets };
-  return { env, db, sql, redis, secrets, providerDeps };
+  /** MCP credentials and OAuth state, decrypted only at call time (PRD §21). */
+  const mcpDeps = { secrets, appUrl: env.APP_URL };
+  return { env, db, sql, redis, secrets, providerDeps, mcpDeps };
 }
 
 export function getServices() {

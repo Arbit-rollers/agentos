@@ -4,9 +4,16 @@ import Link from 'next/link';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 import { allowedActions, canAgentRun } from '@agentos/core';
-import { findAgent, listAgentRuns, listChildAgents, listProviderConnections } from '@agentos/db';
+import {
+  findAgent,
+  listAgentRuns,
+  listAgentToolGrants,
+  listChildAgents,
+  listProviderConnections,
+} from '@agentos/db';
+import { stricter } from '@agentos/policy';
 import { TRAITS, compilePersonality, normalizeTraits } from '@agentos/personality';
-import { Button, Card, CardContent, CardHeader, CardTitle } from '@agentos/ui';
+import { Button, Card, CardContent, CardHeader, CardTitle, StatusBadge } from '@agentos/ui';
 import { AgentAvatar } from '@/components/agents/agent-avatar';
 import { AgentStatusBadge } from '@/components/agents/agent-status';
 import { RecentRuns } from '@/components/agents/recent-runs';
@@ -43,13 +50,14 @@ export default async function AgentPage({ params }: Params) {
   const { ctx } = await requireSession();
   const db = getServices().db;
   const agent = await loadAgentOr404(ctx, id);
-  const [parent, children, brain, connections, runs, canRun] = await Promise.all([
+  const [parent, children, brain, connections, runs, canRun, toolGrants] = await Promise.all([
     agent.parentAgentId ? findAgent(db, ctx, agent.parentAgentId) : undefined,
     listChildAgents(db, ctx, id),
     brainValue(ctx, id),
     listProviderConnections(db, ctx),
     listAgentRuns(db, ctx, id, 8),
     canAgentRun(db, ctx, id),
+    listAgentToolGrants(db, ctx, id),
   ]);
   const connectionName = new Map(connections.map((c) => [c.id, c.name]));
   const targetLabel = (target: { connectionId: string; model: string }) =>
@@ -226,6 +234,54 @@ export default async function AgentPage({ params }: Params) {
               </CardContent>
             </Card>
           )}
+
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('agentTools.title')}</CardTitle>
+              {!archived && (
+                <Button variant="ghost" size="sm" asChild>
+                  <Link href={stepHref(id, 'tools')}>
+                    <Pencil aria-hidden />
+                    {t('agentTools.manage')}
+                  </Link>
+                </Button>
+              )}
+            </CardHeader>
+            <CardContent>
+              {toolGrants.length === 0 ? (
+                <p className="text-sm text-text-muted">{t('agentTools.none')}</p>
+              ) : (
+                <ul className="divide-y divide-border">
+                  {toolGrants.map((grant) => {
+                    // What actually applies: the stricter of the agent's mode and the workspace default.
+                    const mode = stricter(grant.permissionMode, grant.tool.defaultPermission);
+                    return (
+                      <li
+                        key={grant.tool.id}
+                        className="flex items-center justify-between gap-3 py-2 text-sm"
+                      >
+                        <span className="min-w-0">
+                          <span className="font-mono text-xs">{grant.tool.name}</span>
+                          <span className="ml-2 text-text-muted">{grant.connection.name}</span>
+                        </span>
+                        <StatusBadge
+                          tone={
+                            mode === 'AUTO_ALLOW'
+                              ? 'success'
+                              : mode === 'APPROVAL_REQUIRED'
+                                ? 'warning'
+                                : 'danger'
+                          }
+                        >
+                          {t(`permissions.${mode}`)}
+                        </StatusBadge>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
 
           <Card>
             <CardHeader>

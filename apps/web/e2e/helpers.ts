@@ -65,7 +65,6 @@ export async function createAgentDraft(
 
 /** The wizard's Next control (exact: the dev overlay adds an "Open Next.js Dev Tools" button). */
 export const nextButton = (page: Page) => page.getByRole('button', { name: 'Next', exact: true });
-export const nextLink = (page: Page) => page.getByRole('link', { name: 'Next', exact: true });
 
 export const FAKE_PROVIDER = 'http://127.0.0.1:4010';
 
@@ -94,4 +93,29 @@ export async function pickModel(page: Page, label: string, provider: string, mod
   await page.getByRole('option', { name: provider }).click();
   await page.getByRole('combobox', { name: `${label}: Model` }).click();
   await page.getByRole('option', { name: new RegExp(`^${model}`) }).click();
+}
+
+export const FAKE_MCP = 'http://127.0.0.1:4020';
+
+/** MCP Hub → Connect. Returns the connection id once its detail page shows. */
+export async function connectMcp(
+  page: Page,
+  {
+    name,
+    path = '/mcp',
+    auth = 'None',
+  }: { name: string; path?: string; auth?: 'None' | 'OAuth (sign in)' },
+) {
+  await page.goto('/mcp/new');
+  await page.waitForLoadState('networkidle');
+  await page.getByLabel('Name', { exact: true }).fill(name);
+  await page.getByLabel('Server URL', { exact: true }).fill(`${FAKE_MCP}${path}`);
+  if (auth !== 'None') {
+    await page.getByLabel('Authentication', { exact: true }).click();
+    await page.getByRole('option', { name: auth }).click();
+  }
+  await page.getByRole('button', { name: 'Connect', exact: true }).click();
+  await expect(page).toHaveURL(/\/mcp\/[0-9a-f-]+(\?connected=1)?$/);
+  await expect(page.getByRole('heading', { level: 1, name })).toBeVisible();
+  return new URL(page.url()).pathname.split('/').pop()!;
 }

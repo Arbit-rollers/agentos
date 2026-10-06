@@ -1,0 +1,1 @@
+ALTER TABLE "agents" ADD COLUMN "approval_policy" jsonb DEFAULT '{"requireApprovalForHighRisk":true,"categories":["send_email","calendar_write","publish_social","payments","delete_files","run_code","change_permissions"]}'::jsonb NOT NULL;

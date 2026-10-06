@@ -17,6 +17,7 @@
     "@agentos/i18n": "workspace:*",
     "@agentos/model-gateway": "workspace:*",
     "@agentos/personality": "workspace:*",
+    "@agentos/policy": "workspace:*",
     "@agentos/ui": "workspace:*",
     "cmdk": "^1.1.1",
     "lucide-react": "^1.52.0",

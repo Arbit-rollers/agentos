@@ -11,6 +11,7 @@ export type PingResult = { pong: true; requestedAt: string; processedAt: string 
 export type SystemJobs = {
   ping: { data: { requestedAt: string }; result: PingResult };
   'sessions.cleanup': { data: Record<string, never>; result: { deleted: number } };
+  'mcp.health': { data: Record<string, never>; result: { checked: number; failing: number } };
 };
 export type SystemJobName = keyof SystemJobs;
 export type SystemJobData = SystemJobs[SystemJobName]['data'];

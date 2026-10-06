@@ -7,7 +7,10 @@ export type AppErrorCode =
   | 'INVALID_TRANSITION'
   | 'MODEL_REQUIRED'
   | 'PROVIDER_IN_USE'
-  | 'MODEL_CALL_FAILED';
+  | 'MODEL_CALL_FAILED'
+  | 'MCP_UNAVAILABLE'
+  | 'TOOL_BLOCKED'
+  | 'APPROVAL_REQUIRED';
 
 /** Expected, user-facing failures. Anything else is a bug and should surface as a 500. */
 export class AppError extends Error {

@@ -4,7 +4,6 @@ import {
   addProvider,
   createAgentDraft,
   nextButton,
-  nextLink,
   pickModel,
   registerUser,
 } from './helpers';
@@ -51,9 +50,10 @@ test.describe('model gateway (M4)', () => {
     await pickModel(page, 'Fallbacks 1', 'Cloud', 'fake-echo');
     await nextButton(page).click();
     await expect(page).toHaveURL(new RegExp(`/agents/${id}/setup/tools$`));
-    await nextLink(page).click();
+    await nextButton(page).click();
     await expect(page).toHaveURL(new RegExp(`/setup/permissions$`));
-    await nextLink(page).click();
+    await nextButton(page).click();
+    await expect(page).toHaveURL(new RegExp(`/setup/review$`));
     await page.getByRole('button', { name: 'Create agent' }).click();
     await expect(page).toHaveURL(new RegExp(`/agents/${id}$`));
 

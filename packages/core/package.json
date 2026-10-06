@@ -14,8 +14,10 @@
   "dependencies": {
     "@agentos/db": "workspace:*",
     "@agentos/i18n": "workspace:*",
+    "@agentos/mcp-gateway": "workspace:*",
     "@agentos/model-gateway": "workspace:*",
     "@agentos/personality": "workspace:*",
+    "@agentos/policy": "workspace:*",
     "@node-rs/argon2": "~2.2.1",
     "bullmq": "^6.3.11",
     "ioredis": "^6.0.0",

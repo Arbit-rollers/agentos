@@ -103,7 +103,29 @@
     "provider_bad_request": "Sağlayıcı isteği reddetti.",
     "provider_not_found": "Sağlayıcı bu modeli veya uç noktayı tanımıyor.",
     "provider_unknown": "Beklenmeyen sağlayıcı hatası.",
-    "no_eligible_model": "Bu ajanın modellerinden hiçbiri bu görev türünü işleyemiyor."
+    "no_eligible_model": "Bu ajanın modellerinden hiçbiri bu görev türünü işleyemiyor.",
+    "mcp_name_required": "Bu sunucuya bir ad verin.",
+    "mcp_name_too_long": "Ad en fazla 80 karakter olabilir.",
+    "token_required": "Token'ı girin.",
+    "invalid_headers": "Her satıra bir 'Ad: değer' başlığı yazın (Host ve Content-Length kullanılamaz).",
+    "mcp_auth": "Sunucuda giriş başarısız oldu.",
+    "unknown_tool": "Bu araç bu çalışma alanında mevcut değil.",
+    "tool_not_granted": "Bu ajanın bu aracı yok.",
+    "permission_looser_than_default": "Bir ajan, çalışma alanı varsayılanından daha az kısıtlanamaz.",
+    "invalid_permission": "Geçerli bir izin seçin.",
+    "MCP_UNAVAILABLE": "MCP sunucusuna ulaşılamadı.",
+    "TOOL_BLOCKED": "Bu araç bu ajan için engelli.",
+    "APPROVAL_REQUIRED": "Bu işlem onay gerektiriyor.",
+    "not_granted": "Ajana bu araç verilmedi.",
+    "blocked": "İzin ayarlarıyla engellendi.",
+    "tool_disabled": "Bu araç devre dışı.",
+    "connection_disabled": "Bu MCP sunucusu devre dışı.",
+    "approval_required": "Onay gerekli.",
+    "high_risk_category": "Yüksek riskli işlem: onay gerekli.",
+    "mcp_auth_err": "Giriş gerekli.",
+    "mcp_unavailable": "MCP sunucusuna ulaşılamadı.",
+    "mcp_timeout": "MCP sunucusu zaman aşımına uğradı.",
+    "mcp_protocol": "MCP sunucusu beklenmeyen bir yanıt verdi."
   },
   "dashboard": {
     "greetingMorning": "Günaydın, {name}",
@@ -154,7 +176,19 @@
     "agent_status_changed": "Ajan durumu değiştirildi",
     "provider_connected": "Yapay zekâ sağlayıcısı bağlandı",
     "provider_removed": "Yapay zekâ sağlayıcısı kaldırıldı",
-    "agent_model_changed": "Ajan modeli değiştirildi"
+    "agent_model_changed": "Ajan modeli değiştirildi",
+    "mcp_connected": "MCP sunucusu bağlandı",
+    "mcp_authorized": "MCP sunucusunda giriş yapıldı",
+    "mcp_removed": "MCP sunucusu bağlantısı kesildi",
+    "mcp_enabled": "MCP sunucusu etkinleştirildi",
+    "mcp_disabled": "MCP sunucusu devre dışı bırakıldı",
+    "mcp_tool_defaults_changed": "Araç varsayılan izni değiştirildi",
+    "agent_tools_changed": "Ajan araçları değiştirildi",
+    "agent_permissions_changed": "Ajan izinleri değiştirildi",
+    "tool_called": "Araç çağrıldı",
+    "tool_called_failure": "Araç çağrısı başarısız",
+    "tool_blocked": "Araç çağrısı engellendi",
+    "tool_approval_required": "Araç çağrısı onay bekliyor"
   },
   "outcome": {
     "success": "Başarılı",
@@ -164,9 +198,6 @@
   "pages": {
     "agents": {
       "description": "Yapay zekâ ajanlarınızı oluşturun, yapılandırın ve yönetin."
-    },
-    "mcpHub": {
-      "description": "MCP sunucularını bağlayın ve ajanlara araçlarına erişim verin."
     },
     "tasks": {
       "description": "Ajanlarınız için görev oluşturun, izleyin ve otomatikleştirin."
@@ -595,5 +626,185 @@
     "budgetLabel": "Bütçe",
     "perTask": "Görev başına {amount}",
     "daily": "Günlük {amount}"
+  },
+  "mcp": {
+    "title": "MCP Merkezi",
+    "subtitle": "MCP sunucularınızı bağlayın ve yönetin. Ajanlara güçlü araçlara erişim verin.",
+    "connect": "MCP Sunucusu Bağla",
+    "filters": {
+      "all": "Tümü",
+      "connected": "Bağlı",
+      "available": "Mevcut",
+      "custom": "Özel",
+      "providers": "Yapay Zekâ Sağlayıcıları"
+    },
+    "filtersLabel": "MCP Merkezi bölümleri",
+    "status": {
+      "connected": "Bağlı",
+      "error": "Hata",
+      "needs_auth": "Giriş gerekli",
+      "untested": "Test edilmedi",
+      "disabled": "Devre dışı"
+    },
+    "tools": "{count, plural, =0 {Araç yok} one {# araç} other {# araç}}",
+    "manage": "Yönet",
+    "connectTemplate": "Bağla",
+    "aiProvider": "Yapay Zekâ Sağlayıcısı",
+    "emptyTitle": "Henüz MCP sunucusu yok",
+    "emptyDescription": "Araçlarını keşfetmek için bir sunucu bağlayın. Siz izin verene kadar ajanlarla hiçbir şey paylaşılmaz.",
+    "templates": {
+      "google_workspace": {
+        "name": "Google Workspace",
+        "description": "Gmail, Dokümanlar, Drive, E-Tablolar, Takvim ve daha fazlası."
+      },
+      "github": {
+        "name": "GitHub",
+        "description": "Depolar, sorunlar, çekme istekleri ve Actions."
+      },
+      "notion": {
+        "name": "Notion",
+        "description": "Sayfalar, veritabanları ve arama."
+      },
+      "slack": {
+        "name": "Slack",
+        "description": "Mesajlar, kanallar ve arama."
+      },
+      "linear": {
+        "name": "Linear",
+        "description": "Sorunlar, projeler ve döngüler."
+      },
+      "instagram": {
+        "name": "Instagram",
+        "description": "Analitik, içerik ve yayınlama."
+      },
+      "youtube": {
+        "name": "YouTube",
+        "description": "Arama, analitik ve yüklemeler."
+      }
+    },
+    "templateHint": "Sunucu URL'sini sağlayıcının MCP belgelerinden yapıştırın.",
+    "form": {
+      "title": "Bir MCP sunucusu bağla",
+      "templateTitle": "{name} bağla",
+      "name": "Ad",
+      "endpoint": "Sunucu URL'si",
+      "endpointHint": "MCP uç noktası, örn. https://example.com/mcp",
+      "transport": "Aktarım",
+      "transports": {
+        "streamable_http": "Streamable HTTP (önerilen)",
+        "sse": "HTTP + SSE (eski)"
+      },
+      "authType": "Kimlik doğrulama",
+      "authTypes": {
+        "none": "Yok",
+        "bearer": "Bearer token",
+        "headers": "Özel başlıklar",
+        "oauth": "OAuth (giriş yap)"
+      },
+      "token": "Token",
+      "tokenHint": "Şifreli saklanır; bir daha gösterilmez.",
+      "headers": "Başlıklar",
+      "headersHint": "Her satıra bir tane, örn. X-API-Key: abc123. Şifreli saklanır.",
+      "oauthHint": "Giriş yapmak için sunucuya yönlendirileceksiniz, ardından buraya geri döneceksiniz.",
+      "submit": "Bağla",
+      "submitting": "Bağlanıyor…",
+      "cancel": "Vazgeç"
+    },
+    "detail": {
+      "tabs": {
+        "overview": "Genel Bakış",
+        "tools": "Araçlar",
+        "authentication": "Kimlik Doğrulama",
+        "settings": "Ayarlar",
+        "logs": "Kayıtlar"
+      },
+      "test": "Bağlantıyı Test Et",
+      "testing": "Test ediliyor…",
+      "disconnect": "Bağlantıyı Kes",
+      "confirmDisconnect": "Bağlantıyı kesmek için tekrar tıklayın",
+      "server": "Sunucu",
+      "transport": "Aktarım",
+      "endpoint": "Uç nokta",
+      "lastChecked": "Son kontrol",
+      "never": "Hiç",
+      "resources": "Kaynaklar",
+      "noResources": "Bu sunucu kaynak yayınlamıyor.",
+      "assignedAgents": "Atanan ajanlar",
+      "noAgents": "Henüz bu sunucuyu kullanan ajan yok.",
+      "searchTools": "Araç ara…",
+      "refreshTools": "Araçları Yenile",
+      "refreshing": "Yenileniyor…",
+      "toolName": "Araç",
+      "description": "Açıklama",
+      "permission": "Varsayılan izin",
+      "enabled": "Etkin",
+      "unavailable": "Sunucu artık bu aracı sunmuyor",
+      "defaultsHint": "Çalışma alanı varsayılanları. Ajanlara aynı veya daha sıkı bir ayar verilebilir, asla daha gevşek değil.",
+      "authType": "Yöntem",
+      "reauthorize": "Yeniden giriş yap",
+      "authOk": "Giriş yapıldı.",
+      "needsAuth": "Araçlar kullanılmadan önce giriş gerekli.",
+      "settingsEnabled": "Bağlantı etkin",
+      "settingsEnabledHint": "Kapalıyken hiçbir ajan bu sunucunun araçlarını çağıramaz.",
+      "noLogs": "Henüz etkinlik yok.",
+      "oauthError": "Giriş başarısız. Tekrar deneyin.",
+      "connectedNotice": "Bağlandı. Araçlar keşfedildi."
+    },
+    "errorCodes": {
+      "auth": "Sunucu kimlik bilgilerini reddetti veya giriş gerektiriyor.",
+      "unavailable": "Sunucuya ulaşılamadı.",
+      "timeout": "Sunucu zamanında yanıt vermedi.",
+      "protocol": "Sunucu bir MCP sunucusu gibi yanıt vermedi — URL'yi ve aktarımı kontrol edin.",
+      "tool_not_found": "Araç bulunamadı."
+    }
+  },
+  "permissions": {
+    "AUTO_ALLOW": "Otomatik izin",
+    "APPROVAL_REQUIRED": "Onay gerekli",
+    "BLOCKED": "Engelli"
+  },
+  "riskCategories": {
+    "send_email": "E-posta gönderme",
+    "calendar_write": "Takvim etkinliği oluşturma",
+    "publish_social": "Sosyal medyada yayınlama",
+    "payments": "Ödeme yapma",
+    "delete_files": "Dosya silme",
+    "run_code": "Harici kod çalıştırma",
+    "change_permissions": "İzinleri değiştirme"
+  },
+  "toolsStep": {
+    "serversTitle": "MCP Bağlantıları",
+    "serversHint": "Bu ajanın kullanabileceği MCP sunucularını ve araçları seçin.",
+    "search": "MCP sunucusu veya araç ara…",
+    "available": "Mevcut MCP sunucuları",
+    "selectAll": "Tümünü seç",
+    "selected": "{selected}/{total} seçildi",
+    "toolsOf": "{name} araçları",
+    "noServers": "Henüz bağlı bir MCP sunucusu yok.",
+    "noServersHint": "MCP Merkezi'nden bir sunucu bağlayın, sonra geri dönün.",
+    "goToHub": "MCP Merkezi'ne git",
+    "noneSelected": "Araç seçilmedi — ajan araçsız çalışacak."
+  },
+  "permissionsStep": {
+    "title": "Araç İzinleri",
+    "hint": "Bu ajanın her araçla neler yapabileceğini belirleyin.",
+    "filtersLabel": "Araçları izne göre filtrele",
+    "filters": {
+      "all": "Tüm Araçlar",
+      "AUTO_ALLOW": "Otomatik İzin",
+      "APPROVAL_REQUIRED": "Onay Gerekli",
+      "BLOCKED": "Engelli"
+    },
+    "approvalTitle": "Onay Ayarları",
+    "approvalToggle": "Yüksek riskli işlemler için onay iste",
+    "approvalHint": "Ajan, hassas işlemler için onay isteyecek.",
+    "highRisk": "Yüksek riskli işlemler",
+    "noTools": "Bu ajanın aracı yok. Önceki adımda seçebilir veya araçsız devam edebilirsiniz.",
+    "capped": "Çalışma alanı varsayılanı: {mode}"
+  },
+  "agentTools": {
+    "title": "Araçlar",
+    "none": "Araç verilmedi.",
+    "manage": "Araçları yönet"
   }
 }
