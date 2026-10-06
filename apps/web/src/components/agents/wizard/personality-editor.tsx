@@ -1,6 +1,5 @@
 'use client';
 
-import { Cpu } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useActionState, useMemo, useState } from 'react';
 import {
@@ -11,9 +10,11 @@ import {
   detectPreset,
   type TraitScores,
 } from '@agentos/personality';
-import { Card, CardContent, EmptyState, Slider, cn } from '@agentos/ui';
+import { Card, CardContent, Slider, cn } from '@agentos/ui';
 import { savePersonalityAction, type AgentFormState } from '@/app/(app)/agents/actions';
 import { useErrorText } from '@/components/error-text';
+import { AiBrainEditor } from '../ai-brain-editor';
+import type { BrainConnectionOption, BrainValue } from '../brain-types';
 import { stepHref } from './steps';
 import { WizardNav } from './wizard-nav';
 
@@ -21,7 +22,17 @@ import { WizardNav } from './wizard-nav';
  * Wizard step 2 (PRD §6, §19). The preview runs the same compiler the runtime uses, so what
  * the user sees is exactly what the model will be told.
  */
-export function PersonalityEditor({ agentId, initial }: { agentId: string; initial: TraitScores }) {
+export function PersonalityEditor({
+  agentId,
+  initial,
+  connections,
+  brain,
+}: {
+  agentId: string;
+  initial: TraitScores;
+  connections: BrainConnectionOption[];
+  brain: BrainValue | null;
+}) {
   const t = useTranslations();
   const errorText = useErrorText();
   const [state, action, pending] = useActionState<AgentFormState, FormData>(
@@ -36,20 +47,21 @@ export function PersonalityEditor({ agentId, initial }: { agentId: string; initi
   return (
     <form action={action}>
       <input type="hidden" name="traits" value={JSON.stringify(traits)} />
-      {state.error && (
-        <p role="alert" className="mb-4 rounded-lg bg-danger/15 px-3 py-2 text-sm text-danger">
-          {errorText(state.error)}
-        </p>
+      {(state.error || state.fieldErrors) && (
+        <div role="alert" className="mb-4 rounded-lg bg-danger/15 px-3 py-2 text-sm text-danger">
+          {state.error && <p>{errorText(state.error)}</p>}
+          {Object.values(state.fieldErrors ?? {})
+            .flat()
+            .filter((code): code is string => Boolean(code))
+            .map((code) => (
+              <p key={code}>{errorText(code)}</p>
+            ))}
+        </div>
       )}
 
-      <Card className="mb-6">
-        <EmptyState
-          icon={<Cpu />}
-          title={t('wizard.aiBrainTitle')}
-          description={t('wizard.aiBrainComingSoon')}
-          className="py-6"
-        />
-      </Card>
+      <div className="mb-6">
+        <AiBrainEditor connections={connections} initial={brain} />
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <Card>

@@ -3,15 +3,18 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
-import { allowedActions, hasModelConfiguration } from '@agentos/core';
-import { findAgent, listChildAgents } from '@agentos/db';
+import { allowedActions, canAgentRun } from '@agentos/core';
+import { findAgent, listAgentRuns, listChildAgents, listProviderConnections } from '@agentos/db';
 import { TRAITS, compilePersonality, normalizeTraits } from '@agentos/personality';
 import { Button, Card, CardContent, CardHeader, CardTitle } from '@agentos/ui';
 import { AgentAvatar } from '@/components/agents/agent-avatar';
 import { AgentStatusBadge } from '@/components/agents/agent-status';
+import { RecentRuns } from '@/components/agents/recent-runs';
+import { TryAgent } from '@/components/agents/try-agent';
 import { StatusActions } from '@/components/agents/status-actions';
 import { stepHref } from '@/components/agents/wizard/steps';
 import { loadAgentOr404 } from '@/server/agents';
+import { brainValue } from '@/server/models';
 import { requireSession } from '@/server/session';
 import { getServices } from '@/server/services';
 
@@ -40,10 +43,17 @@ export default async function AgentPage({ params }: Params) {
   const { ctx } = await requireSession();
   const db = getServices().db;
   const agent = await loadAgentOr404(ctx, id);
-  const [parent, children] = await Promise.all([
+  const [parent, children, brain, connections, runs, canRun] = await Promise.all([
     agent.parentAgentId ? findAgent(db, ctx, agent.parentAgentId) : undefined,
     listChildAgents(db, ctx, id),
+    brainValue(ctx, id),
+    listProviderConnections(db, ctx),
+    listAgentRuns(db, ctx, id, 8),
+    canAgentRun(db, ctx, id),
   ]);
+  const connectionName = new Map(connections.map((c) => [c.id, c.name]));
+  const targetLabel = (target: { connectionId: string; model: string }) =>
+    `${connectionName.get(target.connectionId) ?? '?'} · ${target.model}`;
   const t = await getTranslations();
   const format = await getFormatter();
   const traits = normalizeTraits(agent.personality?.traitScores);
@@ -88,11 +98,7 @@ export default async function AgentPage({ params }: Params) {
               </Link>
             </Button>
           )}
-          <StatusActions
-            agentId={id}
-            actions={allowedActions(agent)}
-            canRun={hasModelConfiguration(agent)}
-          />
+          <StatusActions agentId={id} actions={allowedActions(agent)} canRun={canRun} />
         </div>
       </div>
 
@@ -104,7 +110,7 @@ export default async function AgentPage({ params }: Params) {
           {t('agents.archivedNotice')}
         </p>
       )}
-      {agent.status === 'configured' && (
+      {agent.status === 'configured' && !canRun && (
         <p
           role="status"
           className="mb-6 rounded-lg border border-info/40 bg-info/10 px-4 py-3 text-sm"
@@ -133,6 +139,100 @@ export default async function AgentPage({ params }: Params) {
                   ))}
                 </ul>
               )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('brain.title')}</CardTitle>
+              {!archived && (
+                <Button variant="ghost" size="sm" asChild>
+                  <Link href={stepHref(id, 'personality')}>
+                    <Pencil aria-hidden />
+                    {brain ? t('agents.edit') : t('runs.configureBrain')}
+                  </Link>
+                </Button>
+              )}
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              {!brain ? (
+                <p className="text-text-muted">{t('runs.aiBrainNotSet')}</p>
+              ) : (
+                <dl className="grid gap-x-4 gap-y-2 sm:grid-cols-[9rem_1fr]">
+                  <dt className="text-text-muted">{t('brain.strategy')}</dt>
+                  <dd>{t(`brain.strategies.${brain.strategy}`)}</dd>
+                  <dt className="text-text-muted">{t('brain.primary')}</dt>
+                  <dd className="font-mono text-xs">{targetLabel(brain.primary)}</dd>
+                  {brain.routes.length > 0 && (
+                    <>
+                      <dt className="text-text-muted">{t('runs.routesLabel')}</dt>
+                      <dd className="space-y-0.5">
+                        {brain.routes.map((r) => (
+                          <p key={r.category}>
+                            {t(`brain.categories.${r.category as 'general'}`)} →{' '}
+                            <span className="font-mono text-xs">{targetLabel(r)}</span>
+                          </p>
+                        ))}
+                      </dd>
+                    </>
+                  )}
+                  {brain.fallbacks.length > 0 && (
+                    <>
+                      <dt className="text-text-muted">{t('runs.fallbacksLabel')}</dt>
+                      <dd className="font-mono text-xs">
+                        {brain.fallbacks.map(targetLabel).join(' → ')}
+                      </dd>
+                    </>
+                  )}
+                  {(brain.budget.perTaskUsd !== undefined ||
+                    brain.budget.dailyUsd !== undefined) && (
+                    <>
+                      <dt className="text-text-muted">{t('runs.budgetLabel')}</dt>
+                      <dd>
+                        {[
+                          brain.budget.perTaskUsd !== undefined &&
+                            t('runs.perTask', {
+                              amount: format.number(brain.budget.perTaskUsd, {
+                                style: 'currency',
+                                currency: 'USD',
+                              }),
+                            }),
+                          brain.budget.dailyUsd !== undefined &&
+                            t('runs.daily', {
+                              amount: format.number(brain.budget.dailyUsd, {
+                                style: 'currency',
+                                currency: 'USD',
+                              }),
+                            }),
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </dd>
+                    </>
+                  )}
+                </dl>
+              )}
+            </CardContent>
+          </Card>
+
+          {brain && !archived && (
+            <Card>
+              <CardHeader className="flex-col items-start gap-1">
+                <CardTitle>{t('runs.tryTitle')}</CardTitle>
+                <p className="text-sm text-text-muted">{t('runs.tryHint')}</p>
+              </CardHeader>
+              <CardContent>
+                <TryAgent agentId={id} />
+              </CardContent>
+            </Card>
+          )}
+
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('runs.recentRuns')}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <RecentRuns runs={runs} />
             </CardContent>
           </Card>
 

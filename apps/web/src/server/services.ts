@@ -12,7 +12,9 @@ function createServices() {
   const { db, sql } = createDb(env.DATABASE_URL);
   const redis = createRedis(env.REDIS_URL);
   const secrets = createSecretStore(db, createSecretCipher(env.AGENTOS_MASTER_KEY));
-  return { env, db, sql, redis, secrets };
+  /** Model providers decrypt keys through the secret store only at call time. */
+  const providerDeps = { secrets };
+  return { env, db, sql, redis, secrets, providerDeps };
 }
 
 export function getServices() {

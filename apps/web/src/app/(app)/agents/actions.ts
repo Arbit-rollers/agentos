@@ -7,9 +7,12 @@ import {
   changeAgentStatus,
   completeAgentSetup,
   createAgent,
+  runAgentPrompt,
+  saveAgentModelConfig,
   updateAgentBasics,
   updatePersonality,
   type AgentAction,
+  type PromptRunResult,
 } from '@agentos/core';
 import { requireSession } from '@/server/session';
 import { getServices } from '@/server/services';
@@ -94,8 +97,20 @@ export async function savePersonalityAction(
   } catch {
     // Malformed input normalizes to neutral scores.
   }
+  const rawModel = text(formData, 'modelConfig');
   return run(async () => {
-    await updatePersonality(getServices().db, ctx, agentId, { traits });
+    const db = getServices().db;
+    await updatePersonality(db, ctx, agentId, { traits });
+    // Empty when no model has been chosen yet; the agent then stays without one.
+    if (rawModel) {
+      let modelConfig: unknown;
+      try {
+        modelConfig = JSON.parse(rawModel);
+      } catch {
+        throw new AppError('VALIDATION', 'Malformed model config', { primary: ['model_required'] });
+      }
+      await saveAgentModelConfig(db, ctx, agentId, modelConfig as never);
+    }
     return `/agents/${agentId}/setup/tools`;
   });
 }
@@ -123,4 +138,36 @@ export async function changeStatusAction(
     await changeAgentStatus(getServices().db, ctx, agentId, action);
     return `/agents/${agentId}`;
   });
+}
+
+export type PromptState = {
+  result?: PromptRunResult;
+  error?: string;
+  fieldErrors?: AgentFormState['fieldErrors'];
+};
+
+/** "Try this agent": one test prompt through the agent's model strategy, recorded as a run. */
+export async function runPromptAction(
+  agentId: string,
+  _: PromptState,
+  formData: FormData,
+): Promise<PromptState> {
+  const { ctx } = await requireSession();
+  const { db, providerDeps } = getServices();
+  try {
+    const result = await runAgentPrompt(db, providerDeps, ctx, agentId, {
+      prompt: text(formData, 'prompt'),
+      category: (text(formData, 'category') || 'general') as never,
+    });
+    revalidatePath(`/agents/${agentId}`);
+    return { result };
+  } catch (error) {
+    if (!(error instanceof AppError)) throw error;
+    revalidatePath(`/agents/${agentId}`);
+    return {
+      error:
+        error.code === 'VALIDATION' || error.code === 'MODEL_CALL_FAILED' ? undefined : error.code,
+      fieldErrors: error.details,
+    };
+  }
 }

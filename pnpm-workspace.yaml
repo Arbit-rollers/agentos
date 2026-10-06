@@ -9,3 +9,6 @@ allowBuilds:
   # Pulled in by next-intl's optional message extractor (unused); prebuilt binaries suffice.
   '@parcel/watcher': false
   '@swc/core': false
+  # Dev-time/no-op scripts (protobufjs only prints a version warning; genai's prepare isn't shipped).
+  '@google/genai': false
+  protobufjs: false

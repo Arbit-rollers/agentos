@@ -78,8 +78,32 @@
     "role_required": "Enter the agent's role.",
     "job_required": "Describe the agent's job.",
     "INVALID_TRANSITION": "That isn't possible in the agent's current state.",
-    "MODEL_REQUIRED": "Choose an AI model before activating this agent (available in M4).",
-    "NOT_FOUND": "This item doesn't exist or you don't have access to it."
+    "MODEL_REQUIRED": "Choose an AI model before activating this agent.",
+    "NOT_FOUND": "This item doesn't exist or you don't have access to it.",
+    "provider_required": "Choose a provider.",
+    "provider_name_required": "Give this provider a name.",
+    "provider_name_too_long": "Name must be at most 60 characters.",
+    "api_key_required": "Enter the API key.",
+    "endpoint_required": "Enter the endpoint URL.",
+    "invalid_endpoint": "Enter a full http:// or https:// URL.",
+    "model_required": "Choose a model.",
+    "unknown_model": "That provider doesn't offer this model. Test the provider to refresh its list.",
+    "duplicate_route": "Each task type can have only one route.",
+    "too_many_fallbacks": "Use at most 5 fallbacks.",
+    "invalid_temperature": "Temperature must be between 0 and 2.",
+    "invalid_max_output": "Max output must be between 1 and 128,000 tokens.",
+    "prompt_required": "Write a prompt.",
+    "prompt_too_long": "Prompt must be at most 20,000 characters.",
+    "PROVIDER_IN_USE": "Agents still use this provider. Switch them to another model first.",
+    "MODEL_CALL_FAILED": "The model call failed.",
+    "provider_auth": "The provider rejected the API key.",
+    "provider_rate_limit": "The provider is rate-limiting requests.",
+    "provider_timeout": "The provider timed out.",
+    "provider_unavailable": "Couldn't reach the provider.",
+    "provider_bad_request": "The provider rejected the request.",
+    "provider_not_found": "The provider doesn't know this model or endpoint.",
+    "provider_unknown": "Unexpected provider error.",
+    "no_eligible_model": "None of this agent's models can handle this task type."
   },
   "dashboard": {
     "greetingMorning": "Good morning, {name}",
@@ -127,7 +151,10 @@
     "agent_created": "Agent created",
     "agent_updated": "Agent updated",
     "agent_personality_changed": "Agent personality changed",
-    "agent_status_changed": "Agent status changed"
+    "agent_status_changed": "Agent status changed",
+    "provider_connected": "AI provider connected",
+    "provider_removed": "AI provider removed",
+    "agent_model_changed": "Agent model changed"
   },
   "outcome": {
     "success": "Success",
@@ -178,7 +205,10 @@
     "languageHint": "Agents reply in the language of the conversation, whatever you choose here.",
     "save": "Save changes",
     "saving": "Saving…",
-    "saved": "Saved."
+    "saved": "Saved.",
+    "profileTab": "Profile",
+    "providersTab": "AI Providers",
+    "sectionsLabel": "Settings sections"
   },
   "languages": {
     "en": "English",
@@ -240,7 +270,7 @@
       "archive": "Archive",
       "restore": "Restore"
     },
-    "activateNeedsModel": "Agents need an AI model before they can run. Model selection arrives in M4.",
+    "activateNeedsModel": "Choose an AI model (Edit → Model & Personality) before activating this agent.",
     "archivedNotice": "This agent is archived. Restore it to make changes.",
     "updated": "Updated {time}",
     "hierarchy": "Hierarchy"
@@ -289,7 +319,7 @@
     "noDirectives": "Balanced: the model keeps its default behaviour.",
     "parameters": "Runtime settings",
     "aiBrainTitle": "AI Brain",
-    "aiBrainComingSoon": "Choose this agent's provider, model, fallbacks and budget here in M4.",
+    "aiBrainComingSoon": "Which model this agent thinks with. Changing it never changes the agent's role, personality or tools.",
     "toolsComingSoon": "Connect MCP servers and choose this agent's tools here in M5.",
     "permissionsComingSoon": "Set Auto allow, Approval required or Blocked for each tool here in M5.",
     "reviewTitle": "Review",
@@ -421,5 +451,149 @@
     "humorous_high": "Uses light humour where it fits.",
     "humorous_subtle": "Keeps any humour subtle and professional.",
     "humorous_low": "Avoids humour."
+  },
+  "providers": {
+    "title": "AI Providers",
+    "subtitle": "Connect model providers once; any agent in this workspace can then use them.",
+    "add": "Add provider",
+    "adding": "Connecting…",
+    "empty": "No AI providers connected yet.",
+    "emptyHint": "Add at least one provider so your agents can think.",
+    "provider": "Provider",
+    "name": "Name",
+    "namePlaceholder": "e.g. Company OpenAI",
+    "apiKey": "API key",
+    "apiKeyHint": "Stored encrypted. It never appears in prompts, logs or this page again.",
+    "apiKeyOptional": "API key (optional)",
+    "endpoint": "Endpoint URL",
+    "endpointHintOllama": "Where Ollama is running, e.g. http://localhost:11434",
+    "endpointHintCompatible": "Base URL of the OpenAI-compatible API, ending in /v1",
+    "test": "Test",
+    "testing": "Testing…",
+    "remove": "Remove",
+    "models": "{count, plural, =0 {No models} one {# model} other {# models}}",
+    "lastChecked": "Checked {time}",
+    "neverChecked": "Not checked yet",
+    "status": {
+      "connected": "Connected",
+      "error": "Error",
+      "untested": "Not tested"
+    },
+    "kinds": {
+      "openai": "OpenAI",
+      "anthropic": "Anthropic",
+      "google": "Google",
+      "ollama": "Ollama (local)",
+      "openai_compatible": "OpenAI-compatible"
+    },
+    "errorCodes": {
+      "auth": "The API key was rejected.",
+      "rate_limit": "Rate limited by the provider.",
+      "timeout": "The provider didn't answer in time.",
+      "unavailable": "Couldn't reach the provider.",
+      "bad_request": "The provider rejected the request.",
+      "not_found": "Endpoint not found — check the URL.",
+      "unknown": "Unexpected provider error."
+    }
+  },
+  "brain": {
+    "title": "AI Brain",
+    "description": "Which model this agent thinks with. Changing it never changes the agent's role, personality or tools.",
+    "noProviders": "Connect an AI provider first.",
+    "noProvidersHint": "Add OpenAI, Anthropic, Google, a local Ollama or any OpenAI-compatible endpoint in Settings.",
+    "goToProviders": "Go to AI Providers",
+    "strategy": "Strategy",
+    "strategies": {
+      "fixed": "Fixed model",
+      "smart_router": "Smart Router",
+      "fallback_chain": "Fallback chain"
+    },
+    "strategyHints": {
+      "fixed": "Always use one model.",
+      "smart_router": "Pick a model per task type; unmatched tasks use the primary model.",
+      "fallback_chain": "Use the primary model; if it's down, rate-limited or too slow, try the next."
+    },
+    "primary": "Primary model",
+    "providerLabel": "Provider",
+    "modelLabel": "Model",
+    "chooseProvider": "Choose a provider",
+    "chooseModel": "Choose a model",
+    "none": "Not set",
+    "temperature": "Temperature",
+    "temperatureUnsupported": "This model doesn't accept a temperature setting.",
+    "maxOutput": "Max output tokens",
+    "maxOutputHint": "Leave empty for the provider default.",
+    "fallbacks": "Fallbacks",
+    "fallbacksHint": "Tried in order when a model is down, rate-limited, times out, can't fit the input or would exceed the per-task budget.",
+    "addFallback": "Add fallback",
+    "remove": "Remove",
+    "routes": "Routes",
+    "routesHint": "Leave a task type empty to use the primary model.",
+    "useDefault": "Use primary",
+    "categories": {
+      "general": "General",
+      "research": "Research",
+      "reasoning": "Complex reasoning",
+      "fast": "Fast / cheap",
+      "private": "Private (local models only)",
+      "vision": "Vision"
+    },
+    "budget": "Budget",
+    "dailyUsd": "Daily limit (USD)",
+    "perTaskUsd": "Per-task limit (USD)",
+    "onExceed": "When exceeded",
+    "onExceedOptions": {
+      "stop": "Stop",
+      "request_approval": "Ask for approval"
+    },
+    "budgetHint": "Per-task limit skips models whose estimated cost is higher. Daily limits are enforced when agents run tasks (M6).",
+    "local": "local",
+    "pricePerM": "${input} / ${output} per 1M tokens",
+    "priceUnknown": "price unknown"
+  },
+  "runs": {
+    "tryTitle": "Try this agent",
+    "tryHint": "Send a test prompt through the agent's model strategy. Each test is recorded as a run.",
+    "prompt": "Prompt",
+    "promptPlaceholder": "Ask the agent something…",
+    "category": "Task type",
+    "send": "Send",
+    "sending": "Thinking…",
+    "response": "Response",
+    "servedBy": "Served by {model}",
+    "tokens": "{input} in · {output} out",
+    "cost": "~${cost}",
+    "costUnknown": "cost unknown",
+    "recentRuns": "Recent runs",
+    "noRuns": "No runs yet.",
+    "status": {
+      "running": "Running",
+      "completed": "Completed",
+      "failed": "Failed"
+    },
+    "events": {
+      "selected": "Selected {target}: {reason}",
+      "skipped": "Skipped {target}: {reason}",
+      "fallback": "{target} failed ({reason}); falling back",
+      "provider_fallback": "Provider switched {from} → {to}",
+      "completed": "Completed on {target}",
+      "failed": "Run failed: {reason}"
+    },
+    "reasons": {
+      "fixed": "fixed model",
+      "fallback_chain": "primary of the fallback chain",
+      "route": "route for {category}",
+      "default_route": "no route for {category}, using primary",
+      "unsupported_modality": "can't handle this task type",
+      "context_limit": "input too large",
+      "cost_threshold": "over the per-task budget"
+    },
+    "aiBrainNotSet": "No model chosen yet.",
+    "configureBrain": "Choose a model",
+    "fallbacksLabel": "Fallbacks",
+    "routesLabel": "Routes",
+    "budgetLabel": "Budget",
+    "perTask": "{amount} per task",
+    "daily": "{amount} per day"
   }
 }

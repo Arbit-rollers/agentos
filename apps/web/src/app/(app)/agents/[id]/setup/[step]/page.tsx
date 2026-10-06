@@ -12,6 +12,7 @@ import { WIZARD_STEPS, stepHref, type WizardStep } from '@/components/agents/wiz
 import { WizardFrame } from '@/components/agents/wizard/wizard-frame';
 import { WizardNav } from '@/components/agents/wizard/wizard-nav';
 import { loadAgentOr404, parentOptionsByType } from '@/server/agents';
+import { brainOptions, brainValue } from '@/server/models';
 import { requireSession } from '@/server/session';
 import { getServices } from '@/server/services';
 
@@ -36,7 +37,12 @@ export default async function AgentSetupPage({ params }: Params) {
       break;
     case 'personality':
       body = (
-        <PersonalityEditor agentId={id} initial={normalizeTraits(agent.personality?.traitScores)} />
+        <PersonalityEditor
+          agentId={id}
+          initial={normalizeTraits(agent.personality?.traitScores)}
+          connections={await brainOptions(ctx)}
+          brain={await brainValue(ctx, id)}
+        />
       );
       break;
     case 'tools':

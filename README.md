@@ -6,7 +6,7 @@ A multi-user operating system for persistent, personality-driven AI agents that 
 - Build plan: [`docs/ROADMAP.md`](docs/ROADMAP.md)
 - Reference screens: [`docs/AgentOS Dark-Mode AI Dashboard Collage.png`](<docs/AgentOS Dark-Mode AI Dashboard Collage.png>)
 
-**Status:** M3 (agents, personality engine, Create Agent wizard) done. Next: M4 model gateway.
+**Status:** M4 (model gateway: AI providers, per-agent models, Smart Router, fallback chains, runs) done. Next: M5 MCP Hub.
 
 ## Repository layout
 
@@ -79,4 +79,8 @@ CI (`.github/workflows/ci.yml`) runs all of these, plus E2E against Postgres (pg
 - **Personality is compiled, never free text.** `compilePersonality()` turns 0–100 trait scores into pre-written directive sentences plus runtime parameters. The same function powers the wizard preview and (M6) the runtime prompt, so the preview is exactly what the model gets. Adding a directive means adding its model text in `packages/personality` _and_ its UI text in both catalogs (a test enforces it); bump `COMPILER_VERSION` when output changes.
 - **Agent rules live in `packages/core/src/agents.ts`:** lifecycle transitions (`allowedActions`), readiness (role + job before leaving Draft), hierarchy (an agent reports only to a strictly higher-ranked type, which also rules out cycles), and auditing of every change, including per-trait before/after values.
 - **Don't export non-component values from `'use client'` files** if server code needs them; Next turns them into client references. Put shared constants in a plain module (see `components/agents/filters.ts`).
+- **Model calls go through `invokeModel()` (`packages/model-gateway`).** It plans candidates from the agent's strategy, skips models that can't serve the request (task type, context size, per-task budget), falls back only on outages, rate limits and timeouts, and reports every decision as an event that `runAgentPrompt()` stores in `run_events`. Configuration errors (bad key, unknown model) are never hidden behind a fallback.
+- **Provider SDKs:** official SDKs only (`openai`, `@anthropic-ai/sdk`, `@google/genai`); OpenAI, Ollama and OpenAI-compatible servers share one adapter. Current Claude models reject `temperature`, so sampling parameters are sent only to models the capability registry marks as accepting them. Claude Fable 5.1 / Opus 5.5 / Opus 5 / Sonnet 5.5 requests opt into Anthropic's server-side refusal fallback; any model switch it makes is recorded as `model.provider_fallback`.
+- **Testing without API keys:** `pnpm --filter @agentos/model-gateway fake-provider` serves OpenAI-compatible (`/openai/v1`, also usable as an Ollama endpoint at `/openai`) and Anthropic (`/anthropic`) APIs on port 4010. Models named `*-down` return 503, `*-limited` 429. Playwright starts it automatically.
+- **Dev server caches services on `globalThis`** to survive hot reloads; restart `pnpm dev` after changing `apps/web/src/server/services.ts`.
 - **Changing the schema:** edit `packages/db/src/schema`, run `pnpm db:generate`, then rename the new migration to something descriptive and update `migrations/meta/_journal.json` to match.

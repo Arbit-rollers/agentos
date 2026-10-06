@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
-import { Card, CardContent, CardHeader, CardTitle, PageHeader } from '@agentos/ui';
+import { Card, CardContent, CardHeader, CardTitle } from '@agentos/ui';
 import { ProfileForm } from '@/components/settings/profile-form';
 import { requireSession } from '@/server/session';
 
@@ -14,7 +14,6 @@ export default async function SettingsPage() {
 
   return (
     <>
-      <PageHeader title={t('title')} description={t('subtitle')} />
       <Card>
         <CardHeader className="flex-col items-start gap-1">
           <CardTitle>{t('profile')}</CardTitle>

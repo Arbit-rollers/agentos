@@ -66,3 +66,32 @@ export async function createAgentDraft(
 /** The wizard's Next control (exact: the dev overlay adds an "Open Next.js Dev Tools" button). */
 export const nextButton = (page: Page) => page.getByRole('button', { name: 'Next', exact: true });
 export const nextLink = (page: Page) => page.getByRole('link', { name: 'Next', exact: true });
+
+export const FAKE_PROVIDER = 'http://127.0.0.1:4010';
+
+/** Settings → AI Providers → Add provider. */
+export async function addProvider(
+  page: Page,
+  {
+    kind,
+    name,
+    endpoint,
+  }: { kind: 'OpenAI-compatible' | 'Ollama (local)'; name: string; endpoint: string },
+) {
+  await page.goto('/settings/providers');
+  await page.waitForLoadState('networkidle');
+  await page.getByLabel('Provider', { exact: true }).click();
+  await page.getByRole('option', { name: kind }).click();
+  await page.getByLabel('Name', { exact: true }).fill(name);
+  await page.getByLabel('Endpoint URL', { exact: true }).fill(endpoint);
+  await page.getByRole('button', { name: 'Add provider' }).click();
+  await expect(page.getByText(name, { exact: true })).toBeVisible();
+}
+
+/** Picks provider + model in an AI Brain target picker (label = "Primary model", "Fallbacks 1", …). */
+export async function pickModel(page: Page, label: string, provider: string, model: string) {
+  await page.getByRole('combobox', { name: `${label}: Provider` }).click();
+  await page.getByRole('option', { name: provider }).click();
+  await page.getByRole('combobox', { name: `${label}: Model` }).click();
+  await page.getByRole('option', { name: new RegExp(`^${model}`) }).click();
+}

@@ -19,6 +19,7 @@ import { z } from 'zod';
 import { recordAudit } from './audit';
 import { parse } from './auth';
 import { AppError } from './errors';
+import { canAgentRun } from './models';
 
 export const AGENT_TYPES = ['master_orchestrator', 'manager', 'specialist', 'system'] as const;
 
@@ -82,14 +83,6 @@ export function readinessErrors(agent: Pick<Agent, 'role' | 'jobDefinition'>) {
 
 const isReady = (agent: Pick<Agent, 'role' | 'jobDefinition'>) =>
   Object.keys(readinessErrors(agent)).length === 0;
-
-/**
- * Whether the agent has a usable AI model. Model configuration arrives in M4; until then no
- * agent can be activated (PRD §19: "Create & Activate" requires a valid model).
- */
-export function hasModelConfiguration(_agent: Agent): boolean {
-  return false;
-}
 
 async function requireAgent(db: Executor, ctx: TenantContext, id: string) {
   const agent = await findAgent(db, ctx, id);
@@ -288,7 +281,8 @@ export async function changeAgentStatus(
   if (!allowedActions(agent).includes(action)) {
     throw new AppError('INVALID_TRANSITION', `Cannot ${action} a ${agent.status} agent`);
   }
-  if ((action === 'activate' || action === 'resume') && !hasModelConfiguration(agent)) {
+  // PRD §19: an agent needs a working model before it can run.
+  if ((action === 'activate' || action === 'resume') && !(await canAgentRun(db, ctx, id))) {
     throw new AppError('MODEL_REQUIRED', 'Choose an AI model before activating this agent');
   }
   const target: Record<AgentAction, AgentStatus> = {
