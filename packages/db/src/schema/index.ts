@@ -49,6 +49,8 @@ export const users = pgTable(
     passwordHash: text('password_hash'),
     authProvider: text('auth_provider').notNull().default('password'),
     locale: text('locale').notNull().default('en'),
+    /** IANA timezone for dates in agent prompts; detected from the browser until set. */
+    timezone: text('timezone'),
     status: userStatus('status').notNull().default('active'),
     createdAt: createdAt(),
   },

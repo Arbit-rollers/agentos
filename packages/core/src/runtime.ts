@@ -12,7 +12,9 @@ import {
   findMcpTool,
   findModelConfig,
   findRun,
+  findSchedule,
   findTask,
+  findUserById,
   findToolCall,
   insertApprovalRequest,
   insertMessage,
@@ -72,6 +74,7 @@ import { buildSystemPrompt, canAgentRun } from './models';
 import type { ProviderDeps } from './providers';
 import { formatContext, retrieveContext, type RetrievedContext } from './knowledge';
 import { ACTIVE, createTask, onTaskRunFinished, resumeDelegatingRun } from './tasks';
+import { describeNow } from './time';
 import { adapterForConnection } from './providers';
 import { redact } from './redact';
 
@@ -109,6 +112,8 @@ type LoopState = {
   /** Tasks this run has handed to other agents so far (PRD §15). */
   delegations?: number;
   pendingBudget?: { approvalId: string; kind: BudgetKind };
+  /** IANA timezone for "today" in the prompt: the schedule's, else the person's, else UTC. */
+  timezone?: string;
   /** Memory and knowledge retrieved when the run started (PRD §25 items 9–11). */
   context?: Pick<RetrievedContext, 'knowledge' | 'memories'>;
 };
@@ -308,8 +313,18 @@ const RUNTIME_RULES = [
 ].join('\n');
 
 /** PRD §25 order: identity, personality and instructions, then memory and knowledge. */
-function systemPrompt(agent: AgentWithPersonality, context = '', team = '') {
-  return [buildSystemPrompt(agent), RUNTIME_RULES, team, context].filter(Boolean).join('\n\n');
+function systemPrompt(agent: AgentWithPersonality, now: string, context = '', team = '') {
+  return [buildSystemPrompt(agent), RUNTIME_RULES, now, team, context].filter(Boolean).join('\n\n');
+}
+
+/** Whose clock the run follows: a scheduled task's timezone, else the person's, else UTC. */
+async function runTimezone(c: Ctx): Promise<string> {
+  const task = c.run.taskId ? await findTask(c.db, c.ctx, c.run.taskId) : undefined;
+  if (task?.scheduleId) {
+    const schedule = await findSchedule(c.db, c.ctx, task.scheduleId);
+    if (schedule) return schedule.timezone;
+  }
+  return (await findUserById(c.db, c.ctx.userId))?.timezone ?? 'UTC';
 }
 
 /**
@@ -317,6 +332,7 @@ function systemPrompt(agent: AgentWithPersonality, context = '', team = '') {
  * what was used (provenance). A retrieval failure never stops the run.
  */
 async function prepareContext(c: Ctx) {
+  if (!c.state.timezone) c.state.timezone = await runTimezone(c);
   if (c.state.context) return;
   const query = [...c.state.messages].reverse().find((m) => m.role === 'user')?.content ?? '';
   try {
@@ -1013,7 +1029,12 @@ async function loop(c: Ctx) {
           plan: toPlan(c.config, connections),
           category: 'general',
           request: {
-            system: systemPrompt(c.agent, await liveContext(c), teamSection(team)),
+            system: systemPrompt(
+              c.agent,
+              describeNow(now(), c.state.timezone ?? 'UTC'),
+              await liveContext(c),
+              teamSection(team),
+            ),
             messages: c.state.messages,
             tools,
             maxOutputTokens: c.config.parameters.maxOutputTokens,

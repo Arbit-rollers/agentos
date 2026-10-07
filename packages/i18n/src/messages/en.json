@@ -301,7 +301,9 @@
     "profileTab": "Profile",
     "providersTab": "AI Providers",
     "sectionsLabel": "Settings sections",
-    "knowledgeTab": "Knowledge"
+    "knowledgeTab": "Knowledge",
+    "timezone": "Timezone",
+    "timezoneHint": "Agents use it for “today”, “tomorrow” and schedules. Detected from your browser until you choose one."
   },
   "languages": {
     "en": "English",

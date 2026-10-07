@@ -301,7 +301,9 @@
     "profileTab": "Profil",
     "providersTab": "Yapay Zekâ Sağlayıcıları",
     "sectionsLabel": "Ayar bölümleri",
-    "knowledgeTab": "Bilgi"
+    "knowledgeTab": "Bilgi",
+    "timezone": "Saat dilimi",
+    "timezoneHint": "Ajanlar bunu “bugün”, “yarın” ve zamanlamalar için kullanır. Siz seçene kadar tarayıcınızdan algılanır."
   },
   "languages": {
     "en": "English",

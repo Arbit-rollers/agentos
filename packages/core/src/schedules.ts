@@ -16,6 +16,7 @@ import { parse } from './auth';
 import { AppError } from './errors';
 import type { RuntimeDeps } from './runtime';
 import { createTask } from './tasks';
+import { isValidTimezone } from './time';
 
 /**
  * Where active schedules live at runtime (BullMQ job schedulers in production, a fake in
@@ -30,14 +31,7 @@ export type SchedulerPort = {
 
 export type ScheduleDeps = RuntimeDeps & { scheduler: SchedulerPort };
 
-export function isValidTimezone(timezone: string): boolean {
-  try {
-    new Intl.DateTimeFormat('en', { timeZone: timezone });
-    return true;
-  } catch {
-    return false;
-  }
-}
+export { isValidTimezone } from './time';
 
 /** Next firing time, or null for inactive / already-fired one-time schedules. */
 export function nextRunAt(
