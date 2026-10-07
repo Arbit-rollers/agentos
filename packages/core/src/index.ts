@@ -71,3 +71,24 @@ export {
 export type { McpConnectionInput, McpDeps, ToolCallOutcome } from './mcp';
 export { DEFAULT_LIMITS, decideApproval, executeRun, startChatTurn } from './runtime';
 export type { RunJob, RuntimeDeps } from './runtime';
+export {
+  cancelTask,
+  createTask,
+  onTaskRunFinished,
+  recoverStaleRuns,
+  retryDelayMs,
+  retryTask,
+} from './tasks';
+export type { TaskInput } from './tasks';
+export {
+  createSchedule,
+  deleteSchedule,
+  fireSchedule,
+  isValidTimezone,
+  nextRunAt,
+  setScheduleActive,
+  syncSchedules,
+} from './schedules';
+export type { ScheduleDeps, ScheduleInput, SchedulerPort } from './schedules';
+export { bullScheduler, createScheduleQueue } from './scheduler-bullmq';
+export type { ScheduleJob } from './scheduler-bullmq';

@@ -204,7 +204,7 @@ Legend: **AC n** = acceptance criterion n in PRD §28. **Screen n** = screen n i
 
 ---
 
-## v0.2: Tasks & Schedules (M7)
+## v0.2: Tasks & Schedules (M7) ✅
 
 - Full task model (PRD §14): objective, input, priority, dependencies, budget, due date, all 8 states
 - BullMQ task queue, retries, cancel; recovery after worker restart
@@ -213,6 +213,16 @@ Legend: **AC n** = acceptance criterion n in PRD §28. **Screen n** = screen n i
 - Agent Tasks tab populated
 
 **DoD:** recurring schedule fires on time across a restart; task state history is visible; failed tasks show the error.
+
+**As built (notes and known gaps)**
+- Tasks: New Task dialog (Tasks page and agent Tasks tab) with details, priority, due date, dependencies and retries; task detail page with Markdown output, error, runs and a state history (`task_state_history`, one row per transition with a note).
+- Dependencies: a task with unfinished dependencies waits (`waiting_for_agent`) and starts when they complete; if one fails, its dependents fail with `dependency_failed`.
+- Retries: only transient provider errors (`provider_*`) retry automatically, with backoff 30 s · 4ⁿ⁻¹, up to the task's `maxRetries` (scheduled tasks: 2). Chat tasks never retry. Failed or cancelled tasks can be retried by hand.
+- Cancel stops queued/running runs at the next step and rejects pending approvals (`task_cancelled`).
+- Recovery: runs send a heartbeat; the worker's `runs.recover` job (every 60 s) re-queues runs whose heartbeat is older than 2 minutes. Tool calls that were in flight are reported to the model as interrupted rather than silently re-run.
+- Schedules: BullMQ job schedulers (`schedule-<id>`, cron + IANA timezone) and delayed jobs for one-time schedules (`once-<id>`); the worker syncs them on start and fires missed one-time schedules. Builder: hourly / daily / weekly / custom cron, or a date and time. Run now, pause/resume, delete.
+- The DoD's "fires across a restart" is covered by a Redis-backed test (one worker closed abruptly, a second one keeps firing; a one-time schedule fires exactly once).
+- Filter tabs are All / Running / Waiting / Completed / Failed; scheduled work shows as the "Scheduled" type column rather than a tab. Per-task budgets come from the agent's budgets; a per-task budget override is not in this release.
 
 ---
 

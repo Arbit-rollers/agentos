@@ -3,8 +3,10 @@ import { Redis } from 'ioredis';
 
 export const QUEUES = {
   system: 'system',
-  /** Agent runs (chat turns and, later, tasks): one job per run step. */
+  /** Agent runs (chat turns and tasks): one job per run step. */
   agent: 'agent',
+  /** Schedule firings (PRD §17). */
+  schedules: 'schedules',
 } as const;
 
 export type PingResult = { pong: true; requestedAt: string; processedAt: string };
@@ -14,6 +16,7 @@ export type SystemJobs = {
   ping: { data: { requestedAt: string }; result: PingResult };
   'sessions.cleanup': { data: Record<string, never>; result: { deleted: number } };
   'mcp.health': { data: Record<string, never>; result: { checked: number; failing: number } };
+  'runs.recover': { data: Record<string, never>; result: { recovered: number } };
 };
 export type SystemJobName = keyof SystemJobs;
 export type SystemJobData = SystemJobs[SystemJobName]['data'];

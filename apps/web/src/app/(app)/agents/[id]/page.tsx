@@ -34,6 +34,7 @@ import { SettingsDrawer } from '@/components/agents/settings-drawer';
 import { stepHref } from '@/components/agents/wizard/steps';
 import { toApprovalView } from '@/components/approvals/approval-view';
 import { RunLog } from '@/components/runs/run-log';
+import { NewTaskDialog } from '@/components/tasks/new-task-dialog';
 import { TaskTable } from '@/components/tasks/task-table';
 import { loadAgentOr404 } from '@/server/agents';
 import { brainValue } from '@/server/models';
@@ -166,6 +167,21 @@ export default async function AgentWorkspacePage({ params, searchParams }: Param
       body = (
         <Card>
           <CardContent className="pt-5">
+            {canRun && ['active', 'configured'].includes(agent.status) && (
+              <div className="mb-3 flex justify-end">
+                <NewTaskDialog
+                  agents={[{ id, name: agent.name }]}
+                  defaultAgentId={id}
+                  openTasks={tasks
+                    .filter((task) =>
+                      ['queued', 'running', 'waiting_for_approval', 'waiting_for_agent'].includes(
+                        task.state,
+                      ),
+                    )
+                    .map((task) => ({ id: task.id, objective: task.objective }))}
+                />
+              </div>
+            )}
             <TaskTable tasks={tasks} showAgent={false} />
           </CardContent>
         </Card>

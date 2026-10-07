@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, sql } from 'drizzle-orm';
+import { and, arrayContains, asc, desc, eq, gte, inArray, isNull, lt, or, sql } from 'drizzle-orm';
 import type { Executor } from '../client';
 import {
   agents,
@@ -7,6 +7,7 @@ import {
   messages,
   runEvents,
   runs,
+  taskStateHistory,
   tasks,
   toolCalls,
 } from '../schema/index';
@@ -95,29 +96,113 @@ export async function listMessages(
 
 // --- tasks ---------------------------------------------------------------------
 
-export async function insertTask(
-  db: Executor,
-  ctx: TenantContext,
-  values: Pick<Task, 'agentId' | 'origin' | 'objective'> & Partial<Pick<Task, 'state' | 'budget'>>,
-): Promise<Task> {
+export type NewTask = Pick<Task, 'agentId' | 'origin' | 'objective'> &
+  Partial<
+    Pick<
+      Task,
+      | 'state'
+      | 'budget'
+      | 'input'
+      | 'priority'
+      | 'dueAt'
+      | 'dependsOn'
+      | 'maxRetries'
+      | 'createdBy'
+      | 'scheduleId'
+    >
+  >;
+
+export async function insertTask(db: Executor, ctx: TenantContext, values: NewTask): Promise<Task> {
   const [row] = await db
     .insert(tasks)
     .values({ ...values, workspaceId: ctx.workspaceId })
     .returning();
+  await db
+    .insert(taskStateHistory)
+    .values({ workspaceId: ctx.workspaceId, taskId: row!.id, state: row!.state });
   return row!;
 }
 
+/** Moves a task to `state` and records it in the task's history. */
 export async function updateTaskState(
   db: Executor,
   ctx: TenantContext,
   id: string,
   state: TaskState,
+  extra: { note?: string; output?: string; error?: string | null; attempt?: number } = {},
 ) {
   const terminal = state === 'completed' || state === 'failed' || state === 'cancelled';
-  await db
+  const [row] = await db
     .update(tasks)
-    .set({ state, updatedAt: new Date(), ...(terminal && { completedAt: new Date() }) })
-    .where(tenantScope(ctx, tasks, eq(tasks.id, id)));
+    .set({
+      state,
+      updatedAt: new Date(),
+      ...(terminal && { completedAt: new Date() }),
+      ...(extra.output !== undefined && { output: extra.output }),
+      ...(extra.error !== undefined && { error: extra.error }),
+      ...(extra.attempt !== undefined && { attempt: extra.attempt }),
+    })
+    .where(tenantScope(ctx, tasks, eq(tasks.id, id)))
+    .returning({ id: tasks.id });
+  if (row) {
+    await db.insert(taskStateHistory).values({
+      workspaceId: ctx.workspaceId,
+      taskId: id,
+      state,
+      note: extra.note ?? extra.error ?? null,
+    });
+  }
+}
+
+export async function findTask(
+  db: Executor,
+  ctx: TenantContext,
+  id: string,
+): Promise<Task | undefined> {
+  const [row] = await db
+    .select()
+    .from(tasks)
+    .where(tenantScope(ctx, tasks, eq(tasks.id, id)))
+    .limit(1);
+  return row;
+}
+
+export async function listTasksByIds(
+  db: Executor,
+  ctx: TenantContext,
+  ids: string[],
+): Promise<Task[]> {
+  if (ids.length === 0) return [];
+  return db
+    .select()
+    .from(tasks)
+    .where(tenantScope(ctx, tasks, inArray(tasks.id, ids)));
+}
+
+/** Queued tasks that list `taskId` among their dependencies. */
+export async function listDependentTasks(
+  db: Executor,
+  ctx: TenantContext,
+  taskId: string,
+): Promise<Task[]> {
+  return db
+    .select()
+    .from(tasks)
+    .where(
+      tenantScope(
+        ctx,
+        tasks,
+        and(eq(tasks.state, 'queued'), arrayContains(tasks.dependsOn, [taskId])),
+      ),
+    );
+}
+
+export async function listTaskHistory(db: Executor, ctx: TenantContext, taskId: string) {
+  return db
+    .select()
+    .from(taskStateHistory)
+    .where(tenantScope(ctx, taskStateHistory, eq(taskStateHistory.taskId, taskId)))
+    .orderBy(asc(taskStateHistory.createdAt));
 }
 
 export async function listTasks(
@@ -228,6 +313,34 @@ export async function addRunUsage(
     .where(tenantScope(ctx, runs, eq(runs.id, id)));
 }
 
+export async function touchRunHeartbeat(db: Executor, ctx: TenantContext, id: string) {
+  await db
+    .update(runs)
+    .set({ heartbeatAt: new Date() })
+    .where(tenantScope(ctx, runs, eq(runs.id, id)));
+}
+
+/**
+ * System-level: runs marked running whose worker stopped sending heartbeats before
+ * `staleBefore` (crashed or killed mid-run). Only the worker's recovery job calls this.
+ */
+export async function listStaleRuns(db: Executor, staleBefore: Date) {
+  return db
+    .select({
+      id: runs.id,
+      workspaceId: runs.workspaceId,
+      agentId: runs.agentId,
+      taskId: runs.taskId,
+    })
+    .from(runs)
+    .where(
+      and(
+        eq(runs.status, 'running'),
+        or(isNull(runs.heartbeatAt), lt(runs.heartbeatAt, staleBefore)),
+      ),
+    );
+}
+
 /** Estimated spend of an agent's runs since `since` (daily budget, PRD §18). */
 export async function agentSpendSince(
   db: Executor,
@@ -252,7 +365,7 @@ export type RunWithDetails = Run & {
 export async function listRunsWithDetails(
   db: Executor,
   ctx: TenantContext,
-  options: { agentId?: string; status?: Run['status']; limit?: number } = {},
+  options: { agentId?: string; taskId?: string; status?: Run['status']; limit?: number } = {},
 ): Promise<RunWithDetails[]> {
   const rows = await db
     .select({ run: runs, agentName: agents.name })
@@ -264,6 +377,7 @@ export async function listRunsWithDetails(
         runs,
         and(
           options.agentId ? eq(runs.agentId, options.agentId) : undefined,
+          options.taskId ? eq(runs.taskId, options.taskId) : undefined,
           options.status ? eq(runs.status, options.status) : undefined,
         ),
       ),

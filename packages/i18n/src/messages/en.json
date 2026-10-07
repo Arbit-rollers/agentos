@@ -138,7 +138,20 @@
     "budget_rejected": "a budget increase was rejected",
     "too_many_steps": "too many steps",
     "agent_not_runnable": "the agent can't run",
-    "internal_error": "an internal error"
+    "internal_error": "an internal error",
+    "agent_required": "Choose an agent.",
+    "objective_required": "Describe the task.",
+    "objective_too_long": "Keep the task under 500 characters.",
+    "input_too_long": "Details must be at most 20,000 characters.",
+    "too_many_retries": "Use at most 5 retries.",
+    "unknown_task": "That task doesn't exist in this workspace.",
+    "dependency_failed": "a task it was waiting for failed",
+    "schedule_name_required": "Give the schedule a name.",
+    "invalid_cron": "Use a 5-field cron expression (minute granularity).",
+    "invalid_timezone": "Choose a valid timezone.",
+    "run_at_in_past": "Choose a time in the future.",
+    "interrupted": "interrupted by a restart",
+    "cancelled_by_user": "cancelled"
   },
   "dashboard": {
     "greetingMorning": "Good morning, {name}",
@@ -202,7 +215,14 @@
     "tool_called_failure": "Tool call failed",
     "tool_blocked": "Tool call blocked",
     "tool_approval_required": "Tool call needs approval",
-    "approval_decided": "Approval decided"
+    "approval_decided": "Approval decided",
+    "task_created": "Task created",
+    "task_cancelled": "Task cancelled",
+    "task_retried": "Task retried",
+    "schedule_created": "Schedule created",
+    "schedule_paused": "Schedule paused",
+    "schedule_resumed": "Schedule resumed",
+    "schedule_deleted": "Schedule deleted"
   },
   "outcome": {
     "success": "Success",
@@ -221,9 +241,6 @@
     },
     "memory": {
       "description": "Inspect, edit and delete what your agents remember."
-    },
-    "schedules": {
-      "description": "Run tasks and workflows on a schedule."
     },
     "analytics": {
       "description": "Token usage, cost and agent performance."
@@ -627,7 +644,8 @@
       "budget_exceeded": "Budget limit reached: {kind}",
       "run_completed": "Run completed",
       "outcomeOk": "a result",
-      "outcomeError": "an error"
+      "outcomeError": "an error",
+      "run_recovered": "Resumed after a restart ({repairedCalls} interrupted tool calls repaired)"
     },
     "reasons": {
       "fixed": "fixed model",
@@ -915,7 +933,7 @@
   },
   "tasksPage": {
     "title": "Tasks",
-    "subtitle": "Every piece of work your agents do. Scheduling and manual tasks arrive in v0.2.",
+    "subtitle": "Create, monitor and automate tasks for your agents.",
     "empty": "No tasks yet. Chat with an agent to create one.",
     "agent": "Agent",
     "objective": "Task",
@@ -927,6 +945,47 @@
       "waiting": "Waiting",
       "completed": "Completed",
       "failed": "Failed"
+    },
+    "newTask": "New Task",
+    "create": "Create task",
+    "creating": "Creating…",
+    "chooseAgent": "Choose an agent",
+    "objectivePlaceholder": "What should the agent do?",
+    "input": "Details",
+    "inputHint": "Context, sources, format. Optional.",
+    "priority": "Priority",
+    "priorities": {
+      "0": "Normal",
+      "1": "High",
+      "2": "Urgent",
+      "3": "Critical"
+    },
+    "dueAt": "Due",
+    "dependsOn": "Waits for",
+    "dependsOnHint": "The task starts after these finish.",
+    "maxRetries": "Retries on provider errors",
+    "type": "Type",
+    "origins": {
+      "chat": "Chat",
+      "manual": "One-time",
+      "schedule": "Scheduled"
+    },
+    "cancel": "Cancel",
+    "retry": "Retry",
+    "open": "Open",
+    "output": "Output",
+    "noOutput": "No output yet.",
+    "history": "History",
+    "runs": "Runs",
+    "error": "Error",
+    "attempt": "Attempt {n}",
+    "waitsFor": "Waits for {count, plural, one {# task} other {# tasks}}",
+    "due": "Due {time}",
+    "back": "Tasks",
+    "schedule": "Schedule",
+    "notes": {
+      "cancelled_by_user": "Cancelled by a person",
+      "manual_retry": "Retried by a person"
     }
   },
   "taskStates": {
@@ -938,5 +997,58 @@
     "completed": "Completed",
     "failed": "Failed",
     "cancelled": "Cancelled"
+  },
+  "schedules": {
+    "title": "Schedules",
+    "subtitle": "Run tasks automatically: once at a set time, or on a recurring schedule.",
+    "new": "New schedule",
+    "create": "Create schedule",
+    "creating": "Creating…",
+    "empty": "No schedules yet.",
+    "name": "Name",
+    "namePlaceholder": "e.g. Weekly aviation trends",
+    "agent": "Agent",
+    "objective": "Task",
+    "input": "Details",
+    "kind": "Repeat",
+    "kinds": {
+      "recurring": "Recurring",
+      "once": "Once"
+    },
+    "frequency": "Frequency",
+    "frequencies": {
+      "hourly": "Every hour",
+      "daily": "Every day",
+      "weekly": "Every week",
+      "custom": "Custom (cron)"
+    },
+    "time": "Time",
+    "day": "Day",
+    "days": {
+      "1": "Monday",
+      "2": "Tuesday",
+      "3": "Wednesday",
+      "4": "Thursday",
+      "5": "Friday",
+      "6": "Saturday",
+      "0": "Sunday"
+    },
+    "minute": "At minute",
+    "cron": "Cron expression",
+    "cronHint": "5 fields: minute hour day-of-month month day-of-week.",
+    "runAt": "Date and time",
+    "timezone": "Timezone",
+    "nextRun": "Next run",
+    "lastRun": "Last run",
+    "never": "—",
+    "runNow": "Run now",
+    "pause": "Pause",
+    "resume": "Resume",
+    "delete": "Delete",
+    "confirmDelete": "Click again to delete",
+    "active": "Active",
+    "paused": "Paused",
+    "done": "Done",
+    "whenLabel": "When"
   }
 }

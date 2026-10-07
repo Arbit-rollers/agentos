@@ -90,6 +90,8 @@ export async function RunLog({
         return t('runs.events.budget_exceeded', {
           kind: translate(`errors.budget_${String(p.kind)}`, String(p.kind)),
         });
+      case 'run.recovered':
+        return t('runs.events.run_recovered', { repairedCalls: String(p.repairedCalls ?? 0) });
       case 'run.completed':
         return t('runs.events.run_completed');
       case 'run.failed':

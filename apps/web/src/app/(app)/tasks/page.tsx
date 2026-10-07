@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
-import { listTasks, type TaskState } from '@agentos/db';
+import { listAgents, listTasks, type TaskState } from '@agentos/db';
 import { Card, CardContent, PageHeader } from '@agentos/ui';
 import { QueryTabs } from '@/components/common/query-tabs';
+import { NewTaskDialog } from '@/components/tasks/new-task-dialog';
 import { TaskTable } from '@/components/tasks/task-table';
 import { requireSession } from '@/server/session';
 import { getServices } from '@/server/services';
@@ -28,14 +29,30 @@ export default async function TasksPage({
   const t = await getTranslations('tasksPage');
   const requested = (await searchParams).filter ?? 'all';
   const filter = requested in FILTERS ? requested : 'all';
-  const tasks = await listTasks(getServices().db, ctx, { limit: 200 });
+  const db = getServices().db;
+  const [tasks, agents] = await Promise.all([
+    listTasks(db, ctx, { limit: 200 }),
+    listAgents(db, ctx, { statuses: ['active', 'configured'] }),
+  ]);
+  const openTasks = tasks.filter((task) =>
+    ['queued', 'running', 'waiting_for_approval', 'waiting_for_agent'].includes(task.state),
+  );
   const count = (key: string) => tasks.filter((task) => FILTERS[key]!.includes(task.state)).length;
   const shown =
     filter === 'all' ? tasks : tasks.filter((task) => FILTERS[filter]!.includes(task.state));
 
   return (
     <>
-      <PageHeader title={t('title')} description={t('subtitle')} />
+      <PageHeader
+        title={t('title')}
+        description={t('subtitle')}
+        actions={
+          <NewTaskDialog
+            agents={agents.map((a) => ({ id: a.id, name: a.name }))}
+            openTasks={openTasks.map((task) => ({ id: task.id, objective: task.objective }))}
+          />
+        }
+      />
       <div className="mb-5">
         <QueryTabs
           param="filter"
