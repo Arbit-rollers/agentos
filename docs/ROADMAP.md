@@ -23,6 +23,7 @@ Legend: **AC n** = acceptance criterion n in PRD §28. **Screen n** = screen n i
 | v0.3 | M8 | Knowledge, Memory, Feedback Learning | — | 21 |
 | v0.4 | M9 | Multi-Agent Orchestration | — | 19, 20 |
 | v0.4.1 | M9.5 | Per-user connections & Google Workspace | 2, 3 | 13, 15 (per user) |
+| v0.4.2 | M9.6 | Workspace invitations & roles | — | 1, 2 (multi-user) |
 | v0.5 | M10 | Workflows | 9 | 25 |
 | v0.6 | M11 | Intelligence, Analytics, Hardening | — | 26 |
 
@@ -293,6 +294,23 @@ Lets every tenant, and every person in it, connect their own accounts to shared 
 - Google Workspace creates one connection per service (Google runs one MCP server per product), so each member signs in once per service. The scopes and endpoints follow Google's published configuration; the flow is tested against a Google-like fake server, not against Google.
 - Workspace invitations don't exist yet (every sign-up gets its own workspace), so "two members, two accounts" is covered by tests that add a member directly. Invitations are the next prerequisite for teams.
 - Revoking at the provider is not called on disconnect; AgentOS deletes its stored tokens.
+
+---
+
+## v0.4.2: Workspace Invitations & Roles (M9.6) ✅
+
+Makes multi-user workspaces real, so per-user connections and private memory matter in practice.
+
+- Settings → Members: members with roles, invite by email (Admin or Member), pending invitations (revoke), change roles, remove members, leave, rename the workspace
+- Invitation links: single use, 7 days, token stored hashed, only the invited email can accept; sign-in and registration return to the link (`?next=`, same-site paths only)
+- Top-bar workspace switcher; the session remembers the current workspace and falls back to the person's own one if they are removed
+- Leaving or removal deletes that person's memories, private knowledge and own MCP credentials in the workspace and pauses their schedules; shared work stays
+
+**As built (notes and known gaps)**
+- No email delivery: the inviter copies the link. Email (SMTP or a provider) is a follow-up.
+- Roles gate member management only. Agents, tools, approvals and settings are open to every member; Viewer exists in the schema but isn't offered.
+- One owner per workspace; ownership transfer and workspace deletion are not built.
+- Signing in lands in the person's oldest workspace; the switcher changes it for that session.
 
 ---
 

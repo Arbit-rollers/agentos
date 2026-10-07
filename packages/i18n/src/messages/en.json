@@ -180,7 +180,13 @@
     "google_service_required": "Pick at least one service.",
     "google_platform_missing": "AgentOS's Google app isn't configured here. Use your own.",
     "per_user_needs_signin": "Per-member sign-in needs OAuth or a token.",
-    "mcp_needs_user_auth": "Connect your own account to this server first."
+    "mcp_needs_user_auth": "Connect your own account to this server first.",
+    "already_member": "This person is already a member.",
+    "invite_wrong_account": "This invitation is for a different email address.",
+    "invite_invalid": "This invitation is no longer valid.",
+    "owner_cannot_leave": "The owner can't leave or be removed.",
+    "workspace_name_required": "Enter a name.",
+    "FORBIDDEN": "Only owners and admins can do that."
   },
   "dashboard": {
     "greetingMorning": "Good morning, {name}",
@@ -270,7 +276,14 @@
     "agent_delegated_denied": "Delegation refused",
     "mcp_user_connected": "Member connected their account",
     "mcp_user_disconnected": "Member disconnected their account",
-    "mcp_auth_changed": "Sign-in method changed"
+    "mcp_auth_changed": "Sign-in method changed",
+    "member_invited": "Member invited",
+    "member_invitation_revoked": "Invitation revoked",
+    "member_joined": "Member joined",
+    "member_role_changed": "Member role changed",
+    "member_removed": "Member removed",
+    "member_left": "Member left",
+    "workspace_renamed": "Workspace renamed"
   },
   "outcome": {
     "success": "Success",
@@ -312,7 +325,8 @@
     "sectionsLabel": "Settings sections",
     "knowledgeTab": "Knowledge",
     "timezone": "Timezone",
-    "timezoneHint": "Agents use it for “today”, “tomorrow” and schedules. Detected from your browser until you choose one."
+    "timezoneHint": "Agents use it for “today”, “tomorrow” and schedules. Detected from your browser until you choose one.",
+    "membersTab": "Members"
   },
   "languages": {
     "en": "English",
@@ -1309,5 +1323,58 @@
     "accepted": "Accepted",
     "dismissed": "Dismissed",
     "reviseMessage": "Please revise your last answer: {comment}"
+  },
+  "team": {
+    "title": "Members",
+    "workspace": "Workspace",
+    "workspaceHint": "Agents, tools, tasks and shared knowledge belong to the workspace. Memory, private knowledge and connected accounts stay personal.",
+    "workspaceName": "Workspace name",
+    "save": "Save",
+    "saved": "Saved.",
+    "inviteHeading": "Invite people",
+    "inviteHint": "Creates a single-use link for one email address, valid for 7 days. AgentOS doesn't send email yet: copy the link and send it yourself.",
+    "email": "Email",
+    "role": "Role",
+    "roles": {
+      "owner": "Owner",
+      "admin": "Admin",
+      "member": "Member",
+      "viewer": "Viewer"
+    },
+    "invite": "Create invitation",
+    "inviting": "Creating…",
+    "linkReady": "Invitation for {email} is ready. Send them this link:",
+    "inviteLink": "Invitation link",
+    "copy": "Copy",
+    "copied": "Copied",
+    "linkHint": "Only {email}'s account can use it. Creating a new invitation for the same email replaces this one.",
+    "members": "{count, plural, one {# member} other {# members}}",
+    "membersLabel": "Workspace members",
+    "you": "(you)",
+    "joined": "Joined {date}",
+    "remove": "Remove",
+    "leave": "Leave workspace",
+    "confirm": "Click again to confirm",
+    "pending": "Pending invitations",
+    "expires": "Expires {date}",
+    "revoke": "Revoke",
+    "switcher": "Switch workspace",
+    "workspaces": "Workspaces",
+    "inviteMembers": "Invite members",
+    "inviteTitle": "Workspace invitation",
+    "inviteSummary": "{inviter} invited you to join “{workspace}” as {role}.",
+    "inviteFor": "This invitation is for {email}.",
+    "signInToAccept": "Sign in to accept",
+    "createToAccept": "Create an account to accept",
+    "accept": "Accept and join",
+    "accepting": "Joining…",
+    "wrongAccount": "You're signed in as {current}, but this invitation is for {invited}.",
+    "signOutToSwitch": "Sign out to use another account",
+    "inviteStatus": {
+      "unknown": "This invitation link isn't valid.",
+      "expired": "This invitation has expired. Ask for a new one.",
+      "used": "This invitation has already been used.",
+      "revoked": "This invitation was withdrawn."
+    }
   }
 }

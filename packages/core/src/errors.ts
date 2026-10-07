@@ -14,7 +14,9 @@ export type AppErrorCode =
   | 'TOOL_BLOCKED'
   | 'APPROVAL_REQUIRED'
   | 'AGENT_NOT_RUNNABLE'
-  | 'ALREADY_DECIDED';
+  | 'ALREADY_DECIDED'
+  /** The caller's workspace role doesn't allow this (e.g. a member managing members). */
+  | 'FORBIDDEN';
 
 /** Expected, user-facing failures. Anything else is a bug and should surface as a 500. */
 export class AppError extends Error {

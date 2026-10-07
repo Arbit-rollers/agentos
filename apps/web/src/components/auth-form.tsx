@@ -7,7 +7,17 @@ import { Button, Field, Input } from '@agentos/ui';
 import { loginAction, registerAction, type AuthFormState } from '@/app/(auth)/actions';
 import { useErrorText } from '@/components/error-text';
 
-export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
+export function AuthForm({
+  mode,
+  next,
+  email,
+}: {
+  mode: 'login' | 'register';
+  /** Where to continue after signing in (e.g. an invitation link). */
+  next?: string;
+  /** Pre-filled email (an invitation's address). */
+  email?: string;
+}) {
   const t = useTranslations('auth');
   const errorText = useErrorText();
   const [state, action, pending] = useActionState<AuthFormState, FormData>(
@@ -27,6 +37,7 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
     <form action={action} className="space-y-4" noValidate>
       <h1 className="text-xl font-semibold">{isRegister ? t('registerTitle') : t('loginTitle')}</h1>
 
+      {next && <input type="hidden" name="next" value={next} />}
       {state.error && (
         <p role="alert" className="rounded-lg bg-danger/15 px-3 py-2 text-sm text-danger">
           {errorText(state.error)}
@@ -53,7 +64,7 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
           type="email"
           autoComplete="email"
           required
-          defaultValue={state.values?.email}
+          defaultValue={state.values?.email ?? email}
           {...invalid('email')}
         />
       </Field>
@@ -86,7 +97,10 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
 
       <p className="text-center text-sm text-text-muted">
         {isRegister ? t('haveAccount') : t('newHere')}{' '}
-        <Link href={isRegister ? '/login' : '/register'} className="text-primary hover:underline">
+        <Link
+          href={`${isRegister ? '/login' : '/register'}${next ? `?next=${encodeURIComponent(next)}${email ? `&email=${encodeURIComponent(email)}` : ''}` : ''}`}
+          className="text-primary hover:underline"
+        >
           {isRegister ? t('signInLink') : t('createAccountLink')}
         </Link>
       </p>
