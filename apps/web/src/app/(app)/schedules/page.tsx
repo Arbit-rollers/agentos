@@ -17,6 +17,7 @@ import {
 } from '@agentos/ui';
 import { NewScheduleDialog } from '@/components/schedules/new-schedule-dialog';
 import { ScheduleActions } from '@/components/schedules/schedule-actions';
+import { canManageItem } from '@/server/permissions';
 import { requireSession } from '@/server/session';
 import { getServices } from '@/server/services';
 
@@ -26,7 +27,8 @@ export async function generateMetadata(): Promise<Metadata> {
 
 /** Schedules (PRD §17). */
 export default async function SchedulesPage() {
-  const { ctx } = await requireSession();
+  const session = await requireSession();
+  const { ctx } = session;
   const db = getServices().db;
   const t = await getTranslations('schedules');
   const format = await getFormatter();
@@ -104,7 +106,9 @@ export default async function SchedulesPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <ScheduleActions id={s.id} name={s.name} active={s.active} />
+                      {canManageItem(session, s.createdBy) && (
+                        <ScheduleActions id={s.id} name={s.name} active={s.active} />
+                      )}
                     </TableCell>
                   </TableRow>
                 );

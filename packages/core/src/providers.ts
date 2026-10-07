@@ -21,6 +21,7 @@ import { z } from 'zod';
 import { recordAudit } from './audit';
 import { parse } from './auth';
 import { AppError } from './errors';
+import { requireWorkspaceAdmin } from './permissions';
 import type { SecretStore } from './secrets';
 
 export type AdapterFactory = (access: ProviderAccess) => ProviderAdapter;
@@ -83,6 +84,7 @@ export async function testProviderConnection(
   ctx: TenantContext,
   id: string,
 ): Promise<ProviderConnection> {
+  await requireWorkspaceAdmin(db, ctx);
   const connection = await findProviderConnection(db, ctx, id);
   if (!connection) throw new AppError('NOT_FOUND', 'Provider not found');
   try {
@@ -110,6 +112,7 @@ export async function createProviderConnection(
   ctx: TenantContext,
   input: ProviderInput,
 ): Promise<ProviderConnection> {
+  await requireWorkspaceAdmin(db, ctx);
   const data = parse(inputSchema, input);
   const connection = await withTransaction(db, async (tx) => {
     const secretId = data.apiKey
@@ -142,6 +145,7 @@ export async function removeProviderConnection(
   ctx: TenantContext,
   id: string,
 ): Promise<void> {
+  await requireWorkspaceAdmin(db, ctx);
   const connection = await findProviderConnection(db, ctx, id);
   if (!connection) throw new AppError('NOT_FOUND', 'Provider not found');
   if ((await countConnectionUsage(db, ctx, id)) > 0) {

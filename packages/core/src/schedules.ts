@@ -14,6 +14,7 @@ import { z } from 'zod';
 import { recordAudit } from './audit';
 import { parse } from './auth';
 import { AppError } from './errors';
+import { requireCreatorOrAdmin } from './permissions';
 import type { RuntimeDeps } from './runtime';
 import { createTask } from './tasks';
 import { isValidTimezone } from './time';
@@ -136,7 +137,8 @@ export async function setScheduleActive(
   id: string,
   active: boolean,
 ) {
-  await requireSchedule(db, ctx, id);
+  const current = await requireSchedule(db, ctx, id);
+  await requireCreatorOrAdmin(db, ctx, current.createdBy);
   const schedule = (await updateSchedule(db, ctx, id, { active }))!;
   if (active) await deps.scheduler.upsert(schedule);
   else await deps.scheduler.remove(id);
@@ -150,6 +152,7 @@ export async function deleteSchedule(
   id: string,
 ) {
   const schedule = await requireSchedule(db, ctx, id);
+  await requireCreatorOrAdmin(db, ctx, schedule.createdBy);
   await deps.scheduler.remove(id);
   await deleteScheduleRow(db, ctx, id);
   await audit(db, ctx, 'schedule.deleted', schedule);
@@ -169,6 +172,8 @@ export async function fireSchedule(
 ) {
   const schedule = await findSchedule(db, ctx, id);
   if (!schedule || (!schedule.active && !options.manual)) return null;
+  // "Run now" from the UI: its creator or an admin. Timed firings run as the creator.
+  if (options.manual) await requireCreatorOrAdmin(db, ctx, schedule.createdBy);
   const task = await createTask(
     db,
     deps,

@@ -13,6 +13,7 @@ import { HubFilters } from '@/components/mcp/hub-filters';
 import { HUB_TABS, type HubTab } from '@/components/mcp/hub-tabs';
 import { ServerIcon } from '@/components/mcp/server-icon';
 import { MCP_TEMPLATES } from '@/components/mcp/templates';
+import { isAdmin } from '@/server/permissions';
 import { requireSession } from '@/server/session';
 import { getServices } from '@/server/services';
 
@@ -36,7 +37,9 @@ export default async function McpHubPage({
 }: {
   searchParams: Promise<{ tab?: string; oauth?: string }>;
 }) {
-  const { ctx } = await requireSession();
+  const session = await requireSession();
+  const { ctx } = session;
+  const admin = isAdmin(session);
   const { db } = getServices();
   const t = await getTranslations();
   const params = await searchParams;
@@ -58,7 +61,7 @@ export default async function McpHubPage({
   };
   const shown = tab === 'connected' ? connected : tab === 'custom' ? custom : connections;
 
-  const connect = (
+  const connect = admin && (
     <Button asChild>
       <Link href="/mcp/new">
         <Plus aria-hidden />
@@ -93,11 +96,15 @@ export default async function McpHubPage({
               <p className="flex-1 text-sm text-text-muted">
                 {t(`mcp.templates.${template.key}.description`)}
               </p>
-              <div className="flex justify-end">
-                <Button size="sm" asChild>
-                  <Link href={`/mcp/new?template=${template.key}`}>{t('mcp.connectTemplate')}</Link>
-                </Button>
-              </div>
+              {admin && (
+                <div className="flex justify-end">
+                  <Button size="sm" asChild>
+                    <Link href={`/mcp/new?template=${template.key}`}>
+                      {t('mcp.connectTemplate')}
+                    </Link>
+                  </Button>
+                </div>
+              )}
             </li>
           ))}
         </ul>

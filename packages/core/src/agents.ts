@@ -19,6 +19,7 @@ import { z } from 'zod';
 import { recordAudit } from './audit';
 import { parse } from './auth';
 import { AppError } from './errors';
+import { requireAgentManager } from './permissions';
 import { canAgentRun } from './models';
 
 export const AGENT_TYPES = ['master_orchestrator', 'manager', 'specialist', 'system'] as const;
@@ -84,9 +85,11 @@ export function readinessErrors(agent: Pick<Agent, 'role' | 'jobDefinition'>) {
 const isReady = (agent: Pick<Agent, 'role' | 'jobDefinition'>) =>
   Object.keys(readinessErrors(agent)).length === 0;
 
+/** An agent the caller may change: its creator, or an owner/admin. */
 async function requireAgent(db: Executor, ctx: TenantContext, id: string) {
   const agent = await findAgent(db, ctx, id);
   if (!agent) throw new AppError('NOT_FOUND', 'Agent not found');
+  await requireAgentManager(db, ctx, agent);
   return agent;
 }
 

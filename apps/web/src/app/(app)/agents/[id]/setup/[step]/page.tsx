@@ -12,6 +12,7 @@ import { ToolsStep } from '@/components/agents/wizard/tools-step';
 import { WizardFrame } from '@/components/agents/wizard/wizard-frame';
 import { loadAgentOr404, parentOptionsByType } from '@/server/agents';
 import { brainOptions, brainValue } from '@/server/models';
+import { canManageAgent } from '@/server/permissions';
 import { requireSession } from '@/server/session';
 import { getServices } from '@/server/services';
 
@@ -24,9 +25,11 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function AgentSetupPage({ params }: Params) {
   const { id, step } = await params;
   if (!WIZARD_STEPS.includes(step as WizardStep)) notFound();
-  const { ctx } = await requireSession();
+  const session = await requireSession();
+  const { ctx } = session;
   const agent = await loadAgentOr404(ctx, id);
-  if (agent.status === 'archived') redirect(`/agents/${id}`);
+  // Only its creator or an owner/admin edits an agent; everyone else sees the workspace.
+  if (agent.status === 'archived' || !canManageAgent(session, agent)) redirect(`/agents/${id}`);
 
   let body;
   switch (step as WizardStep) {

@@ -24,8 +24,12 @@ type Scope = 'workspace' | 'agent' | 'user';
 export function AddSourceDialog({
   agents,
   agentId,
+  allowWorkspace = true,
 }: {
+  /** Agents the person may attach knowledge to (their own, or all for admins). */
   agents: { id: string; name: string }[];
+  /** Workspace-wide knowledge reaches every agent: owners and admins only. */
+  allowWorkspace?: boolean;
   /** Set on an agent's Files tab: the source is attached to that agent. */
   agentId?: string;
 }) {
@@ -34,7 +38,11 @@ export function AddSourceDialog({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<SourceType>('note');
-  const [scope, setScope] = useState<Scope>(agentId ? 'agent' : 'workspace');
+  const scopes = (['workspace', 'agent', 'user'] as const).filter(
+    (value) =>
+      (value !== 'workspace' || allowWorkspace) && (value !== 'agent' || agents.length > 0),
+  );
+  const [scope, setScope] = useState<Scope>(agentId ? 'agent' : scopes[0]!);
   const [state, action, pending] = useActionState(
     async (prev: Awaited<ReturnType<typeof addKnowledgeAction>>, formData: FormData) => {
       const result = await addKnowledgeAction(prev, formData);
@@ -84,7 +92,7 @@ export function AddSourceDialog({
                   id="source-scope"
                   value={scope}
                   onValueChange={(value) => setScope(value as Scope)}
-                  options={(['workspace', 'agent', 'user'] as const).map((value) => ({
+                  options={scopes.map((value) => ({
                     value,
                     label: t(`scopes.${value}`),
                   }))}

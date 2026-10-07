@@ -23,6 +23,7 @@ import { recordAudit } from './audit';
 import { recordTaskEpisode } from './memory';
 import { parse } from './auth';
 import { AppError } from './errors';
+import { requireCreatorOrAdmin } from './permissions';
 import { canAgentRun } from './models';
 import type { RuntimeDeps } from './runtime';
 
@@ -235,6 +236,8 @@ export async function cancelTask(
 ) {
   const task = await findTask(db, ctx, taskId);
   if (!task) throw new AppError('NOT_FOUND', 'Task not found');
+  // Cascades from a cancelled parent were already authorized there.
+  if (options.note !== 'parent_cancelled') await requireCreatorOrAdmin(db, ctx, task.createdBy);
   if (!ACTIVE.includes(task.state)) throw new AppError('INVALID_TRANSITION', 'Task is not active');
   await updateTaskState(db, ctx, task.id, 'cancelled', {
     note: options.note ?? 'cancelled_by_user',
@@ -284,6 +287,7 @@ export async function retryTask(
 ) {
   const task = await findTask(db, ctx, taskId);
   if (!task) throw new AppError('NOT_FOUND', 'Task not found');
+  await requireCreatorOrAdmin(db, ctx, task.createdBy);
   if (task.state !== 'failed' && task.state !== 'cancelled')
     throw new AppError('INVALID_TRANSITION', 'Only failed or cancelled tasks can be retried');
   const agent = await findAgent(db, ctx, task.agentId);

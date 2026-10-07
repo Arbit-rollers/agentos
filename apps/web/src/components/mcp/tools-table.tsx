@@ -34,7 +34,16 @@ const TONE: Record<PermissionMode, string> = {
 };
 
 /** Connection detail → Tools (Screen 3): workspace defaults per tool. */
-export function ToolsTable({ connectionId, tools }: { connectionId: string; tools: ToolRow[] }) {
+export function ToolsTable({
+  connectionId,
+  tools,
+  editable = true,
+}: {
+  connectionId: string;
+  tools: ToolRow[];
+  /** Members see the defaults; owners and admins change them. */
+  editable?: boolean;
+}) {
   const t = useTranslations();
   const [query, setQuery] = useState('');
   const [pending, start] = useTransition();
@@ -58,7 +67,7 @@ export function ToolsTable({ connectionId, tools }: { connectionId: string; tool
         <Button
           variant="secondary"
           size="sm"
-          disabled={pending}
+          disabled={pending || !editable}
           onClick={() => start(async () => void (await testMcpAction(connectionId)))}
         >
           <RefreshCw aria-hidden className={cn(pending && 'animate-spin')} />
@@ -89,6 +98,7 @@ export function ToolsTable({ connectionId, tools }: { connectionId: string; tool
                 <Select
                   aria-label={`${t('mcp.detail.permission')}: ${tool.name}`}
                   value={tool.defaultPermission}
+                  disabled={!editable}
                   className={TONE[tool.defaultPermission]}
                   onValueChange={(value) =>
                     start(async () => {
@@ -107,6 +117,7 @@ export function ToolsTable({ connectionId, tools }: { connectionId: string; tool
                 <Switch
                   aria-label={`${t('mcp.detail.enabled')}: ${tool.name}`}
                   checked={tool.enabled}
+                  disabled={!editable}
                   onCheckedChange={(enabled) =>
                     start(async () => {
                       await updateToolDefaultAction(connectionId, tool.id, { enabled });

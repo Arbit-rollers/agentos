@@ -70,6 +70,7 @@ import {
 import { Ajv } from 'ajv';
 import { recordAudit } from './audit';
 import { AppError } from './errors';
+import { requireCreatorOrAdmin } from './permissions';
 import { accessFor, type McpDeps } from './mcp';
 import { buildSystemPrompt, canAgentRun } from './models';
 import type { ProviderDeps } from './providers';
@@ -276,6 +277,7 @@ export async function startChatTurn(
     const task = await insertTask(tx, ctx, {
       agentId,
       origin: 'chat',
+      createdBy: ctx.userId,
       objective: text.slice(0, 500),
       state: 'queued',
     });
@@ -1220,6 +1222,11 @@ export async function decideApproval(
 ): Promise<void> {
   const approval = await findApprovalRequest(db, ctx, approvalId);
   if (!approval) throw new AppError('NOT_FOUND', 'Approval not found');
+  // The person the run works for decides, or an owner/admin.
+  const requestedFor = approval.taskId
+    ? (await findTask(db, ctx, approval.taskId))?.createdBy
+    : null;
+  await requireCreatorOrAdmin(db, ctx, requestedFor);
   if (approval.status !== 'pending') throw new AppError('ALREADY_DECIDED', 'Already decided');
 
   if (input.editedArguments && approval.toolCallId) {

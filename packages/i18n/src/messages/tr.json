@@ -186,7 +186,9 @@
     "invite_invalid": "Bu davet artık geçerli değil.",
     "owner_cannot_leave": "Sahip ayrılamaz veya çıkarılamaz.",
     "workspace_name_required": "Bir ad girin.",
-    "FORBIDDEN": "Bunu yalnızca sahipler ve yöneticiler yapabilir."
+    "FORBIDDEN": "Bunu yalnızca sahipler ve yöneticiler yapabilir.",
+    "admin_only": "Bunu yalnızca sahipler ve yöneticiler yapabilir.",
+    "creator_or_admin": "Bunu yalnızca oluşturan kişi veya bir yönetici yapabilir."
   },
   "dashboard": {
     "greetingMorning": "Günaydın, {name}",
@@ -1052,7 +1054,8 @@
     },
     "decidedBy": "Karar: {time}",
     "invalidJson": "Parametreler geçerli JSON olmalıdır.",
-    "task": "Görev"
+    "task": "Görev",
+    "notYours": "Bu çalıştırmanın adına çalıştığı kişi veya bir yönetici bekleniyor."
   },
   "logs": {
     "title": "Kayıtlar",
@@ -1375,6 +1378,7 @@
       "expired": "Bu davetin süresi doldu. Yeni bir davet isteyin.",
       "used": "Bu davet zaten kullanıldı.",
       "revoked": "Bu davet geri çekildi."
-    }
+    },
+    "adminOnly": "Bunu yalnızca sahipler ve yöneticiler değiştirebilir. Bir değişiklik gerekiyorsa onlardan birine sorun."
   }
 }

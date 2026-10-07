@@ -27,9 +27,12 @@ export type ApprovalView = {
 export function ApprovalCard({
   approval,
   compact = false,
+  canDecide = true,
 }: {
   approval: ApprovalView;
   compact?: boolean;
+  /** The person the run works for, or an owner/admin. Others only see the request. */
+  canDecide?: boolean;
 }) {
   const t = useTranslations();
   const format = useFormatter();
@@ -159,7 +162,12 @@ export function ApprovalCard({
           {error === 'invalidJson' ? t('approvals.invalidJson') : errorText(error)}
         </p>
       )}
-      {approval.status === 'pending' && (
+      {approval.status === 'pending' && !canDecide && (
+        <p className="text-xs text-text-muted" data-testid="not-yours">
+          {t('approvals.notYours')}
+        </p>
+      )}
+      {approval.status === 'pending' && canDecide && (
         <div className="flex flex-wrap gap-2">
           {editing ? (
             <>

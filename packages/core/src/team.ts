@@ -25,27 +25,17 @@ import { z } from 'zod';
 import { recordAudit } from './audit';
 import { hashSessionToken, parse } from './auth';
 import { AppError } from './errors';
+import { requireWorkspaceAdmin } from './permissions';
 import type { SecretStore } from './secrets';
 
 export const INVITATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 /** Roles an invitation or a role change can grant. Ownership isn't transferable yet. */
 export const ASSIGNABLE_ROLES = ['admin', 'member'] as const;
-const MANAGERS: WorkspaceRole[] = ['owner', 'admin'];
 
 const hashToken = (token: string) => createHash('sha256').update(token).digest('hex');
 
-async function roleOf(db: Database, ctx: TenantContext): Promise<WorkspaceRole> {
-  const membership = await findMembership(db, ctx.userId, ctx.workspaceId);
-  if (!membership) throw new AppError('FORBIDDEN', 'Not a member of this workspace');
-  return membership.role;
-}
-
 /** Owners and admins manage members and invitations. */
-export async function requireManager(db: Database, ctx: TenantContext) {
-  const role = await roleOf(db, ctx);
-  if (!MANAGERS.includes(role)) throw new AppError('FORBIDDEN', 'Owners and admins only');
-  return role;
-}
+export const requireManager = requireWorkspaceAdmin;
 
 const audit = (
   db: Database,

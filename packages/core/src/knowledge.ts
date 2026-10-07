@@ -30,6 +30,7 @@ import { z } from 'zod';
 import { recordAudit } from './audit';
 import { parse } from './auth';
 import { AppError } from './errors';
+import { requireAgentManager, requireCreatorOrAdmin, requireWorkspaceAdmin } from './permissions';
 import { fetchDocument } from './fetch-url';
 import { adapterForConnection, type ProviderDeps } from './providers';
 import { chunkText, htmlToText, toTsquery } from './text';
@@ -121,6 +122,7 @@ export async function setEmbeddingSetting(
   ctx: TenantContext,
   input: { connectionId: string; model: string } | null,
 ): Promise<EmbeddingSetting | null> {
+  await requireWorkspaceAdmin(db, ctx);
   const before = await getEmbeddingSetting(db, ctx);
   let setting: EmbeddingSetting | null = null;
   if (input) {
@@ -252,9 +254,13 @@ export async function createKnowledgeSource(
   input: KnowledgeSourceInput,
 ): Promise<KnowledgeSource> {
   const data = parse(sourceSchema, input);
+  // Workspace-wide knowledge reaches every agent: admins only. Agent knowledge: whoever may
+  // change that agent. Private knowledge: anyone.
+  if (data.scope === 'workspace') await requireWorkspaceAdmin(db, ctx);
   if (data.scope === 'agent') {
     const agent = await findAgent(db, ctx, data.agentId!);
     if (!agent) throw new AppError('VALIDATION', 'Unknown agent', { agentId: ['agent_required'] });
+    await requireAgentManager(db, ctx, agent);
   }
   let values: Parameters<typeof insertKnowledgeSource>[2];
   const base = { scope: data.scope, agentId: data.scope === 'agent' ? data.agentId! : null };
@@ -319,6 +325,7 @@ export async function createKnowledgeSource(
 export async function deleteKnowledgeSource(db: Database, ctx: TenantContext, id: string) {
   const source = await findKnowledgeSource(db, ctx, id);
   if (!source) throw new AppError('NOT_FOUND', 'Source not found');
+  await requireCreatorOrAdmin(db, ctx, source.createdBy);
   await deleteSourceRow(db, ctx, id);
   await recordAudit(db, {
     workspaceId: ctx.workspaceId,
@@ -342,6 +349,7 @@ export async function reindexKnowledgeSource(
 ) {
   const source = await findKnowledgeSource(db, ctx, id);
   if (!source) throw new AppError('NOT_FOUND', 'Source not found');
+  await requireCreatorOrAdmin(db, ctx, source.createdBy);
   await updateKnowledgeSource(db, ctx, id, {
     status: 'pending',
     error: null,

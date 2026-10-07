@@ -54,6 +54,7 @@ import { z } from 'zod';
 import { recordAudit } from './audit';
 import { parse } from './auth';
 import { AppError } from './errors';
+import { requireAgentManager, requireWorkspaceAdmin } from './permissions';
 import type { SecretStore } from './secrets';
 
 export type McpDeps = {
@@ -318,6 +319,8 @@ export async function startMcpAuthorization(
 ): Promise<string | null> {
   const connection = await requireConnection(db, ctx, id);
   if (connection.authType !== 'oauth') throw new AppError('VALIDATION', 'Not an OAuth connection');
+  // Anyone connects their own account; the shared sign-in is the admins'.
+  if (!perUser(connection)) await requireWorkspaceAdmin(db, ctx);
   const state = randomBytes(24).toString('base64url');
   let userSecretId: string | undefined;
   if (perUser(connection)) {
@@ -531,6 +534,7 @@ export async function createMcpConnection(
   ctx: TenantContext,
   input: McpConnectionInput,
 ): Promise<{ connection: McpConnection; authorizationUrl: string | null }> {
+  await requireWorkspaceAdmin(db, ctx);
   const data = parse(connectionSchema, input);
   const secretValue = connectionSecretFor(data);
   const secretId = secretValue
@@ -578,6 +582,7 @@ export async function updateMcpConnectionAuth(
   id: string,
   input: Omit<McpConnectionInput, 'name' | 'serverType' | 'endpoint' | 'transport'>,
 ): Promise<{ connection: McpConnection; authorizationUrl: string | null }> {
+  await requireWorkspaceAdmin(db, ctx);
   const current = await requireConnection(db, ctx, id);
   const data = parse(connectionSchema, {
     ...input,
@@ -627,6 +632,7 @@ export async function setMcpConnectionEnabled(
   id: string,
   enabled: boolean,
 ) {
+  await requireWorkspaceAdmin(db, ctx);
   await requireConnection(db, ctx, id);
   await updateMcpConnection(db, ctx, id, { enabled });
   await recordAudit(db, {
@@ -646,6 +652,7 @@ export async function removeMcpConnection(
   ctx: TenantContext,
   id: string,
 ) {
+  await requireWorkspaceAdmin(db, ctx);
   const connection = await requireConnection(db, ctx, id);
   const memberSecrets = await listMcpCredentialSecretIds(db, ctx, id);
   await deleteMcpConnection(db, ctx, id);
@@ -669,6 +676,7 @@ export async function updateToolDefaults(
   toolId: string,
   input: { defaultPermission?: PermissionMode; enabled?: boolean },
 ): Promise<McpTool> {
+  await requireWorkspaceAdmin(db, ctx);
   const tool = await findMcpTool(db, ctx, toolId);
   if (!tool) throw new AppError('NOT_FOUND', 'Tool not found');
   if (input.defaultPermission && !PERMISSION_MODES.includes(input.defaultPermission)) {
@@ -694,6 +702,7 @@ export async function updateToolDefaults(
 async function requireEditableAgent(db: Database, ctx: TenantContext, agentId: string) {
   const agent = await findAgent(db, ctx, agentId);
   if (!agent) throw new AppError('NOT_FOUND', 'Agent not found');
+  await requireAgentManager(db, ctx, agent);
   if (agent.status === 'archived')
     throw new AppError('INVALID_TRANSITION', 'Restore the agent before editing it');
   return agent;
@@ -861,4 +870,15 @@ export async function executeAgentTool(
       tool: [`mcp_${error.kind}`],
     });
   }
+}
+
+/** MCP Hub → Test: re-discovers tools (owners and admins). */
+export async function testMcpConnection(
+  db: Database,
+  deps: McpDeps,
+  ctx: TenantContext,
+  id: string,
+): Promise<McpConnection> {
+  await requireWorkspaceAdmin(db, ctx);
+  return refreshMcpConnection(db, deps, ctx, id);
 }
