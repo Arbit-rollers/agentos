@@ -20,7 +20,9 @@ const nextConfig: NextConfig = {
     '@agentos/model-gateway',
     '@agentos/mcp-gateway',
   ],
-  serverExternalPackages: ['bullmq', 'ioredis', 'postgres', '@node-rs/argon2'],
+  serverExternalPackages: ['bullmq', 'ioredis', 'postgres', '@node-rs/argon2', 'unpdf'],
+  // Knowledge uploads go through a server action (10 MB files + form overhead).
+  experimental: { serverActions: { bodySizeLimit: '11mb' } },
 };
 
 export default withNextIntl(nextConfig);

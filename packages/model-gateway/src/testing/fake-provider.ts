@@ -9,6 +9,7 @@
 //   Anthropic requests that opt into server-side fallbacks and say "refuse" → served by
 //   `claude-fallback` with a fallback block, as the real API does after a policy decline
 //   anything else echoes the last user message.
+//   /openai/v1/embeddings → deterministic bag-of-words vectors (768 dims; *-small-dim → 384).
 // Requests are recorded so tests can assert what reached the provider.
 import { createServer, type IncomingMessage, type Server } from 'node:http';
 
@@ -18,7 +19,14 @@ export type RecordedRequest = {
   body: unknown;
 };
 
-export const FAKE_MODELS = ['fake-echo', 'fake-down', 'fake-limited', 'fake-local'];
+export const FAKE_MODELS = [
+  'fake-echo',
+  'fake-down',
+  'fake-limited',
+  'fake-local',
+  'fake-embed',
+  'fake-embed-small-dim',
+];
 export const FAKE_CLAUDE_MODELS = ['claude-fake', 'claude-fake-down', 'claude-opus-5-5'];
 
 async function readBody(req: IncomingMessage): Promise<unknown> {
@@ -61,6 +69,21 @@ function plannedCalls(body: Body): { name: string; args: unknown }[] {
   });
 }
 
+/**
+ * Deterministic bag-of-words vector: texts that share words point the same way, so cosine
+ * similarity behaves like a crude real embedding.
+ */
+export function fakeEmbedding(text: string, size = 768): number[] {
+  const vector = Array.from({ length: size }, () => 0);
+  for (const word of text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []) {
+    let hash = 2166136261;
+    for (const char of word) hash = Math.imul(hash ^ char.codePointAt(0)!, 16777619);
+    vector[Math.abs(hash) % size]! += 1;
+  }
+  const norm = Math.hypot(...vector) || 1;
+  return vector.map((v) => v / norm);
+}
+
 let sequence = 0;
 
 export function startFakeProvider(options: { port?: number; apiKey?: string } = {}) {
@@ -86,6 +109,22 @@ export function startFakeProvider(options: { port?: number; apiKey?: string } = 
       return send(200, {
         object: 'list',
         data: FAKE_MODELS.map((id) => ({ id, object: 'model' })),
+      });
+    }
+    if (url === '/openai/v1/embeddings' && body) {
+      if (body.model.endsWith('-down')) return send(503, { error: { message: 'down' } });
+      const inputs = (body as unknown as { input: string[] | string }).input;
+      const list = Array.isArray(inputs) ? inputs : [inputs];
+      const size = body.model.includes('small-dim') ? 384 : 768;
+      return send(200, {
+        object: 'list',
+        model: body.model,
+        data: list.map((text, index) => ({
+          object: 'embedding',
+          index,
+          embedding: fakeEmbedding(text, size),
+        })),
+        usage: { prompt_tokens: list.join(' ').split(/\s+/).length, total_tokens: 0 },
       });
     }
     if (url === '/openai/v1/chat/completions' && body) {

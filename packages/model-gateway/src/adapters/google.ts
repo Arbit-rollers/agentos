@@ -1,9 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { ApiError, GoogleGenAI, type Content, type Part } from '@google/genai';
-import { ProviderError, errorKindForStatus } from '../errors';
+import { ProviderError, checkDimensions, errorKindForStatus } from '../errors';
 import type {
   ChatMessage,
   DiscoveredModel,
+  EmbedRequest,
+  EmbedResult,
   GenerateRequest,
   GenerateResult,
   ProviderAccess,
@@ -11,6 +13,7 @@ import type {
   StopReason,
   ToolCall,
 } from '../types';
+import { EMBEDDING_DIMENSIONS } from '../types';
 
 const TIMEOUT_MS = 120_000;
 
@@ -90,6 +93,28 @@ export function createGoogleAdapter(access: ProviderAccess): ProviderAdapter {
           });
         }
         return models;
+      } catch (error) {
+        throw toProviderError(error);
+      }
+    },
+
+    async embed(request: EmbedRequest): Promise<EmbedResult> {
+      try {
+        const response = await client.models.embedContent({
+          model: request.model,
+          contents: request.inputs,
+          config: {
+            outputDimensionality: EMBEDDING_DIMENSIONS,
+            taskType: request.purpose === 'query' ? 'RETRIEVAL_QUERY' : 'RETRIEVAL_DOCUMENT',
+            abortSignal: request.signal,
+          },
+        });
+        const vectors = (response.embeddings ?? []).map((e) => e.values ?? []);
+        return {
+          vectors: checkDimensions(vectors, EMBEDDING_DIMENSIONS, request.inputs.length),
+          // The Gemini API does not report token usage for embeddings.
+          inputTokens: 0,
+        };
       } catch (error) {
         throw toProviderError(error);
       }

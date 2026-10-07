@@ -1,4 +1,4 @@
-import { Pencil } from 'lucide-react';
+import { BookOpen, Pencil } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getFormatter, getTranslations } from 'next-intl/server';
@@ -10,6 +10,8 @@ import {
   latestConversation,
   listAgentToolGrants,
   listApprovalRequests,
+  listFeedbackEvents,
+  listKnowledgeSources,
   listChildAgents,
   listMessages,
   listProviderConnections,
@@ -33,6 +35,10 @@ import { ChatPanel, type ChatItem } from '@/components/agents/chat/chat-panel';
 import { SettingsDrawer } from '@/components/agents/settings-drawer';
 import { stepHref } from '@/components/agents/wizard/steps';
 import { toApprovalView } from '@/components/approvals/approval-view';
+import { AddSourceDialog } from '@/components/knowledge/add-source-dialog';
+import { SourceTable } from '@/components/knowledge/source-table';
+import { AddMemoryDialog } from '@/components/memory/add-memory-dialog';
+import { MemoryList, loadMemories } from '@/components/memory/memory-list';
 import { RunLog } from '@/components/runs/run-log';
 import { NewTaskDialog } from '@/components/tasks/new-task-dialog';
 import { TaskTable } from '@/components/tasks/task-table';
@@ -120,10 +126,13 @@ export default async function AgentWorkspacePage({ params, searchParams }: Param
       const runIds = [
         ...new Set(messages.map((m) => m.runId).filter((r): r is string => Boolean(r))),
       ];
-      const [runs, calls, approvals] = await Promise.all([
+      const [runs, calls, approvals, feedback] = await Promise.all([
         runIds.length ? listRunsWithDetails(db, ctx, { agentId: id, limit: 200 }) : [],
         listToolCallsForRuns(db, ctx, runIds),
         listApprovalRequests(db, ctx, { runIds }),
+        listFeedbackEvents(db, ctx, {
+          messageIds: messages.filter((m) => m.role === 'assistant').map((m) => m.id),
+        }),
       ]);
       const items: ChatItem[] = [];
       for (const message of messages) {
@@ -143,7 +152,22 @@ export default async function AgentWorkspacePage({ params, searchParams }: Param
             });
           }
         } else {
-          items.push({ kind: 'assistant', id: message.id, content: message.content });
+          // Newest feedback on this answer (events are newest first).
+          const latest = feedback.find(
+            (f) => f.messageId === message.id && f.userId === ctx.userId,
+          );
+          items.push({
+            kind: 'assistant',
+            id: message.id,
+            content: message.content,
+            ...(latest && {
+              feedback: {
+                id: latest.id,
+                action: latest.action,
+                suggestions: latest.suggestions,
+              },
+            }),
+          });
         }
       }
       body = (
@@ -235,17 +259,47 @@ export default async function AgentWorkspacePage({ params, searchParams }: Param
         </Card>
       );
       break;
-    case 'files':
-    case 'memory':
+    case 'files': {
+      const sources = await listKnowledgeSources(db, ctx, { agentId: id });
       body = (
         <Card>
-          <EmptyState
-            title={t('workspace.comingSoon', { milestone: 'v0.3' })}
-            description={t(`pages.${tab === 'files' ? 'knowledge' : 'memory'}.description`)}
-          />
+          <CardContent className="pt-5">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <Link href="/knowledge" className="text-sm text-text-muted hover:text-primary">
+                {t('knowledge.manage')}
+              </Link>
+              <AddSourceDialog agents={[{ id, name: agent.name }]} agentId={id} />
+            </div>
+            {sources.length === 0 ? (
+              <EmptyState icon={<BookOpen />} title={t('knowledge.emptyAgent')} className="py-6" />
+            ) : (
+              <SourceTable sources={sources} showScope={false} />
+            )}
+          </CardContent>
         </Card>
       );
       break;
+    }
+    case 'memory': {
+      const { memories } = await loadMemories(ctx, { agentId: id });
+      body = (
+        <Card>
+          <CardContent className="pt-5">
+            <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm text-text-muted">
+                {t('memoryPage.agentHint')}{' '}
+                <Link href="/memory" className="hover:text-primary">
+                  {t('memoryPage.manage')}
+                </Link>
+              </p>
+              <AddMemoryDialog agents={[{ id, name: agent.name }]} agentId={id} />
+            </div>
+            <MemoryList memories={memories} />
+          </CardContent>
+        </Card>
+      );
+      break;
+    }
     case 'logs':
       body = (
         <Card>

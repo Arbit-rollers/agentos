@@ -226,7 +226,7 @@ Legend: **AC n** = acceptance criterion n in PRD §28. **Screen n** = screen n i
 
 ---
 
-## v0.3: Knowledge, Memory, Feedback Learning (M8)
+## v0.3: Knowledge, Memory, Feedback Learning (M8) ✅
 
 - `knowledge_sources`: upload PDF/text/notes, URLs; scopes User / Workspace / Agent; ingestion jobs → chunk → embed (pgvector)
 - Retrieval inserted into runtime context (relevant only; never the whole database)
@@ -237,6 +237,16 @@ Legend: **AC n** = acceptance criterion n in PRD §28. **Screen n** = screen n i
 
 **Covers:** AC 21
 **DoD:** deleted memory never appears in later runs; personality suggestions never apply without approval.
+
+**As built (notes and known gaps)**
+- Knowledge: notes, file uploads (PDF, text, Markdown, CSV, JSON, HTML; 10 MB) and web pages, scoped Workspace / Agent / Only me. Project scope waits for projects. Scanned PDFs (no text layer) are rejected; there is no OCR.
+- Embeddings use the workspace's own provider connection (OpenAI, Google, Ollama, OpenAI-compatible) at a fixed 768 dimensions; models that produce another size are rejected when chosen. Changing the model re-indexes every source and memory in the background. Without a model, search is keyword-only.
+- Retrieval is hybrid (pgvector cosine + Postgres full text, merged by reciprocal rank fusion). Pinned and procedural memories always apply; other memories and knowledge only when relevant.
+- Memory layers: working = the run's own state; episodic = finished manual/scheduled tasks (chat turns are not stored); semantic and procedural = added by hand or accepted from feedback. Memory is private to the user who owns it.
+- Feedback: Approve / Reject / Revise / Feedback under every answer. Suggestions are a rule (the comment) and, for recognised phrases in English or Turkish, one personality trait ±20. Revise also asks the agent to redo the answer. Suggestions are accepted or dismissed in the chat or on the Memory page.
+- Run log shows which memories and knowledge sources each run used (`context.retrieved`).
+- Local setup: pgvector 0.8.7 was built for Homebrew Postgres 15 (README).
+- The chat's live updates now reconnect after a dropped stream instead of waiting for a manual reload.
 
 ---
 

@@ -6,7 +6,7 @@ A multi-user operating system for persistent, personality-driven AI agents that 
 - Build plan: [`docs/ROADMAP.md`](docs/ROADMAP.md)
 - Reference screens: [`docs/AgentOS Dark-Mode AI Dashboard Collage.png`](<docs/AgentOS Dark-Mode AI Dashboard Collage.png>)
 
-**Status:** v0.2 complete. v0.1 (M0–M6): agents with personalities and per-agent models, MCP tools with server-side permissions, chat with tool use, approvals, budgets and full run logs. v0.2 (M7): tasks with dependencies, retries, cancel and state history; one-time and recurring schedules; run recovery after a worker restart. Next: v0.3 knowledge & memory.
+**Status:** v0.3 complete. v0.1 (M0–M6): agents with personalities and per-agent models, MCP tools with server-side permissions, chat with tool use, approvals, budgets and full run logs. v0.2 (M7): tasks with dependencies, retries, cancel and state history; one-time and recurring schedules; run recovery. v0.3 (M8): knowledge sources (notes, files, web pages) with hybrid search, private per-user memory, and feedback that suggests rules and personality changes for you to accept. Next: v0.4 multi-agent orchestration.
 
 ## Repository layout
 
@@ -40,7 +40,9 @@ docker compose up --build
 
 ## Run locally without Docker
 
-Requires Node 24+, pnpm (`corepack enable`), PostgreSQL and Redis.
+Requires Node 24+, pnpm (`corepack enable`), PostgreSQL with the [pgvector](https://github.com/pgvector/pgvector) extension, and Redis.
+
+If your Postgres has no pgvector package (Homebrew's `pgvector` only targets Postgres 17/18), build it against your server: `git clone --branch v0.8.7 https://github.com/pgvector/pgvector && cd pgvector && PG_CONFIG=$(brew --prefix postgresql@15)/bin/pg_config make install`. Then, as a superuser, run `CREATE EXTENSION vector;` in both `agentos` and `agentos_test` (the migration does it too, but needs superuser rights).
 
 ```sh
 cp .env.example .env          # point DATABASE_URL / REDIS_URL at your local services,
@@ -87,6 +89,10 @@ CI (`.github/workflows/ci.yml`) runs all of these, plus E2E against Postgres (pg
 - **Testing MCP:** `pnpm --filter @agentos/mcp-gateway fake-mcp` runs a reference MCP server (built from the SDK) on port 4020: `/mcp` (no auth), `/secure/mcp` (bearer `test-token`), `/oauth/mcp` (OAuth with an auto-approving login), `/sse` (legacy transport). Playwright starts it automatically.
 - **Agent runs execute in the worker** (`executeRun` in `packages/core/src/runtime.ts`). A chat turn records the message, creates a task and a queued run, and enqueues it on the `agent` queue. The loop assembles the PRD §25 context, offers only non-blocked tools (aliased to provider-safe names), validates every tool call's arguments against the tool's JSON Schema (ajv), evaluates policy on every call, wraps tool output as `<tool_output trust="untrusted">`, and enforces budgets (tool calls, runtime, per-task and daily cost; stop or ask for approval). A step that needs approval persists the transcript in `runs.state` and stops; `decideApproval()` re-queues the run, which resumes in a later worker process. `claimRun()` makes duplicate job delivery harmless.
 - **Tasks and schedules** live in `packages/core/src/tasks.ts` and `schedules.ts`. Every task state change goes through `updateTaskState()`, which also writes `task_state_history`. When a run finishes, `onTaskRunFinished()` completes the task and starts its dependents, retries transient provider errors with backoff, or fails it (and its dependents). Schedules are registered with BullMQ through the `SchedulerPort` (`scheduler-bullmq.ts`); the database is the source of truth and the worker re-syncs on start. Runs heartbeat while they work; the worker re-queues stale runs every minute.
+- **Knowledge and memory** (`packages/core/src/knowledge.ts`, `memory.ts`): sources are read on upload (PDF via `unpdf`, text, Markdown, HTML), then chunked and embedded by the worker's `knowledge` queue. Embeddings come from the workspace's own providers (Settings → Knowledge); every vector is 768-dimensional and stored with the model that made it, so vectors from different models are never compared. Without an embedding model, search is keyword-only (Postgres full text, `simple` config for en + tr). Retrieval fuses vector and keyword rankings (reciprocal rank fusion) and is limited to 5 excerpts / 2,000 tokens. A run retrieves once at start, logs `context.retrieved` with the ids it used, and re-checks before every model call so a memory deleted or disabled mid-run is dropped. Knowledge excerpts reach the model inside `<knowledge trust="untrusted">` tags.
+- **Memory is private to its user** (PRD §12): repositories filter on `memories.user_id`; user-scoped knowledge is visible only to its uploader. Deletion is a hard delete. Finished manual and scheduled tasks are remembered as episodic memories; chat turns are not.
+- **Feedback learning** (`feedback.ts`): Reject / Revise / Feedback with a comment creates a _suggested_ rule and, when the comment matches a known phrase (en + tr), a personality change of ±20 on one trait. Nothing applies until the user accepts it; accepted personality changes go through `updatePersonality()` (versioned, audited before/after).
+- **URL fetching** (`fetch-url.ts`): http(s) only, every redirect re-checked, private/loopback/link-local addresses refused unless `AGENTOS_ALLOW_PRIVATE_URLS=1`, 5 MB and 15 s limits. Known gap: DNS is resolved separately for the check and the connection.
 - **Live updates:** `/api/runs/[id]/events` streams a run's events (server-sent events) until it settles; the chat refreshes when it does. Token-by-token streaming is not implemented yet.
 - **Personality eval against a real model:** `pnpm --filter @agentos/core eval:personality` (needs `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` + `EVAL_MODEL`, or `EVAL_PROVIDER=ollama`). It compares a terse/skeptical agent with a verbose/credulous one and fails if answers aren't measurably shorter and more hedged.
 - **Dev server caches services on `globalThis`** to survive hot reloads; restart `pnpm dev` after changing `apps/web/src/server/services.ts`.

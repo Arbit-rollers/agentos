@@ -19,6 +19,7 @@ import {
 } from '@agentos/db';
 import { z } from 'zod';
 import { recordAudit } from './audit';
+import { recordTaskEpisode } from './memory';
 import { parse } from './auth';
 import { AppError } from './errors';
 import { canAgentRun } from './models';
@@ -145,12 +146,19 @@ export async function onTaskRunFinished(
   ctx: TenantContext,
   taskId: string,
   outcome: { status: 'completed'; output: string } | { status: 'failed'; error: string },
+  runId: string | null = null,
 ) {
   const task = await findTask(db, ctx, taskId);
   if (!task || task.state === 'cancelled') return;
+  // Episodic memory is best effort: it must never change how the task ends.
+  const remember = (
+    result: 'completed' | 'failed',
+    fields: { output: string | null; error: string | null },
+  ) => recordTaskEpisode(db, deps, ctx, { ...task, ...fields }, runId, result).catch(() => null);
 
   if (outcome.status === 'completed') {
     await updateTaskState(db, ctx, task.id, 'completed', { output: outcome.output, error: null });
+    await remember('completed', { output: outcome.output, error: null });
     for (const dependent of await listDependentTasks(db, ctx, task.id)) {
       const blockers = await listTasksByIds(db, ctx, dependent.dependsOn);
       if (blockers.every((b) => b.state === 'completed'))
@@ -169,6 +177,7 @@ export async function onTaskRunFinished(
     return;
   }
   await failTask(db, ctx, task, outcome.error);
+  await remember('failed', { output: null, error: outcome.error });
 }
 
 /** Cancels a task: its runs stop at the next step and pending approvals are rejected. */

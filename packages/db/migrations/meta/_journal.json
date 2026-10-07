@@ -64,6 +64,13 @@
       "when": 1791359183172,
       "tag": "0008_tasks_schedules",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791360667812,
+      "tag": "0009_knowledge_memory",
+      "breakpoints": true
     }
   ]
 }

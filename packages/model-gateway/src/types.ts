@@ -83,9 +83,35 @@ export type DiscoveredModel = {
   maxOutputTokens?: number;
 };
 
+/**
+ * Knowledge and memory vectors have one fixed size so a single pgvector index serves every
+ * workspace. OpenAI text-embedding-3 and Gemini embeddings are asked for this size;
+ * nomic-embed-text (Ollama) produces it natively. Other sizes are rejected.
+ */
+export const EMBEDDING_DIMENSIONS = 768;
+
+/** Suggested embedding model per provider. Anthropic has no embeddings API. */
+export const DEFAULT_EMBEDDING_MODELS: Partial<Record<ProviderKind, string>> = {
+  openai: 'text-embedding-3-small',
+  google: 'gemini-embedding-001',
+  ollama: 'nomic-embed-text',
+};
+
+export type EmbedRequest = {
+  model: string;
+  inputs: string[];
+  /** Some providers embed queries and documents differently. */
+  purpose: 'document' | 'query';
+  signal?: AbortSignal;
+};
+
+export type EmbedResult = { vectors: number[][]; inputTokens: number };
+
 /** One adapter per provider family (PRD §7.1). */
 export interface ProviderAdapter {
   readonly provider: ProviderKind;
   listModels(): Promise<DiscoveredModel[]>;
   generate(request: GenerateRequest): Promise<GenerateResult>;
+  /** Absent when the provider has no embeddings API. */
+  embed?(request: EmbedRequest): Promise<EmbedResult>;
 }

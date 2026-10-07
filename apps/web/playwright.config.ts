@@ -2,7 +2,9 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: './e2e',
-  // The suite runs against `next dev`, which compiles each route on first visit.
+  // The suite runs against `next dev`, which compiles each route on first visit, and most
+  // tests are multi-page flows that also wait on the worker.
+  timeout: 60_000,
   expect: { timeout: 10_000 },
   use: { baseURL: 'http://localhost:3000' },
   webServer: [

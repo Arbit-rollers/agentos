@@ -88,7 +88,9 @@ test.describe('runtime, chat and approvals (M6)', () => {
     await tabs.getByRole('link', { name: /^Tools/ }).click();
     await expect(page.getByText('Approval required')).toBeVisible();
     await tabs.getByRole('link', { name: /^Memory/ }).click();
-    await expect(page.getByText('Coming in v0.3')).toBeVisible();
+    await expect(page.getByText('No memories yet.')).toBeVisible();
+    await tabs.getByRole('link', { name: /^Files/ }).click();
+    await expect(page.getByText('No files attached to this agent yet.')).toBeVisible();
     await page.goto(`/agents/${id}`);
     await page.getByRole('button', { name: 'Agent settings' }).click();
     await expect(

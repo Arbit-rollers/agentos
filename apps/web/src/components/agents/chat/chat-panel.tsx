@@ -11,10 +11,11 @@ import { ApprovalCard, type ApprovalView } from '@/components/approvals/approval
 import { useErrorText } from '@/components/error-text';
 import { Markdown } from '@/components/markdown';
 import { AgentAvatar } from '../agent-avatar';
+import { AnswerFeedback, type AnswerFeedbackView } from './answer-feedback';
 
 export type ChatItem =
   | { kind: 'user'; id: string; content: string }
-  | { kind: 'assistant'; id: string; content: string }
+  | { kind: 'assistant'; id: string; content: string; feedback?: AnswerFeedbackView }
   | {
       kind: 'run';
       id: string;
@@ -100,7 +101,14 @@ export function ChatPanel({
       setLive(null);
       router.refresh();
     });
-    source.onerror = () => source.close();
+    // A dropped connection reconnects on its own (the server re-sends the current status and
+    // `done` if the run has settled). Only a permanently closed stream falls back to a refresh.
+    source.onerror = () => {
+      if (source.readyState === EventSource.CLOSED) {
+        setLive(null);
+        router.refresh();
+      }
+    };
     return () => source.close();
   }, [followRunId, router]);
 
@@ -142,6 +150,14 @@ export function ChatPanel({
                 <div className="min-w-0 flex-1" data-testid="assistant-message">
                   <p className="mb-1 text-xs text-text-muted">{agentName}</p>
                   <Markdown>{item.content}</Markdown>
+                  {conversationId && (
+                    <AnswerFeedback
+                      agentId={agentId}
+                      conversationId={conversationId}
+                      messageId={item.id}
+                      latest={item.feedback}
+                    />
+                  )}
                 </div>
               </li>
             ) : (

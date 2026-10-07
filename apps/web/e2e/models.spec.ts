@@ -22,7 +22,7 @@ test.describe('model gateway (M4)', () => {
       endpoint: `${FAKE_PROVIDER}/openai/v1`,
     });
     await expect(page.getByText('Connected').first()).toBeVisible();
-    await expect(page.getByText(/4 models/)).toBeVisible();
+    await expect(page.getByText(/6 models/)).toBeVisible();
 
     await addProvider(page, {
       kind: 'OpenAI-compatible',

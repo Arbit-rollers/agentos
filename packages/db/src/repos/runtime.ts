@@ -78,6 +78,17 @@ export async function insertMessage(
   return row!;
 }
 
+/** A message together with its conversation (for feedback on an agent's answer). */
+export async function findMessageWithConversation(db: Executor, ctx: TenantContext, id: string) {
+  const [row] = await db
+    .select({ message: messages, conversation: conversations })
+    .from(messages)
+    .innerJoin(conversations, eq(conversations.id, messages.conversationId))
+    .where(tenantScope(ctx, messages, eq(messages.id, id)))
+    .limit(1);
+  return row;
+}
+
 /** Oldest first; the last `limit` messages. */
 export async function listMessages(
   db: Executor,

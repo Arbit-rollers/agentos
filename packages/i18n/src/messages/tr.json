@@ -151,7 +151,26 @@
     "invalid_timezone": "Geçerli bir saat dilimi seçin.",
     "run_at_in_past": "Gelecekte bir zaman seçin.",
     "interrupted": "yeniden başlatma nedeniyle kesildi",
-    "cancelled_by_user": "iptal edildi"
+    "cancelled_by_user": "iptal edildi",
+    "provider_no_embeddings": "Bu sağlayıcının embedding API'si yok. OpenAI, Google, Ollama veya OpenAI uyumlu bir sunucu seçin.",
+    "embedding_failed": "Model embedding döndürmedi. Model adını ve sağlayıcıyı kontrol edin.",
+    "embedding_dimensions": "Bu modelin vektörleri 768 boyutlu değil. Başka bir embedding modeli seçin.",
+    "note_required": "Notun metnini yazın.",
+    "note_too_long": "Notlar en fazla 200.000 karakter olabilir. Bunun yerine dosya yükleyin.",
+    "invalid_url": "http veya https ile başlayan bir URL girin.",
+    "url_private": "Özel ve yerel ağ adresleri getirilemez.",
+    "url_unreachable": "Sayfa getirilemedi.",
+    "source_too_large": "Bu çok büyük. Sınır 10 MB.",
+    "file_required": "Bir dosya seçin.",
+    "file_type_unsupported": "Bu dosya türü henüz desteklenmiyor.",
+    "file_unreadable": "Dosya okunamadı.",
+    "no_text_found": "Metin bulunamadı. Taranmış PDF'ler OCR gerektirir; bu henüz desteklenmiyor.",
+    "ingestion_failed": "Dizinleme başarısız oldu. Yeniden dizinlemeyi deneyin.",
+    "memory_required": "Hafızayı yazın.",
+    "memory_too_long": "Hafızalar en fazla 2.000 karakter olabilir.",
+    "comment_required": "Neyin değişmesi gerektiğini yazın.",
+    "comment_too_long": "1.000 karakterin altında tutun.",
+    "retrieval_failed": "Hafıza ve bilgiler getirilemedi."
   },
   "dashboard": {
     "greetingMorning": "Günaydın, {name}",
@@ -222,7 +241,21 @@
     "schedule_created": "Zamanlama oluşturuldu",
     "schedule_paused": "Zamanlama duraklatıldı",
     "schedule_resumed": "Zamanlama devam ettirildi",
-    "schedule_deleted": "Zamanlama silindi"
+    "schedule_deleted": "Zamanlama silindi",
+    "knowledge_source_added": "Bilgi eklendi",
+    "knowledge_source_deleted": "Bilgi silindi",
+    "knowledge_embedding_changed": "Embedding modeli değişti",
+    "memory_created": "Hafıza eklendi",
+    "memory_suggested": "Hafıza önerildi",
+    "memory_edited": "Hafıza düzenlendi",
+    "memory_pinned": "Hafıza sabitlendi",
+    "memory_unpinned": "Hafıza sabitlemesi kaldırıldı",
+    "memory_enabled": "Hafıza etkinleştirildi",
+    "memory_disabled": "Hafıza devre dışı bırakıldı",
+    "memory_deleted": "Hafıza silindi",
+    "feedback_submitted": "Geri bildirim verildi",
+    "feedback_suggestion_accepted": "Öneri onaylandı",
+    "feedback_suggestion_dismissed": "Öneri reddedildi"
   },
   "outcome": {
     "success": "Başarılı",
@@ -261,7 +294,8 @@
     "saved": "Kaydedildi.",
     "profileTab": "Profil",
     "providersTab": "Yapay Zekâ Sağlayıcıları",
-    "sectionsLabel": "Ayar bölümleri"
+    "sectionsLabel": "Ayar bölümleri",
+    "knowledgeTab": "Bilgi"
   },
   "languages": {
     "en": "English",
@@ -645,7 +679,9 @@
       "run_completed": "Çalıştırma tamamlandı",
       "outcomeOk": "bir sonuç",
       "outcomeError": "bir hata",
-      "run_recovered": "Yeniden başlatmadan sonra devam edildi ({repairedCalls} kesilen araç çağrısı onarıldı)"
+      "run_recovered": "Yeniden başlatmadan sonra devam edildi ({repairedCalls} kesilen araç çağrısı onarıldı)",
+      "context_retrieved": "{memories, plural, =0 {Hafıza kullanılmadı} other {# hafıza kullanıldı}}, {knowledge, plural, =0 {bilgi kullanılmadı} other {# bilgi bölümü kullanıldı}}{sources}",
+      "context_keyword": " (anahtar kelime araması)"
     },
     "reasons": {
       "fixed": "sabit model",
@@ -1050,5 +1086,139 @@
     "paused": "Duraklatıldı",
     "done": "Tamamlandı",
     "whenLabel": "Ne zaman"
+  },
+  "embedding": {
+    "title": "Gömme (embedding) modeli",
+    "subtitle": "Bilgileri ve hafızayı vektöre çevirir; ajanlar onları anlamına göre bulur. Model seçilmezse AgentOS anahtar kelimeyle arar.",
+    "provider": "Sağlayıcı",
+    "model": "Model",
+    "modelHint": "768 boyutlu vektör üretmeli; örneğin text-embedding-3-small (OpenAI), gemini-embedding-001 (Google) veya nomic-embed-text (Ollama).",
+    "save": "Kaydet ve yeniden dizinle",
+    "saving": "Model kontrol ediliyor…",
+    "turnOff": "Yalnızca anahtar kelimeyle ara",
+    "current": "Kullanılan: {provider} · {model}",
+    "none": "Yalnızca anahtar kelime araması. Ajanların anlamına göre araması için bir model seçin.",
+    "noProviders": "Önce bir OpenAI, Google, Ollama veya OpenAI uyumlu sağlayıcı ekleyin. Anthropic'in embedding API'si yok.",
+    "saved": "Kaydedildi. Bilgiler ve hafıza arka planda yeniden dizinleniyor."
+  },
+  "knowledge": {
+    "title": "Bilgi",
+    "subtitle": "Ajanlarınızın yararlanabileceği belgeler, notlar ve web sayfaları. Modele yalnızca ilgili bölümler gönderilir.",
+    "add": "Kaynak ekle",
+    "adding": "Ekleniyor…",
+    "empty": "Henüz bilgi yok.",
+    "emptyHint": "Bir not, dosya veya web sayfası ekleyin. Ajanlar yanıt verirken ilgili bölümleri kullanır.",
+    "emptyAgent": "Bu ajana henüz dosya eklenmedi.",
+    "type": "Tür",
+    "types": {
+      "note": "Not",
+      "file": "Dosya",
+      "url": "Web sayfası"
+    },
+    "name": "Ad",
+    "namePlaceholder": "örn. Marka yazım kılavuzu",
+    "nameOptional": "Ad (isteğe bağlı)",
+    "text": "Metin",
+    "file": "Dosya",
+    "fileHint": "PDF, metin, Markdown, CSV, JSON veya HTML; en fazla 10 MB.",
+    "url": "URL",
+    "scope": "Kimler görebilir",
+    "scopes": {
+      "workspace": "Tüm çalışma alanı",
+      "agent": "Tek bir ajan",
+      "user": "Yalnızca ben"
+    },
+    "agent": "Ajan",
+    "status": {
+      "pending": "Sırada",
+      "processing": "Dizinleniyor",
+      "ready": "Hazır",
+      "failed": "Başarısız"
+    },
+    "excerpts": "{count, plural, one {# bölüm} other {# bölüm}}",
+    "keywordOnly": "Yalnızca anahtar kelime araması",
+    "reindex": "Yeniden dizinle",
+    "refetch": "Yeniden getir",
+    "delete": "Sil",
+    "confirmDelete": "Silmek için tekrar tıklayın",
+    "source": "Kaynak",
+    "added": "Eklenme",
+    "preview": "Önizleme",
+    "manage": "Bilgileri yönet"
+  },
+  "memoryPage": {
+    "title": "Hafıza",
+    "subtitle": "Ajanlarınızın sizinle çalışırken öğrendikleri. Hafızanız yalnızca size özeldir.",
+    "add": "Hafıza ekle",
+    "adding": "Ekleniyor…",
+    "empty": "Henüz hafıza yok.",
+    "emptyHint": "Ajanlar tamamlanan görevleri hatırlar; geri bildiriminiz, siz onayladığınızda kurala dönüşebilir.",
+    "search": "Hafızada ara",
+    "type": "Tür",
+    "types": {
+      "procedural": "Kural",
+      "semantic": "Bilgi",
+      "episodic": "Geçmiş görev"
+    },
+    "typeHints": {
+      "procedural": "Her zaman uygulanır; örn. \"Madde işaretleriyle yanıtla.\"",
+      "semantic": "İlgili olduğunda kullanılır; örn. \"Mali yılımız Nisan'da başlar.\"",
+      "episodic": "Yaşanmış bir şey; örn. tamamlanan bir görev."
+    },
+    "content": "Hafıza",
+    "agent": "Geçerli olduğu ajan",
+    "allAgents": "Tüm ajanlar",
+    "pinned": "Sabitlendi",
+    "pinHint": "Sabitlenen hafızalar her çalıştırmaya eklenir.",
+    "pin": "Sabitle",
+    "unpin": "Sabitlemeyi kaldır",
+    "disable": "Devre dışı bırak",
+    "enable": "Etkinleştir",
+    "edit": "Düzenle",
+    "save": "Kaydet",
+    "cancel": "Vazgeç",
+    "delete": "Sil",
+    "confirmDelete": "Silmek için tekrar tıklayın",
+    "disabled": "Devre dışı",
+    "filters": {
+      "all": "Tümü",
+      "procedural": "Kurallar",
+      "semantic": "Bilgiler",
+      "episodic": "Geçmiş görevler",
+      "disabled": "Devre dışı"
+    },
+    "provenance": {
+      "manual": "Sizin eklediğiniz",
+      "feedback": "Geri bildiriminizden",
+      "run": "Bir görevden"
+    },
+    "lastUsed": "Son kullanım {time}",
+    "neverUsed": "Henüz kullanılmadı",
+    "suggestions": "Geri bildiriminizden öneriler",
+    "suggestionsHint": "Siz onaylamadan hiçbir şey değişmez.",
+    "accept": "Onayla",
+    "dismiss": "Reddet",
+    "ruleSuggestion": "Yeni kural: {content}",
+    "traitSuggestion": "{trait}: {from} → {to}",
+    "feedbackOn": "{agent} için geri bildirim",
+    "manage": "Hafızayı yönet",
+    "agentHint": "Bu ajana ait hafızalar. Tüm ajanlar için olan hafızalar da geçerlidir."
+  },
+  "feedback": {
+    "label": "Bu yanıt hakkında geri bildirim",
+    "approve": "İyi yanıt",
+    "reject": "Kötü yanıt",
+    "revise": "Düzelt",
+    "feedback": "Geri bildirim",
+    "comment": "Ne değişmeli?",
+    "placeholder": "örn. Çok uzun. Bana yalnızca önemli bilgileri ver.",
+    "send": "Gönder",
+    "cancel": "Vazgeç",
+    "approved": "İyi yanıt olarak işaretlendi.",
+    "recorded": "Geri bildirim kaydedildi.",
+    "suggestions": "Önerilen değişiklikler",
+    "accepted": "Onaylandı",
+    "dismissed": "Reddedildi",
+    "reviseMessage": "Lütfen son yanıtını düzelt: {comment}"
   }
 }

@@ -9,8 +9,6 @@ import type { NavKey } from '@/components/shell/nav-items';
 // delivers each (docs/ROADMAP.md). A real page at the same path replaces its entry here.
 const UPCOMING = {
   workflows: { nav: 'workflows', milestone: 'v0.5' },
-  knowledge: { nav: 'knowledge', milestone: 'v0.3' },
-  memory: { nav: 'memory', milestone: 'v0.3' },
   analytics: { nav: 'analytics', milestone: 'v0.6' },
 } as const satisfies Record<
   string,

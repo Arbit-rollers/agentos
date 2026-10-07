@@ -12,10 +12,13 @@ import {
   setAgentPermissions,
   setAgentTools,
   startChatTurn,
+  submitFeedback,
   updateAgentBasics,
   updatePersonality,
   type AgentAction,
 } from '@agentos/core';
+import type { FeedbackAction, FeedbackSuggestion } from '@agentos/db';
+import { getTranslations } from 'next-intl/server';
 import { requireSession } from '@/server/session';
 import { getServices } from '@/server/services';
 
@@ -226,4 +229,49 @@ export async function savePermissionsAction(
     });
     return `/agents/${agentId}/setup/review`;
   });
+}
+
+export type FeedbackResult = {
+  ok?: boolean;
+  error?: string;
+  fieldErrors?: Record<string, string[] | undefined>;
+  feedback?: { id: string; suggestions: FeedbackSuggestion[] };
+};
+
+/**
+ * Agent output → Approve / Reject / Revise / Feedback (PRD §13). Revise also asks the agent
+ * to redo the answer in the same conversation.
+ */
+export async function submitFeedbackAction(input: {
+  agentId: string;
+  conversationId: string;
+  messageId: string;
+  action: FeedbackAction;
+  comment?: string;
+}): Promise<FeedbackResult> {
+  const { ctx } = await requireSession();
+  const { db, runtimeDeps } = getServices();
+  try {
+    const event = await submitFeedback(db, runtimeDeps, ctx, {
+      messageId: input.messageId,
+      action: input.action,
+      comment: input.comment,
+    });
+    if (input.action === 'revise') {
+      const t = await getTranslations('feedback');
+      await startChatTurn(db, runtimeDeps, ctx, input.agentId, {
+        message: t('reviseMessage', { comment: event.comment }),
+        conversationId: input.conversationId,
+      });
+    }
+    revalidatePath(`/agents/${input.agentId}`);
+    revalidatePath('/memory');
+    return { ok: true, feedback: { id: event.id, suggestions: event.suggestions } };
+  } catch (error) {
+    if (!(error instanceof AppError)) throw error;
+    return {
+      error: error.code === 'VALIDATION' ? undefined : error.code,
+      fieldErrors: error.details,
+    };
+  }
 }
