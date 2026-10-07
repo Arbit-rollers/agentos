@@ -24,7 +24,10 @@ const TONE: Record<KnowledgeSource['status'], StatusTone> = {
 export async function SourceTable({
   sources,
   showScope = true,
+  viewer,
 }: {
+  /** Who is looking: actions show only for their own sources, or for admins. */
+  viewer: { userId: string; admin: boolean };
   sources: (KnowledgeSource & { agentName: string | null })[];
   showScope?: boolean;
 }) {
@@ -103,12 +106,14 @@ export async function SourceTable({
                   {format.dateTime(source.createdAt, { dateStyle: 'medium' })}
                 </TableCell>
                 <TableCell>
-                  <SourceActions
-                    id={source.id}
-                    name={source.name}
-                    type={source.type}
-                    busy={indexing}
-                  />
+                  {(viewer.admin || source.createdBy === viewer.userId) && (
+                    <SourceActions
+                      id={source.id}
+                      name={source.name}
+                      type={source.type}
+                      busy={indexing}
+                    />
+                  )}
                 </TableCell>
               </TableRow>
             );

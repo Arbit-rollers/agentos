@@ -7,6 +7,7 @@ import { listAgents, listKnowledgeSources } from '@agentos/db';
 import { Button, Card, EmptyState, PageHeader } from '@agentos/ui';
 import { AddSourceDialog } from '@/components/knowledge/add-source-dialog';
 import { SourceTable } from '@/components/knowledge/source-table';
+import { canManageAgent, isAdmin } from '@/server/permissions';
 import { requireSession } from '@/server/session';
 import { getServices } from '@/server/services';
 
@@ -16,7 +17,9 @@ export async function generateMetadata(): Promise<Metadata> {
 
 /** Knowledge (PRD §11): sources, their scope and indexing status. */
 export default async function KnowledgePage() {
-  const { ctx } = await requireSession();
+  const session = await requireSession();
+  const { ctx } = session;
+  const admin = isAdmin(session);
   const db = getServices().db;
   const t = await getTranslations();
   const [sources, agents, embedding] = await Promise.all([
@@ -38,7 +41,12 @@ export default async function KnowledgePage() {
                 {t('embedding.title')}
               </Link>
             </Button>
-            <AddSourceDialog agents={agents.map((a) => ({ id: a.id, name: a.name }))} />
+            <AddSourceDialog
+              agents={agents
+                .filter((a) => canManageAgent(session, a))
+                .map((a) => ({ id: a.id, name: a.name }))}
+              allowWorkspace={admin}
+            />
           </div>
         }
       />
@@ -60,7 +68,7 @@ export default async function KnowledgePage() {
         </Card>
       ) : (
         <Card className="p-2">
-          <SourceTable sources={sources} />
+          <SourceTable sources={sources} viewer={{ userId: ctx.userId, admin }} />
         </Card>
       )}
     </>

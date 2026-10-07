@@ -17,16 +17,18 @@ import { DelegationTree, loadDelegationTree } from '@/components/tasks/delegatio
 import { TaskActions } from '@/components/tasks/task-actions';
 import { TASK_TONE } from '@/components/tasks/task-table';
 import { isUuid } from '@/server/api';
+import { canManageItem } from '@/server/permissions';
 import { requireSession } from '@/server/session';
 import { getServices } from '@/server/services';
 
 type Params = { params: Promise<{ id: string }> };
 
 async function load(id: string) {
-  const { ctx } = await requireSession();
+  const session = await requireSession();
+  const { ctx } = session;
   const task = isUuid(id) ? await findTask(getServices().db, ctx, id) : undefined;
   if (!task) notFound();
-  return { ctx, task };
+  return { ctx, task, manage: canManageItem(session, task.createdBy) };
 }
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
@@ -35,7 +37,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
 /** Task detail: output, state history and runs (PRD §14, §22). */
 export default async function TaskPage({ params }: Params) {
-  const { ctx, task } = await load((await params).id);
+  const { ctx, task, manage } = await load((await params).id);
   const db = getServices().db;
   const t = await getTranslations();
   const format = await getFormatter();
@@ -110,11 +112,13 @@ export default async function TaskPage({ params }: Params) {
             </p>
           )}
         </div>
-        <TaskActions
-          id={task.id}
-          canCancel={active}
-          canRetry={task.state === 'failed' || task.state === 'cancelled'}
-        />
+        {manage && (
+          <TaskActions
+            id={task.id}
+            canCancel={active}
+            canRetry={task.state === 'failed' || task.state === 'cancelled'}
+          />
+        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">

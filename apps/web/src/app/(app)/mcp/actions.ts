@@ -10,7 +10,7 @@ import {
   setMyMcpToken,
   updateMcpConnectionAuth,
   type GoogleService,
-  refreshMcpConnection,
+  testMcpConnection,
   removeMcpConnection,
   setMcpConnectionEnabled,
   startMcpAuthorization,
@@ -80,7 +80,7 @@ export async function testMcpAction(id: string): Promise<McpFormState> {
   const { ctx } = await requireSession();
   const { db, mcpDeps } = getServices();
   try {
-    const connection = await refreshMcpConnection(db, mcpDeps, ctx, id);
+    const connection = await testMcpConnection(db, mcpDeps, ctx, id);
     revalidatePath(`/mcp/${id}`);
     revalidatePath('/mcp');
     return connection.status === 'connected'

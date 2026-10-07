@@ -186,7 +186,9 @@
     "invite_invalid": "This invitation is no longer valid.",
     "owner_cannot_leave": "The owner can't leave or be removed.",
     "workspace_name_required": "Enter a name.",
-    "FORBIDDEN": "Only owners and admins can do that."
+    "FORBIDDEN": "Only owners and admins can do that.",
+    "admin_only": "Only owners and admins can do that.",
+    "creator_or_admin": "Only the person who created it, or an admin, can do that."
   },
   "dashboard": {
     "greetingMorning": "Good morning, {name}",
@@ -1052,7 +1054,8 @@
     },
     "decidedBy": "Decided {time}",
     "invalidJson": "Parameters must be valid JSON.",
-    "task": "Task"
+    "task": "Task",
+    "notYours": "Waiting for the person this run works for, or an admin."
   },
   "logs": {
     "title": "Logs",
@@ -1375,6 +1378,7 @@
       "expired": "This invitation has expired. Ask for a new one.",
       "used": "This invitation has already been used.",
       "revoked": "This invitation was withdrawn."
-    }
+    },
+    "adminOnly": "Only owners and admins can change this. Ask one of them if something needs to change."
   }
 }

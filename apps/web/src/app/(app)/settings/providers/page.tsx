@@ -13,6 +13,8 @@ import {
 } from '@agentos/ui';
 import { AddProviderForm } from '@/components/settings/add-provider-form';
 import { ProviderActions } from '@/components/settings/provider-actions';
+import { AdminOnlyNote } from '@/components/admin-only-note';
+import { isAdmin } from '@/server/permissions';
 import { requireSession } from '@/server/session';
 import { getServices } from '@/server/services';
 
@@ -27,7 +29,9 @@ const TONE: Record<ProviderConnection['status'], StatusTone> = {
 };
 
 export default async function ProvidersPage() {
-  const { ctx } = await requireSession();
+  const session = await requireSession();
+  const { ctx } = session;
+  const admin = isAdmin(session);
   const { db, env } = getServices();
   const connections = await listProviderConnections(db, ctx);
   const t = await getTranslations('providers');
@@ -81,7 +85,7 @@ export default async function ProvidersPage() {
                       </p>
                     )}
                   </div>
-                  <ProviderActions id={connection.id} name={connection.name} />
+                  {admin && <ProviderActions id={connection.id} name={connection.name} />}
                 </li>
               ))}
             </ul>
@@ -89,14 +93,18 @@ export default async function ProvidersPage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('add')}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <AddProviderForm ollamaDefault={env.OLLAMA_BASE_URL} />
-        </CardContent>
-      </Card>
+      {admin ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('add')}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <AddProviderForm ollamaDefault={env.OLLAMA_BASE_URL} />
+          </CardContent>
+        </Card>
+      ) : (
+        <AdminOnlyNote />
+      )}
     </div>
   );
 }

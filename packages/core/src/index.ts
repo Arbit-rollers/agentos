@@ -76,6 +76,7 @@ export {
   updateToolDefaults,
   disconnectMyMcpAccount,
   setMyMcpToken,
+  testMcpConnection,
   updateMcpConnectionAuth,
 } from './mcp';
 export type { McpConnectionInput, McpDeps, ToolCallOutcome } from './mcp';
@@ -157,3 +158,10 @@ export {
   switchWorkspace,
 } from './team';
 export type { InvitationView } from './team';
+export {
+  isWorkspaceAdmin,
+  requireAgentManager,
+  requireCreatorOrAdmin,
+  requireWorkspaceAdmin,
+  workspaceRole,
+} from './permissions';

@@ -20,6 +20,8 @@ import { MyAccount } from '@/components/mcp/my-account';
 import { ServerIcon } from '@/components/mcp/server-icon';
 import { ToolsTable } from '@/components/mcp/tools-table';
 import { isUuid } from '@/server/api';
+import { AdminOnlyNote } from '@/components/admin-only-note';
+import { isAdmin } from '@/server/permissions';
 import { requireSession } from '@/server/session';
 import { getServices } from '@/server/services';
 
@@ -40,10 +42,11 @@ type Params = {
 };
 
 async function load(id: string) {
-  const { ctx } = await requireSession();
+  const session = await requireSession();
+  const { ctx } = session;
   const connection = isUuid(id) ? await findMcpConnection(getServices().db, ctx, id) : undefined;
   if (!connection) notFound();
-  return { ctx, connection };
+  return { ctx, connection, admin: isAdmin(session) };
 }
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
@@ -54,7 +57,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 export default async function McpConnectionPage({ params, searchParams }: Params) {
   const { id } = await params;
   const query = await searchParams;
-  const { ctx, connection } = await load(id);
+  const { ctx, connection, admin } = await load(id);
   const db = getServices().db;
   const t = await getTranslations();
   const format = await getFormatter();
@@ -144,6 +147,7 @@ export default async function McpConnectionPage({ params, searchParams }: Params
       body = (
         <ToolsTable
           connectionId={id}
+          editable={admin}
           tools={tools.map((tool) => ({
             id: tool.id,
             name: tool.name,
@@ -202,7 +206,7 @@ export default async function McpConnectionPage({ params, searchParams }: Params
               </section>
             </>
           )}
-          {!perUser && connection.authType === 'oauth' && (
+          {admin && !perUser && connection.authType === 'oauth' && (
             <>
               <p className="text-sm text-text-muted">
                 {connection.status === 'needs_auth'
@@ -212,18 +216,20 @@ export default async function McpConnectionPage({ params, searchParams }: Params
               <ReauthorizeButton id={id} />
             </>
           )}
-          <ChangeSignInForm
-            id={id}
-            authType={connection.authType}
-            credentialMode={connection.credentialMode}
-            redirectUri={redirectUri}
-          />
+          {admin && (
+            <ChangeSignInForm
+              id={id}
+              authType={connection.authType}
+              credentialMode={connection.credentialMode}
+              redirectUri={redirectUri}
+            />
+          )}
         </div>
       );
       break;
     }
     case 'settings':
-      body = <EnabledSwitch id={id} enabled={connection.enabled} />;
+      body = admin ? <EnabledSwitch id={id} enabled={connection.enabled} /> : <AdminOnlyNote />;
       break;
     case 'logs': {
       const logs = await listAuditLogsForTargets(db, ctx, [id, ...tools.map((tool) => tool.id)]);
@@ -293,7 +299,7 @@ export default async function McpConnectionPage({ params, searchParams }: Params
             )}
           </div>
         </div>
-        <DetailActions id={id} />
+        {admin && <DetailActions id={id} />}
       </div>
       {query.connected && (
         <p role="status" className="mb-4 rounded-lg bg-success/15 px-3 py-2 text-sm text-success">

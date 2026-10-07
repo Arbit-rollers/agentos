@@ -5,6 +5,8 @@ import { getEmbeddingSetting, suggestedEmbeddingModel } from '@agentos/core';
 import { listProviderConnections } from '@agentos/db';
 import { Card, CardContent, CardHeader, CardTitle } from '@agentos/ui';
 import { EmbeddingForm } from '@/components/settings/embedding-form';
+import { AdminOnlyNote } from '@/components/admin-only-note';
+import { isAdmin } from '@/server/permissions';
 import { requireSession } from '@/server/session';
 import { getServices } from '@/server/services';
 
@@ -14,7 +16,8 @@ export async function generateMetadata(): Promise<Metadata> {
 
 /** Settings → Knowledge (PRD §29: embeddings through the Model Gateway). */
 export default async function KnowledgeSettingsPage() {
-  const { ctx } = await requireSession();
+  const session = await requireSession();
+  const { ctx } = session;
   const db = getServices().db;
   const t = await getTranslations('embedding');
   const [connections, current] = await Promise.all([
@@ -39,7 +42,9 @@ export default async function KnowledgeSettingsPage() {
             ? t('current', { provider: currentName, model: current.model })
             : t('none')}
         </p>
-        {providers.length === 0 ? (
+        {!isAdmin(session) ? (
+          <AdminOnlyNote />
+        ) : providers.length === 0 ? (
           <p className="text-sm text-text-muted">
             {t('noProviders')}{' '}
             <Link href="/settings/providers" className="text-primary hover:underline">

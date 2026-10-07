@@ -24,6 +24,7 @@ Legend: **AC n** = acceptance criterion n in PRD §28. **Screen n** = screen n i
 | v0.4 | M9 | Multi-Agent Orchestration | — | 19, 20 |
 | v0.4.1 | M9.5 | Per-user connections & Google Workspace | 2, 3 | 13, 15 (per user) |
 | v0.4.2 | M9.6 | Workspace invitations & roles | — | 1, 2 (multi-user) |
+| v0.4.3 | M9.7 | Role restrictions | — | 2, 15 |
 | v0.5 | M10 | Workflows | 9 | 25 |
 | v0.6 | M11 | Intelligence, Analytics, Hardening | — | 26 |
 
@@ -311,6 +312,25 @@ Makes multi-user workspaces real, so per-user connections and private memory mat
 - Roles gate member management only. Agents, tools, approvals and settings are open to every member; Viewer exists in the schema but isn't offered.
 - One owner per workspace; ownership transfer and workspace deletion are not built.
 - Signing in lands in the person's oldest workspace; the switcher changes it for that session.
+
+---
+
+## v0.4.3: Role Restrictions (M9.7) ✅
+
+| Area | Owner / Admin | Member |
+|---|---|---|
+| AI providers, embedding model, MCP servers (add, remove, sign-in method, tool defaults), members | ✅ | view only; connects **their own account** on per-member servers |
+| Agents | create, edit any | create; edit / activate / archive **their own** |
+| Approvals | decide any | decide those for **their own** runs |
+| Tasks & schedules | cancel / retry / pause / delete any | create; manage **their own** |
+| Knowledge | any scope; manage any | "Only me", and "One agent" on their own agents; manage their own |
+| Chat, memory, feedback | ✅ | ✅ (memory stays private) |
+
+**As built (notes and known gaps)**
+- Enforced in core (`permissions.ts`) on every call, so the API, server actions and worker paths can't bypass it; the UI hides refused controls. Worker jobs (health checks, schedule firings, recovery) are system actions and aren't role-checked.
+- Chat tasks now record who started them (backfilled from conversations by migration 0015), so approvals and cancellation reach the right person.
+- A member who gives feedback on someone else's agent can accept the suggested rule (it's their memory) but not the personality change; that needs the agent's creator or an admin.
+- Viewer (read-only) is still not offered.
 
 ---
 

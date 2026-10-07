@@ -31,6 +31,7 @@ import { z } from 'zod';
 import { recordAudit } from './audit';
 import { parse } from './auth';
 import { AppError } from './errors';
+import { requireAgentManager } from './permissions';
 import { adapterForConnection, type ProviderDeps } from './providers';
 import { redact } from './redact';
 
@@ -80,6 +81,7 @@ export async function saveAgentModelConfig(
 ): Promise<void> {
   const agent = await findAgent(db, ctx, agentId);
   if (!agent) throw new AppError('NOT_FOUND', 'Agent not found');
+  await requireAgentManager(db, ctx, agent);
   if (agent.status === 'archived') {
     throw new AppError('INVALID_TRANSITION', 'Restore the agent before editing it');
   }

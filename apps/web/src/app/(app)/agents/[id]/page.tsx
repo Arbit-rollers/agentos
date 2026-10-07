@@ -44,6 +44,7 @@ import { NewTaskDialog } from '@/components/tasks/new-task-dialog';
 import { TaskTable } from '@/components/tasks/task-table';
 import { loadAgentOr404 } from '@/server/agents';
 import { brainValue } from '@/server/models';
+import { canManageAgent, isAdmin } from '@/server/permissions';
 import { requireSession } from '@/server/session';
 import { getServices } from '@/server/services';
 
@@ -65,9 +66,11 @@ export default async function AgentWorkspacePage({ params, searchParams }: Param
   const { id } = await params;
   const query = await searchParams;
   const tab: Tab = TABS.includes(query.tab as Tab) ? (query.tab as Tab) : 'chat';
-  const { ctx } = await requireSession();
+  const session = await requireSession();
+  const { ctx } = session;
   const db = getServices().db;
   const agent = await loadAgentOr404(ctx, id);
+  const manage = canManageAgent(session, agent);
   const t = await getTranslations();
   const format = await getFormatter();
   const now = new Date();
@@ -216,12 +219,14 @@ export default async function AgentWorkspacePage({ params, searchParams }: Param
         <Card>
           <CardContent className="pt-5">
             <div className="mb-3 flex justify-end">
-              <Button variant="secondary" size="sm" asChild>
-                <Link href={stepHref(id, 'tools')}>
-                  <Pencil aria-hidden />
-                  {t('agentTools.manage')}
-                </Link>
-              </Button>
+              {manage && (
+                <Button variant="secondary" size="sm" asChild>
+                  <Link href={stepHref(id, 'tools')}>
+                    <Pencil aria-hidden />
+                    {t('agentTools.manage')}
+                  </Link>
+                </Button>
+              )}
             </div>
             {grants.length === 0 ? (
               <p className="text-sm text-text-muted">{t('agentTools.none')}</p>
@@ -268,12 +273,16 @@ export default async function AgentWorkspacePage({ params, searchParams }: Param
               <Link href="/knowledge" className="text-sm text-text-muted hover:text-primary">
                 {t('knowledge.manage')}
               </Link>
-              <AddSourceDialog agents={[{ id, name: agent.name }]} agentId={id} />
+              {manage && <AddSourceDialog agents={[{ id, name: agent.name }]} agentId={id} />}
             </div>
             {sources.length === 0 ? (
               <EmptyState icon={<BookOpen />} title={t('knowledge.emptyAgent')} className="py-6" />
             ) : (
-              <SourceTable sources={sources} showScope={false} />
+              <SourceTable
+                sources={sources}
+                showScope={false}
+                viewer={{ userId: ctx.userId, admin: isAdmin(session) }}
+              />
             )}
           </CardContent>
         </Card>
@@ -345,6 +354,7 @@ export default async function AgentWorkspacePage({ params, searchParams }: Param
             brain={brain}
             connectionNames={connectionNames}
             canRun={canRun}
+            canManage={manage}
           />
         </SettingsDrawer>
       </div>

@@ -32,6 +32,7 @@ export async function AgentOverview({
   brain,
   connectionNames,
   canRun,
+  canManage = true,
 }: {
   agent: AgentWithPersonality;
   parent?: Agent;
@@ -39,11 +40,14 @@ export async function AgentOverview({
   brain: BrainValue | null;
   connectionNames: Map<string, string>;
   canRun: boolean;
+  /** Its creator or an owner/admin: may edit and change status. */
+  canManage?: boolean;
 }) {
   const t = await getTranslations();
   const format = await getFormatter();
   const id = agent.id;
   const archived = agent.status === 'archived';
+  const editable = canManage && !archived;
   const traits = normalizeTraits(agent.personality?.traitScores);
   const directives = compilePersonality(traits).directives;
   const targetLabel = (target: { connectionId: string; model: string }) =>
@@ -60,7 +64,7 @@ export async function AgentOverview({
       <span className="text-text-muted">{t('agents.none')}</span>
     );
   const edit = (step: 'basic' | 'personality', label: string) =>
-    !archived && (
+    editable && (
       <Button variant="ghost" size="sm" asChild>
         <Link href={stepHref(id, step)}>
           <Pencil aria-hidden />
@@ -80,7 +84,7 @@ export async function AgentOverview({
           </span>
         </div>
         <div className="flex flex-wrap items-start gap-2">
-          {!archived && (
+          {editable && (
             <Button variant="secondary" asChild>
               <Link href={stepHref(id, 'basic')}>
                 <Pencil aria-hidden />
@@ -88,7 +92,9 @@ export async function AgentOverview({
               </Link>
             </Button>
           )}
-          <StatusActions agentId={id} actions={allowedActions(agent)} canRun={canRun} />
+          {canManage && (
+            <StatusActions agentId={id} actions={allowedActions(agent)} canRun={canRun} />
+          )}
         </div>
       </div>
       {archived && (
