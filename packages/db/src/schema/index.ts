@@ -428,6 +428,13 @@ export type McpServerInfo = {
 export type McpResourceRow = { uri: string; name: string; description?: string; mimeType?: string };
 
 /** A workspace's MCP server (PRD §8). Credentials and OAuth state live in `secrets`. */
+/**
+ * shared: one set of credentials for the whole workspace (a service account).
+ * per_user: each member connects their own account; runs use the account of the person
+ * they act for (v0.4.1).
+ */
+export const mcpCredentialMode = pgEnum('mcp_credential_mode', ['shared', 'per_user']);
+
 export const mcpConnections = pgTable(
   'mcp_connections',
   {
@@ -444,7 +451,16 @@ export const mcpConnections = pgTable(
     transport: mcpTransport('transport').notNull(),
     endpoint: text('endpoint').notNull(),
     authType: mcpAuthType('auth_type').notNull(),
+    credentialMode: mcpCredentialMode('credential_mode').notNull().default('shared'),
+    /** Shared credentials; for per-user OAuth only the client registration lives here. */
     secretId: uuid('secret_id').references(() => secrets.id, { onDelete: 'set null' }),
+    /** Space-separated OAuth scopes to request (overrides what the server advertises). */
+    oauthScopes: text('oauth_scopes'),
+    /** Extra authorization request parameters, e.g. Google's access_type=offline. */
+    oauthParams: jsonb('oauth_params')
+      .$type<Record<string, string>>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
     status: mcpStatus('status').notNull().default('untested'),
     enabled: boolean('enabled').notNull().default(true),
     serverInfo: jsonb('server_info').$type<McpServerInfo>(),
@@ -461,6 +477,34 @@ export const mcpConnections = pgTable(
   (t) => [
     index('mcp_connections_workspace_idx').on(t.workspaceId),
     uniqueIndex('mcp_connections_oauth_state_key').on(t.oauthStateHash),
+  ],
+);
+
+/** A member's own credentials for a per-user MCP connection (v0.4.1). */
+export const mcpUserCredentials = pgTable(
+  'mcp_user_credentials',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    connectionId: uuid('connection_id')
+      .notNull()
+      .references(() => mcpConnections.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** Encrypted token or OAuth state (tokens, PKCE verifier). */
+    secretId: uuid('secret_id').references(() => secrets.id, { onDelete: 'set null' }),
+    status: text('status').$type<'connected' | 'needs_auth'>().notNull().default('needs_auth'),
+    /** SHA-256 of the OAuth `state` while this member's sign-in is in progress. */
+    oauthStateHash: text('oauth_state_hash'),
+    connectedAt: timestamp('connected_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex('mcp_user_credentials_key').on(t.connectionId, t.userId),
+    uniqueIndex('mcp_user_credentials_state_key').on(t.oauthStateHash),
   ],
 );
 

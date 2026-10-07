@@ -73,3 +73,11 @@ export async function updateWorkspaceSettings(
     .returning({ settings: workspaces.settings });
   return row?.settings ?? {};
 }
+
+/** Adds a member to a workspace (tests today; workspace invitations later). */
+export async function addWorkspaceMember(
+  db: Executor,
+  values: { workspaceId: string; userId: string; role: WorkspaceRole },
+): Promise<void> {
+  await db.insert(workspaceMembers).values(values).onConflictDoNothing();
+}

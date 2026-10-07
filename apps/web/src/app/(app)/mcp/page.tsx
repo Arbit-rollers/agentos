@@ -155,9 +155,14 @@ export default async function McpHubPage({
                   <ServerIcon serverType={connection.serverType} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium">{connection.name}</p>
-                    <StatusBadge tone={TONE[status] ?? 'neutral'}>
-                      {t(`mcp.status.${status}`)}
-                    </StatusBadge>
+                    <div className="flex flex-wrap gap-1">
+                      <StatusBadge tone={TONE[status] ?? 'neutral'}>
+                        {t(`mcp.status.${status}`)}
+                      </StatusBadge>
+                      {connection.credentialMode === 'per_user' && (
+                        <StatusBadge tone="info">{t('mcp.detail.perUserBadge')}</StatusBadge>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <p className="line-clamp-2 flex-1 text-sm text-text-muted">

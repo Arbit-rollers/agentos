@@ -15,6 +15,7 @@ import {
   findSchedule,
   findTask,
   findUserById,
+  upsertMyMcpCredential,
   findToolCall,
   insertApprovalRequest,
   insertMessage,
@@ -609,11 +610,25 @@ async function exceededBudget(
 async function runTool(c: Ctx, tool: McpTool, args: Record<string, unknown>) {
   const connection = await findMcpConnection(c.db, c.ctx, tool.connectionId);
   if (!connection) return { isError: true, text: 'The MCP server is no longer connected.' };
+  const connectFirst = {
+    isError: true,
+    text: `The person you are working for has not connected their own account to "${connection.name}". Tell them to open MCP Hub → ${connection.name} → Connect my account, then ask again. Do not try to get the data another way.`,
+  };
   try {
-    const result = await callTool(await accessFor(c.deps, c.ctx, connection), tool.name, args);
+    const result = await callTool(
+      await accessFor(c.db, c.deps, c.ctx, connection),
+      tool.name,
+      args,
+    );
     return { isError: result.isError, text: result.text };
   } catch (error) {
+    if (error instanceof AppError && error.code === 'MCP_NEEDS_USER_AUTH') return connectFirst;
     if (!(error instanceof McpGatewayError)) throw error;
+    // Their sign-in was revoked or expired for good: ask them to connect again.
+    if (error.kind === 'auth' && connection.credentialMode === 'per_user') {
+      await upsertMyMcpCredential(c.db, c.ctx, connection.id, { status: 'needs_auth' });
+      return connectFirst;
+    }
     return { isError: true, text: `The MCP server call failed (${error.kind}).` };
   }
 }

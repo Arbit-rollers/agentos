@@ -18,9 +18,18 @@ export type OAuthStore = {
   save(state: OAuthState): Promise<void>;
 };
 
+/** Per-connection OAuth settings beyond what the server advertises. */
+export type OAuthOptions = {
+  /** Space-separated scopes to request; wins over the server's `scopes_supported`. */
+  scope?: string;
+  /** Extra authorization request parameters (e.g. Google: access_type=offline). */
+  params?: Record<string, string>;
+};
+
 /**
- * OAuth 2.1 client for one MCP connection (authorization code + PKCE, dynamic client
- * registration, refresh). A server app can't redirect the user from inside the SDK, so the
+ * OAuth 2.1 client for one MCP connection (authorization code + PKCE, refresh, and either
+ * dynamic client registration or a client registered beforehand and stored as
+ * `clientInformation`). A server app can't redirect the user from inside the SDK, so the
  * authorization URL is captured and returned to the caller, which sends the browser there.
  */
 export class StoredOAuthProvider implements OAuthClientProvider {
@@ -30,6 +39,7 @@ export class StoredOAuthProvider implements OAuthClientProvider {
     private readonly store: OAuthStore,
     private readonly redirect: string,
     private readonly stateValue: string,
+    readonly options: OAuthOptions = {},
   ) {}
 
   get redirectUrl() {
@@ -43,6 +53,7 @@ export class StoredOAuthProvider implements OAuthClientProvider {
       grant_types: ['authorization_code', 'refresh_token'],
       response_types: ['code'],
       token_endpoint_auth_method: 'none',
+      ...(this.options.scope && { scope: this.options.scope }),
     };
   }
 
@@ -67,6 +78,8 @@ export class StoredOAuthProvider implements OAuthClientProvider {
   }
 
   redirectToAuthorization(authorizationUrl: URL) {
+    for (const [key, value] of Object.entries(this.options.params ?? {}))
+      authorizationUrl.searchParams.set(key, value);
     this.authorizationUrl = authorizationUrl;
   }
 
@@ -87,7 +100,7 @@ export async function beginOAuth(
   serverUrl: string,
 ): Promise<{ status: 'authorized' } | { status: 'redirect'; url: string }> {
   try {
-    const result = await auth(provider, { serverUrl });
+    const result = await auth(provider, { serverUrl, scope: provider.options.scope });
     if (result === 'AUTHORIZED') return { status: 'authorized' };
     if (!provider.authorizationUrl)
       throw new McpGatewayError('auth', 'Server did not provide an authorization URL');
@@ -105,7 +118,11 @@ export async function completeOAuth(
   code: string,
 ): Promise<void> {
   try {
-    const result = await auth(provider, { serverUrl, authorizationCode: code });
+    const result = await auth(provider, {
+      serverUrl,
+      authorizationCode: code,
+      scope: provider.options.scope,
+    });
     if (result !== 'AUTHORIZED')
       throw new McpGatewayError('auth', 'Authorization did not complete');
   } catch (error) {

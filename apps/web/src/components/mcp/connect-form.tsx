@@ -2,26 +2,26 @@
 
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { useActionState, useEffect, useState } from 'react';
-import { Button, Card, CardContent, Field, Input, Select, Textarea } from '@agentos/ui';
+import { useActionState, useEffect } from 'react';
+import { Button, Card, CardContent, Field, Input, Select } from '@agentos/ui';
 import { connectMcpAction, type McpFormState } from '@/app/(app)/mcp/actions';
 import { useErrorText } from '@/components/error-text';
+import { SignInFields } from './sign-in-fields';
 
-const AUTH_TYPES = ['none', 'bearer', 'headers', 'oauth'] as const;
 const TRANSPORTS = ['streamable_http', 'sse'] as const;
 
 export function ConnectForm({
   template,
   templateName,
+  redirectUri,
 }: {
   template?: string;
   templateName?: string;
+  /** Where OAuth providers send people back to, shown for manual client setup. */
+  redirectUri: string;
 }) {
   const t = useTranslations('mcp');
   const errorText = useErrorText();
-  const [authType, setAuthType] = useState<(typeof AUTH_TYPES)[number]>(
-    template ? 'oauth' : 'none',
-  );
   const [state, action, pending] = useActionState<McpFormState, FormData>(connectMcpAction, {});
 
   // OAuth: the server hands back the provider's sign-in page; the callback brings us back.
@@ -68,52 +68,12 @@ export function ConnectForm({
                 }))}
               />
             </Field>
-            <Field label={t('form.authType')} htmlFor="authType">
-              <Select
-                id="authType"
-                name="authType"
-                value={authType}
-                onValueChange={(value) => setAuthType(value as typeof authType)}
-                options={AUTH_TYPES.map((value) => ({
-                  value,
-                  label: t(`form.authTypes.${value}`),
-                }))}
-              />
-            </Field>
           </div>
-          {authType === 'bearer' && (
-            <Field
-              label={t('form.token')}
-              htmlFor="token"
-              error={error('token')}
-              hint={t('form.tokenHint')}
-            >
-              <Input
-                id="token"
-                name="token"
-                type="password"
-                autoComplete="off"
-                spellCheck={false}
-              />
-            </Field>
-          )}
-          {authType === 'headers' && (
-            <Field
-              label={t('form.headers')}
-              htmlFor="headers"
-              error={error('headers')}
-              hint={t('form.headersHint')}
-            >
-              <Textarea
-                id="headers"
-                name="headers"
-                rows={3}
-                spellCheck={false}
-                className="font-mono"
-              />
-            </Field>
-          )}
-          {authType === 'oauth' && <p className="text-sm text-text-muted">{t('form.oauthHint')}</p>}
+          <SignInFields
+            defaultAuthType={template ? 'oauth' : 'none'}
+            redirectUri={redirectUri}
+            error={error}
+          />
           <div className="flex gap-2">
             <Button type="submit" disabled={pending || Boolean(state.authorizationUrl)}>
               {pending || state.authorizationUrl ? t('form.submitting') : t('form.submit')}

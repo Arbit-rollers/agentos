@@ -11,6 +11,9 @@ const envSchema = z.object({
   AGENTOS_MASTER_KEY: masterKey,
   OLLAMA_BASE_URL: z.url().default('http://localhost:11434'),
   APP_URL: z.url().default('http://localhost:3000'),
+  /** Optional: AgentOS's own Google OAuth client for Google Workspace connections. */
+  AGENTOS_GOOGLE_CLIENT_ID: z.string().min(1).optional(),
+  AGENTOS_GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

@@ -9,6 +9,8 @@ export type AppErrorCode =
   | 'PROVIDER_IN_USE'
   | 'MODEL_CALL_FAILED'
   | 'MCP_UNAVAILABLE'
+  /** A per-user MCP connection the person has not connected their own account to yet. */
+  | 'MCP_NEEDS_USER_AUTH'
   | 'TOOL_BLOCKED'
   | 'APPROVAL_REQUIRED'
   | 'AGENT_NOT_RUNNABLE'

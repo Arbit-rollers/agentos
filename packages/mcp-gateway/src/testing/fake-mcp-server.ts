@@ -4,10 +4,14 @@
 //   /secure/mcp   bearer token `test-token`
 //   /oauth/mcp    OAuth 2.1 (auto-approving authorization server at the same origin)
 //   /sse + /messages   legacy HTTP+SSE transport, no auth
+// A second listener (`staticUrl`) imitates Google's MCP servers: OAuth with a client that must
+// be registered beforehand (no dynamic registration), scopes, and accounts. Its /mcp also
+// offers `whoami`, which reports the signed-in account and scopes. The account is chosen with
+// `&account=…` on the authorization URL (default `default@example.com`).
 // Tools mirror the Google Workspace example in PRD §8.3.
 import { randomUUID } from 'node:crypto';
 import type { Server } from 'node:http';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import { DemoInMemoryClientsStore } from '@modelcontextprotocol/sdk/examples/server/demoInMemoryOAuthProvider.js';
 import { createMcpExpressApp } from '@modelcontextprotocol/sdk/server/express.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -41,7 +45,7 @@ export const FAKE_TOOLS = [
 
 export type ToolCallRecord = { name: string; args: Record<string, unknown>; path: string };
 
-function buildServer(calls: ToolCallRecord[], path: string): McpServer {
+function buildServer(calls: ToolCallRecord[], path: string, whoami = false): McpServer {
   const server = new McpServer({
     name: 'fake-workspace',
     version: '1.0.0',
@@ -93,6 +97,22 @@ function buildServer(calls: ToolCallRecord[], path: string): McpServer {
       return { ...text('upstream API error'), isError: true };
     },
   );
+  if (whoami) {
+    server.registerTool(
+      'whoami',
+      {
+        description: 'The signed-in account',
+        inputSchema: {},
+        annotations: { readOnlyHint: true },
+      },
+      async (args, extra) => {
+        record('whoami')(args);
+        const info = extra.authInfo;
+        const account = (info?.extra?.account as string | undefined) ?? 'anonymous';
+        return text(`account: ${account}; scopes: ${(info?.scopes ?? []).join(' ')}`);
+      },
+    );
+  }
   server.registerResource(
     'readme',
     'file:///readme.md',
@@ -105,19 +125,26 @@ function buildServer(calls: ToolCallRecord[], path: string): McpServer {
 }
 
 /** Auto-approving OAuth server with refresh tokens; access tokens can be made to expire at once. */
+type Grant = { clientId: string; account: string; scopes: string[] };
+
 class FakeOAuthProvider implements OAuthServerProvider {
-  clientsStore = new DemoInMemoryClientsStore();
+  clientsStore: OAuthServerProvider['clientsStore'] = new DemoInMemoryClientsStore();
   accessTokenLifetimeSeconds = 3600;
+  /** Query of the last authorization request (tests check scopes and extra parameters). */
+  lastAuthorizeQuery: Record<string, unknown> = {};
   private codes = new Map<
     string,
-    { client: OAuthClientInformationFull; params: AuthorizationParams }
+    { client: OAuthClientInformationFull; params: AuthorizationParams; account: string }
   >();
-  private access = new Map<string, { clientId: string; expiresAt: number }>();
-  private refresh = new Map<string, string>();
+  private access = new Map<string, Grant & { expiresAt: number }>();
+  private refresh = new Map<string, Grant>();
 
   async authorize(client: OAuthClientInformationFull, params: AuthorizationParams, res: Response) {
     const code = randomUUID();
-    this.codes.set(code, { client, params });
+    const query = { ...(res.req as Request).query } as Record<string, unknown>;
+    this.lastAuthorizeQuery = query;
+    const account = typeof query.account === 'string' ? query.account : 'default@example.com';
+    this.codes.set(code, { client, params, account });
     const target = new URL(params.redirectUri);
     target.searchParams.set('code', code);
     if (params.state) target.searchParams.set('state', params.state);
@@ -130,14 +157,14 @@ class FakeOAuthProvider implements OAuthServerProvider {
     return data.params.codeChallenge;
   }
 
-  private issue(clientId: string): OAuthTokens {
+  private issue(grant: Grant): OAuthTokens {
     const accessToken = randomUUID();
     const refreshToken = randomUUID();
     this.access.set(accessToken, {
-      clientId,
+      ...grant,
       expiresAt: Date.now() + this.accessTokenLifetimeSeconds * 1000,
     });
-    this.refresh.set(refreshToken, clientId);
+    this.refresh.set(refreshToken, grant);
     return {
       access_token: accessToken,
       token_type: 'bearer',
@@ -151,14 +178,18 @@ class FakeOAuthProvider implements OAuthServerProvider {
     if (!data || data.client.client_id !== client.client_id)
       throw new Error('Invalid authorization code');
     this.codes.delete(code);
-    return this.issue(client.client_id);
+    return this.issue({
+      clientId: client.client_id,
+      account: data.account,
+      scopes: data.params.scopes ?? [],
+    });
   }
 
   async exchangeRefreshToken(client: OAuthClientInformationFull, refreshToken: string) {
-    if (this.refresh.get(refreshToken) !== client.client_id)
-      throw new Error('Invalid refresh token');
+    const grant = this.refresh.get(refreshToken);
+    if (grant?.clientId !== client.client_id) throw new Error('Invalid refresh token');
     this.refresh.delete(refreshToken);
-    return this.issue(client.client_id);
+    return this.issue(grant);
   }
 
   async verifyAccessToken(token: string): Promise<AuthInfo> {
@@ -169,21 +200,39 @@ class FakeOAuthProvider implements OAuthServerProvider {
     return {
       token,
       clientId: data.clientId,
-      scopes: [],
+      scopes: data.scopes,
       expiresAt: Math.floor(data.expiresAt / 1000),
+      extra: { account: data.account },
     };
   }
 }
 
-export function startFakeMcpServer(options: { port?: number } = {}) {
+/** The pre-registered client the Google-like server accepts. */
+export const STATIC_CLIENT = { id: 'static-client', secret: 'static-secret' } as const;
+
+export function startFakeMcpServer(
+  options: { port?: number; staticPort?: number; staticRedirectUris?: string[] } = {},
+) {
   const calls: ToolCallRecord[] = [];
   const oauth = new FakeOAuthProvider();
+  const staticOAuth = new FakeOAuthProvider();
+  const staticClient: OAuthClientInformationFull = {
+    client_id: STATIC_CLIENT.id,
+    client_secret: STATIC_CLIENT.secret,
+    redirect_uris: options.staticRedirectUris ?? ['http://localhost:3000/api/mcp/oauth/callback'],
+    token_endpoint_auth_method: 'client_secret_post',
+  };
+  // No registerClient: the authorization server publishes no registration endpoint.
+  staticOAuth.clientsStore = {
+    getClient: async (id: string) => (id === STATIC_CLIENT.id ? staticClient : undefined),
+  };
   const app = createMcpExpressApp({ host: '127.0.0.1' });
   let baseUrl = '';
 
   const handle =
-    (path: string) => async (req: Parameters<Parameters<typeof app.post>[1]>[0], res: Response) => {
-      const server = buildServer(calls, path);
+    (path: string, whoami = false) =>
+    async (req: Parameters<Parameters<typeof app.post>[1]>[0], res: Response) => {
+      const server = buildServer(calls, path, whoami);
       const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
       res.on('close', () => {
         void transport.close();
@@ -217,8 +266,32 @@ export function startFakeMcpServer(options: { port?: number } = {}) {
     await transport.handlePostMessage(req, res, req.body);
   });
 
+  // Google-like server on its own origin (its authorization server lives at that origin).
+  const staticApp = createMcpExpressApp({ host: '127.0.0.1' });
+  const staticServer: Server = staticApp.listen(options.staticPort ?? 0, '127.0.0.1');
+  const staticReady = new Promise<string>((resolve) => {
+    staticServer.on('listening', () => {
+      const address = staticServer.address();
+      const port = typeof address === 'object' && address ? address.port : options.staticPort;
+      const origin = `http://127.0.0.1:${port}`;
+      const resourceServerUrl = new URL(`${origin}/mcp`);
+      staticApp.use(
+        mcpAuthRouter({ provider: staticOAuth, issuerUrl: new URL(origin), resourceServerUrl }),
+      );
+      staticApp.post(
+        '/mcp',
+        requireBearerAuth({
+          verifier: staticOAuth,
+          resourceMetadataUrl: getOAuthProtectedResourceMetadataUrl(resourceServerUrl),
+        }),
+        handle('/static/mcp', true),
+      );
+      resolve(origin);
+    });
+  });
+
   const server: Server = app.listen(options.port ?? 0, '127.0.0.1');
-  const ready = new Promise<{ url: string }>((resolve) => {
+  const ready = new Promise<{ url: string; staticUrl: string }>((resolve) => {
     server.on('listening', () => {
       const address = server.address();
       const port = typeof address === 'object' && address ? address.port : options.port;
@@ -235,7 +308,7 @@ export function startFakeMcpServer(options: { port?: number } = {}) {
         }),
         handle('/oauth/mcp'),
       );
-      resolve({ url: baseUrl });
+      void staticReady.then((staticUrl) => resolve({ url: baseUrl, staticUrl }));
     });
   });
 
@@ -243,10 +316,16 @@ export function startFakeMcpServer(options: { port?: number } = {}) {
     ready,
     calls,
     oauth,
+    staticOAuth,
     close: () =>
-      new Promise<void>((resolve) => {
-        server.closeAllConnections();
-        server.close(() => resolve());
-      }),
+      Promise.all(
+        [server, staticServer].map(
+          (s) =>
+            new Promise<void>((resolve) => {
+              s.closeAllConnections();
+              s.close(() => resolve());
+            }),
+        ),
+      ).then(() => undefined),
   };
 }
