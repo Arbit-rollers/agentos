@@ -216,6 +216,21 @@ export async function listTaskHistory(db: Executor, ctx: TenantContext, taskId: 
     .orderBy(asc(taskStateHistory.createdAt));
 }
 
+/** Tasks this task delegated to other agents (PRD §15), oldest first. */
+export async function listChildTasks(
+  db: Executor,
+  ctx: TenantContext,
+  parentTaskId: string,
+): Promise<(Task & { agentName: string })[]> {
+  const rows = await db
+    .select({ task: tasks, agentName: agents.name })
+    .from(tasks)
+    .innerJoin(agents, eq(agents.id, tasks.agentId))
+    .where(tenantScope(ctx, tasks, eq(tasks.parentTaskId, parentTaskId)))
+    .orderBy(asc(tasks.createdAt));
+  return rows.map((r) => ({ ...r.task, agentName: r.agentName }));
+}
+
 export async function listTasks(
   db: Executor,
   ctx: TenantContext,
@@ -456,7 +471,10 @@ export async function updateToolCall(
   ctx: TenantContext,
   id: string,
   values: Partial<
-    Pick<ToolCallRow, 'status' | 'result' | 'arguments' | 'decisionReason' | 'finishedAt'>
+    Pick<
+      ToolCallRow,
+      'status' | 'result' | 'arguments' | 'decisionReason' | 'finishedAt' | 'delegatedTaskId'
+    >
   >,
 ) {
   await db

@@ -5,7 +5,9 @@
 //   *-limited   → HTTP 429 (rate limit; triggers fallback)
 //   with tools offered, a user message containing [[call:<name part>:<json args>]] makes the
 //   model call the first tool whose name contains <name part> (several markers → parallel
-//   calls); after tool results it answers "Tool results: <content>; …" (errors prefixed ERROR)
+//   calls); <<call:…>> works the same but only outside [[call:…]] markers, so a delegated
+//   task can carry a call for the next agent; after tool results it answers
+//   "Tool results: <content>; …" (errors prefixed ERROR)
 //   Anthropic requests that opt into server-side fallbacks and say "refuse" → served by
 //   `claude-fallback` with a fallback block, as the real API does after a policy decline
 //   anything else echoes the last user message.
@@ -57,13 +59,19 @@ const lastUser = (body: Body) =>
   textOf([...body.messages].reverse().find((m) => m.role === 'user' && textOf(m.content))?.content);
 
 const MARKER = /\[\[call:([\w.-]+):(\{.*?\})\]\]/g;
+/** Same call, written inside another marker's arguments (e.g. a task handed to another agent). */
+const NESTED_MARKER = /<<call:([\w.-]+):(\{.*?\})>>/g;
 
 /** Tool calls requested by markers in the last message, if it is a plain user message. */
 function plannedCalls(body: Body): { name: string; args: unknown }[] {
   const names = (body.tools ?? []).map((t) => t.function?.name ?? t.name ?? '');
   const last = body.messages.at(-1);
   if (!last || last.role !== 'user' || names.length === 0) return [];
-  return [...textOf(last.content).matchAll(MARKER)].flatMap(([, part, json]) => {
+  const text = textOf(last.content);
+  // <<call:…>> counts only outside [[call:…]] markers: inside one it is that call's payload.
+  const outer = [...text.matchAll(MARKER)];
+  const rest = text.replace(MARKER, ' ');
+  return [...outer, ...rest.matchAll(NESTED_MARKER)].flatMap(([, part, json]) => {
     const name = names.find((n) => n.includes(part!));
     return name ? [{ name, args: JSON.parse(json!) as unknown }] : [];
   });

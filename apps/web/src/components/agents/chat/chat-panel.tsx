@@ -36,7 +36,8 @@ const TOOL_TONE: Record<string, StatusTone> = {
   failed: 'danger',
 };
 
-type Live = { runId: string; status: string; note?: string };
+/** `team`: agents this run handed work to and is still waiting for. */
+type Live = { runId: string; status: string; note?: string; team?: string[] };
 
 /** Agent Workspace → Chat (PRD §20, Screen 7). */
 export function ChatPanel({
@@ -86,15 +87,23 @@ export function ChatPanel({
     source.addEventListener('update', (message) => {
       const data = JSON.parse((message as MessageEvent).data) as {
         status: string;
-        events: { type: string; payload: { tool?: string } }[];
+        events: { type: string; payload: { tool?: string; agent?: string } }[];
       };
       const toolEvent = [...data.events].reverse().find((e) => e.type === 'tool.call');
-      setLive((current) => ({
-        runId: followRunId,
-        status: data.status,
-        note:
-          toolEvent?.payload.tool ?? (current?.runId === followRunId ? current.note : undefined),
-      }));
+      setLive((current) => {
+        const same = current?.runId === followRunId;
+        const team = new Set(same ? current.team : []);
+        for (const e of data.events) {
+          if (e.type === 'delegation.started' && e.payload.agent) team.add(e.payload.agent);
+          if (e.type === 'delegation.finished' && e.payload.agent) team.delete(e.payload.agent);
+        }
+        return {
+          runId: followRunId,
+          status: data.status,
+          note: toolEvent?.payload.tool ?? (same ? current.note : undefined),
+          team: [...team],
+        };
+      });
     });
     source.addEventListener('done', () => {
       source.close();
@@ -192,7 +201,13 @@ export function ChatPanel({
           {live && live.status !== 'waiting_approval' && (
             <li className="flex items-center gap-2 pl-11 text-sm text-text-muted" role="status">
               <Loader2 aria-hidden className="size-4 animate-spin" />
-              {live.note ? <span className="font-mono">{live.note}</span> : t('workspace.thinking')}
+              {live.status === 'waiting_agents' && live.team?.length ? (
+                t('workspace.waitingTeam', { agents: live.team.join(', ') })
+              ) : live.note ? (
+                <span className="font-mono">{live.note}</span>
+              ) : (
+                t('workspace.thinking')
+              )}
             </li>
           )}
           <div ref={endRef} />

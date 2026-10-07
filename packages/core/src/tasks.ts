@@ -5,6 +5,7 @@ import {
   findTask,
   insertRun,
   insertTask,
+  listChildTasks,
   listApprovalRequests,
   listDependentTasks,
   listRunsWithDetails,
@@ -29,7 +30,12 @@ import type { RuntimeDeps } from './runtime';
 const TRANSIENT = new Set(['provider_unavailable', 'provider_rate_limit', 'provider_timeout']);
 /** Delay before retry n (1-based): 30s, 2m, 8m… capped at 30 minutes. */
 export const retryDelayMs = (attempt: number) => Math.min(30 * 60_000, 30_000 * 4 ** (attempt - 1));
-const ACTIVE: Task['state'][] = ['queued', 'running', 'waiting_for_agent', 'waiting_for_approval'];
+export const ACTIVE: Task['state'][] = [
+  'queued',
+  'running',
+  'waiting_for_agent',
+  'waiting_for_approval',
+];
 
 const taskSchema = z.object({
   agentId: z.uuid({ error: 'agent_required' }),
@@ -80,7 +86,9 @@ export async function createTask(
   deps: RuntimeDeps,
   ctx: TenantContext,
   input: TaskInput,
-  origin: { kind: 'manual' | 'schedule'; scheduleId?: string } = { kind: 'manual' },
+  origin:
+    | { kind: 'manual' | 'schedule'; scheduleId?: string }
+    | { kind: 'delegation'; parentTaskId: string; parentRunId: string } = { kind: 'manual' },
 ): Promise<Task> {
   const data = parse(taskSchema, input);
   const agent = await findAgent(db, ctx, data.agentId);
@@ -99,7 +107,11 @@ export async function createTask(
     agentId: agent.id,
     origin: origin.kind,
     createdBy: ctx.userId,
-    ...(origin.scheduleId && { scheduleId: origin.scheduleId }),
+    ...(origin.kind !== 'delegation' && origin.scheduleId && { scheduleId: origin.scheduleId }),
+    ...(origin.kind === 'delegation' && {
+      parentTaskId: origin.parentTaskId,
+      parentRunId: origin.parentRunId,
+    }),
     objective: data.objective,
     input: data.input,
     priority: data.priority,
@@ -116,7 +128,11 @@ export async function createTask(
     targetType: 'task',
     targetId: task.id,
     outcome: 'success',
-    metadata: { origin: origin.kind, ...(origin.scheduleId && { scheduleId: origin.scheduleId }) },
+    metadata: {
+      origin: origin.kind,
+      ...(origin.kind !== 'delegation' && origin.scheduleId && { scheduleId: origin.scheduleId }),
+      ...(origin.kind === 'delegation' && { parentTaskId: origin.parentTaskId }),
+    },
   });
 
   // A schedule firing for an agent that can't run is recorded as a failed task, not lost.
@@ -159,6 +175,7 @@ export async function onTaskRunFinished(
   if (outcome.status === 'completed') {
     await updateTaskState(db, ctx, task.id, 'completed', { output: outcome.output, error: null });
     await remember('completed', { output: outcome.output, error: null });
+    await resumeDelegatingRun(db, deps, ctx, task.parentRunId);
     for (const dependent of await listDependentTasks(db, ctx, task.id)) {
       const blockers = await listTasksByIds(db, ctx, dependent.dependsOn);
       if (blockers.every((b) => b.state === 'completed'))
@@ -178,17 +195,57 @@ export async function onTaskRunFinished(
   }
   await failTask(db, ctx, task, outcome.error);
   await remember('failed', { output: null, error: outcome.error });
+  await resumeDelegatingRun(db, deps, ctx, task.parentRunId);
 }
 
-/** Cancels a task: its runs stop at the next step and pending approvals are rejected. */
-export async function cancelTask(db: Database, ctx: TenantContext, taskId: string) {
+/**
+ * A run waiting on delegated tasks goes back on the queue once none of them is still active
+ * (PRD §15). Called when a child finishes and by the parent itself right after it starts
+ * waiting, so a child that finished first is never missed; a duplicate job is harmless
+ * because runs are claimed atomically.
+ */
+export async function resumeDelegatingRun(
+  db: Database,
+  deps: RuntimeDeps,
+  ctx: TenantContext,
+  runId: string | null,
+): Promise<boolean> {
+  if (!runId) return false;
+  const run = await findRun(db, ctx, runId);
+  if (!run || run.status !== 'waiting_agents' || !run.taskId) return false;
+  const children = (await listChildTasks(db, ctx, run.taskId)).filter(
+    (t) => t.parentRunId === runId,
+  );
+  if (children.some((child) => ACTIVE.includes(child.state))) return false;
+  await updateRun(db, ctx, run.id, { status: 'queued' });
+  await updateTaskState(db, ctx, run.taskId, 'queued', { note: 'delegations_finished' });
+  await deps.enqueueRun({ runId: run.id, workspaceId: ctx.workspaceId, userId: ctx.userId });
+  return true;
+}
+
+/**
+ * Cancels a task: its runs stop at the next step, pending approvals are rejected, and work it
+ * delegated is cancelled too. Cancelling a delegated task lets its parent continue without it.
+ */
+export async function cancelTask(
+  db: Database,
+  ctx: TenantContext,
+  taskId: string,
+  options: { deps?: RuntimeDeps; note?: string } = {},
+) {
   const task = await findTask(db, ctx, taskId);
   if (!task) throw new AppError('NOT_FOUND', 'Task not found');
   if (!ACTIVE.includes(task.state)) throw new AppError('INVALID_TRANSITION', 'Task is not active');
-  await updateTaskState(db, ctx, task.id, 'cancelled', { note: 'cancelled_by_user' });
+  await updateTaskState(db, ctx, task.id, 'cancelled', {
+    note: options.note ?? 'cancelled_by_user',
+  });
+  for (const child of await listChildTasks(db, ctx, task.id)) {
+    if (ACTIVE.includes(child.state))
+      await cancelTask(db, ctx, child.id, { note: 'parent_cancelled' });
+  }
   const runs = await listRunsWithDetails(db, ctx, { taskId, limit: 50 });
   for (const run of runs) {
-    if (['queued', 'running', 'waiting_approval'].includes(run.status)) {
+    if (['queued', 'running', 'waiting_approval', 'waiting_agents'].includes(run.status)) {
       await updateRun(db, ctx, run.id, { status: 'cancelled', endedAt: new Date() });
     }
   }
@@ -214,6 +271,8 @@ export async function cancelTask(db: Database, ctx: TenantContext, taskId: strin
     targetId: task.id,
     outcome: 'success',
   });
+  if (options.deps && options.note !== 'parent_cancelled')
+    await resumeDelegatingRun(db, options.deps, ctx, task.parentRunId);
 }
 
 /** Runs a failed or cancelled task again as a new attempt. */

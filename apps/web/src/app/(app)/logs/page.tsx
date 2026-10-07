@@ -7,7 +7,7 @@ import { RunLog } from '@/components/runs/run-log';
 import { requireSession } from '@/server/session';
 import { getServices } from '@/server/services';
 
-const STATUSES = ['completed', 'waiting_approval', 'failed'] as const;
+const STATUSES = ['completed', 'waiting_approval', 'waiting_agents', 'failed'] as const;
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations('logs'))('title') };

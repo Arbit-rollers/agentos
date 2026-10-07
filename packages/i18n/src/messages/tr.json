@@ -170,7 +170,11 @@
     "memory_too_long": "Hafızalar en fazla 2.000 karakter olabilir.",
     "comment_required": "Neyin değişmesi gerektiğini yazın.",
     "comment_too_long": "1.000 karakterin altında tutun.",
-    "retrieval_failed": "Hafıza ve bilgiler getirilemedi."
+    "retrieval_failed": "Hafıza ve bilgiler getirilemedi.",
+    "not_on_team": "Bu ajan, bu ajanın ekibinde değil.",
+    "delegation_too_deep": "Devretme zincirleri üç seviyeyle sınırlıdır.",
+    "too_many_delegations": "Bir çalıştırmada çok fazla görev devredildi.",
+    "no_task": "Devretmek için bir görev gerekir."
   },
   "dashboard": {
     "greetingMorning": "Günaydın, {name}",
@@ -255,7 +259,9 @@
     "memory_deleted": "Hafıza silindi",
     "feedback_submitted": "Geri bildirim verildi",
     "feedback_suggestion_accepted": "Öneri onaylandı",
-    "feedback_suggestion_dismissed": "Öneri reddedildi"
+    "feedback_suggestion_dismissed": "Öneri reddedildi",
+    "agent_delegated": "Görev devredildi",
+    "agent_delegated_denied": "Devretme reddedildi"
   },
   "outcome": {
     "success": "Başarılı",
@@ -662,7 +668,8 @@
       "failed": "Başarısız",
       "queued": "Sırada",
       "waiting_approval": "Onay bekleniyor",
-      "cancelled": "İptal edildi"
+      "cancelled": "İptal edildi",
+      "waiting_agents": "Ekip bekleniyor"
     },
     "events": {
       "selected": "{target} seçildi: {reason}",
@@ -681,7 +688,10 @@
       "outcomeError": "bir hata",
       "run_recovered": "Yeniden başlatmadan sonra devam edildi ({repairedCalls} kesilen araç çağrısı onarıldı)",
       "context_retrieved": "{memories, plural, =0 {Hafıza kullanılmadı} other {# hafıza kullanıldı}}, {knowledge, plural, =0 {bilgi kullanılmadı} other {# bilgi bölümü kullanıldı}}{sources}",
-      "context_keyword": " (anahtar kelime araması)"
+      "context_keyword": " (anahtar kelime araması)",
+      "delegation_started": "{agent} ajanına devredildi: {objective}",
+      "delegation_finished": "{agent} tamamladı: {state}",
+      "delegation_refused": "Devretme reddedildi: {reason}"
     },
     "reasons": {
       "fixed": "sabit model",
@@ -920,7 +930,11 @@
     },
     "approvalTitle": "Onay gerekli",
     "reviewInInbox": "Onaylar'da aç",
-    "comingSoon": "{milestone} sürümünde geliyor"
+    "comingSoon": "{milestone} sürümünde geliyor",
+    "waitingTeam": "{agents} bekleniyor",
+    "team": "Ekip",
+    "teamHint": "Doğrudan bağlı ajanlara görev verebilir: {agents}.",
+    "noTeam": "Bu ajana ekip vermek için ona bağlı ajanlar ekleyin."
   },
   "approvals": {
     "title": "Onaylar",
@@ -1004,7 +1018,8 @@
     "origins": {
       "chat": "Sohbet",
       "manual": "Tek seferlik",
-      "schedule": "Zamanlanmış"
+      "schedule": "Zamanlanmış",
+      "delegation": "Devredilen"
     },
     "cancel": "İptal et",
     "retry": "Yeniden dene",
@@ -1021,8 +1036,15 @@
     "schedule": "Zamanlama",
     "notes": {
       "cancelled_by_user": "Bir kişi tarafından iptal edildi",
-      "manual_retry": "Bir kişi tarafından yeniden denendi"
-    }
+      "manual_retry": "Bir kişi tarafından yeniden denendi",
+      "delegations_finished": "Ekip tamamladı; devam ediliyor",
+      "parent_cancelled": "Devreden görevle birlikte iptal edildi"
+    },
+    "delegation": "Devretme",
+    "delegatedBy": "{agent} tarafından devredildi",
+    "delegatedTo": "Ekibe verilen işler",
+    "noDelegation": "Bu görev iş devretmedi.",
+    "openParent": "Devreden görevi aç"
   },
   "taskStates": {
     "draft": "Taslak",

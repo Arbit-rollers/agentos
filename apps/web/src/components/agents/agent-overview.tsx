@@ -249,6 +249,13 @@ export async function AgentOverview({
           <h3 className="mb-1 text-xs font-medium text-text-muted uppercase">
             {t('agents.directReports')}
           </h3>
+          {(agent.agentType === 'master_orchestrator' || agent.agentType === 'manager') && (
+            <p className="mb-2 text-xs text-text-muted" data-testid="team-hint">
+              {children.length > 0
+                ? t('workspace.teamHint', { agents: children.map((c) => c.name).join(', ') })
+                : t('workspace.noTeam')}
+            </p>
+          )}
           {children.length === 0 ? (
             <p className="text-sm text-text-muted">{t('agents.noDirectReports')}</p>
           ) : (

@@ -250,7 +250,7 @@ Legend: **AC n** = acceptance criterion n in PRD §28. **Screen n** = screen n i
 
 ---
 
-## v0.4: Multi-Agent Orchestration (M9)
+## v0.4: Multi-Agent Orchestration (M9) ✅
 
 - Master Orchestrator and Manager runtime behaviors: decompose goal → subtasks → select authorized agents → delegate → monitor → synthesize
 - Child tasks with `parent_task_id`; minimal context handoff
@@ -259,6 +259,14 @@ Legend: **AC n** = acceptance criterion n in PRD §28. **Screen n** = screen n i
 
 **Covers:** AC 19, AC 20
 **DoD:** "Create tomorrow's Pilots Quest reel" style demo runs across 3+ agents with one approval step; a child agent cannot use a tool only its parent has.
+
+**As built (notes and known gaps)**
+- Authorization = the reporting hierarchy from the wizard: an orchestrator or manager may delegate only to its direct reports that are Configured/Active and have a working model. Managers delegate onward to their own reports (orchestrator → manager → specialist). Specialists and system agents get no delegate tool.
+- Decomposition, agent selection and synthesis are done by the leading agent's model through the `delegate_task` tool (parallel calls allowed); the runtime enforces who, how deep (3 levels) and how many (8 per run).
+- Minimal handoff: a child task holds only the objective and details from the call. Children use their own tools, permissions, memory scope and budgets; nothing passes down from the parent (AC 20, tested).
+- The parent run waits as `waiting_agents` and resumes when all children have finished; child answers are wrapped as untrusted data. Failed or cancelled children come back as errors the parent can handle.
+- Task detail shows the delegation tree and links children to their parent; run logs show delegation started / finished / refused; the chat shows which team members it is waiting for.
+- Known gaps: the parent's per-task budget does not include its children's cost (each child counts against its own agent's budgets); there is no delegation to agents outside the direct-report line, and no per-agent override of that rule.
 
 ---
 
