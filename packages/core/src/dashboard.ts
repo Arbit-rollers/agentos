@@ -3,7 +3,9 @@ import {
   listAgents,
   listAuditLogs,
   listMcpConnections,
+  countTasksByState,
   runStats,
+  taskOutcomesByDay,
   type Agent,
   type AuditLog,
   type Database,
@@ -36,22 +38,26 @@ function lastDays(now: Date, days: number): TaskOverviewDay[] {
 
 const STRIP_ORDER: Agent['status'][] = ['active', 'paused', 'configured', 'draft'];
 
-/**
- * Data for the dashboard (PRD §4, Screen 1). Tasks don't exist yet (v0.2); their counts are
- * zero until then.
- */
+/** Data for the dashboard (PRD §4, Screen 1). */
 export async function getDashboardSummary(
   db: Database,
   ctx: TenantContext,
   now = new Date(),
 ): Promise<DashboardSummary> {
   const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-  const [counts, agents, stats, mcp] = await Promise.all([
+  const overview = lastDays(now, 7);
+  const [counts, agents, stats, mcp, taskStates, outcomes] = await Promise.all([
     countAgentsByStatus(db, ctx),
     listAgents(db, ctx, { statuses: STRIP_ORDER }),
     runStats(db, ctx, weekAgo),
     listMcpConnections(db, ctx),
+    countTasksByState(db, ctx),
+    taskOutcomesByDay(db, ctx, new Date(`${overview[0]!.date}T00:00:00Z`)),
   ]);
+  for (const row of outcomes) {
+    const day = overview.find((d) => d.date === row.day);
+    if (day) Object.assign(day, { completed: row.completed, failed: row.failed });
+  }
   const finished = stats.completed + stats.failed;
   return {
     agents: {
@@ -60,7 +66,12 @@ export async function getDashboardSummary(
       total: counts.active + counts.paused + counts.configured + counts.draft,
     },
     agentList: agents.sort((a, b) => STRIP_ORDER.indexOf(a.status) - STRIP_ORDER.indexOf(b.status)),
-    tasks: { running: 0 },
+    tasks: {
+      running:
+        (taskStates.queued ?? 0) +
+        (taskStates.running ?? 0) +
+        (taskStates.waiting_for_approval ?? 0),
+    },
     mcpConnections: {
       connected: mcp.filter((c) => c.enabled && c.status === 'connected').length,
     },
@@ -70,7 +81,7 @@ export async function getDashboardSummary(
       outputTokens: stats.outputTokens,
       costUsd: stats.costUsd,
     },
-    taskOverview: lastDays(now, 7),
+    taskOverview: overview,
     recentActivity: await listAuditLogs(db, ctx, { limit: 6 }),
   };
 }

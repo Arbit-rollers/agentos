@@ -19,8 +19,8 @@ export function DialogContent({
 }: ComponentProps<typeof DialogPrimitive.Content> & {
   title: string;
   hideTitle?: boolean;
-  /** `left` renders a full-height sheet, e.g. mobile navigation. */
-  side?: 'center' | 'left';
+  /** `left`/`right` render a full-height sheet (mobile navigation, settings drawer). */
+  side?: 'center' | 'left' | 'right';
   children: ReactNode;
 }) {
   return (
@@ -32,7 +32,9 @@ export function DialogContent({
           'fixed z-50 border border-border bg-surface shadow-2xl outline-none',
           side === 'left'
             ? 'inset-y-0 left-0 w-72 border-y-0 border-l-0'
-            : 'top-[15vh] left-1/2 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 rounded-(--radius-card)',
+            : side === 'right'
+              ? 'inset-y-0 right-0 w-full max-w-3xl overflow-y-auto border-y-0 border-r-0'
+              : 'top-[15vh] left-1/2 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 rounded-(--radius-card)',
           className,
         )}
         {...props}

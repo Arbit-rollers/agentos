@@ -9,7 +9,43 @@ export type ProviderAccess = {
   apiKey?: string | null;
 };
 
-export type ChatMessage = { role: 'user' | 'assistant'; content: string };
+export type ToolSpec = {
+  /** Provider-safe alias: [a-zA-Z_][a-zA-Z0-9_]{0,63}. */
+  name: string;
+  description: string;
+  /** JSON Schema of the arguments. */
+  inputSchema: Record<string, unknown>;
+};
+
+export type ToolCall = {
+  id: string;
+  name: string;
+  /** Parsed arguments, or null when the model produced invalid JSON (see `rawArguments`). */
+  arguments: Record<string, unknown> | null;
+  rawArguments?: string;
+};
+
+export type ToolResultContent = {
+  toolCallId: string;
+  name: string;
+  content: string;
+  isError: boolean;
+};
+
+/**
+ * Provider-neutral transcript. Assistant turns keep the provider's raw content so the same
+ * provider gets it back unchanged (Anthropic thinking/tool_use blocks, Gemini thought
+ * signatures); other providers rebuild from the neutral fields.
+ */
+export type ChatMessage =
+  | { role: 'user'; content: string }
+  | {
+      role: 'assistant';
+      content: string;
+      toolCalls?: ToolCall[];
+      providerContent?: { provider: ProviderKind; content: unknown };
+    }
+  | { role: 'tool'; results: ToolResultContent[] };
 
 export type GenerateRequest = {
   model: string;
@@ -18,10 +54,12 @@ export type GenerateRequest = {
   maxOutputTokens?: number;
   /** Sent only when the model accepts sampling parameters (see the capability registry). */
   temperature?: number;
+  /** Tools the model may call; the caller decides what each call is allowed to do. */
+  tools?: ToolSpec[];
   signal?: AbortSignal;
 };
 
-export type StopReason = 'end' | 'max_tokens' | 'refusal' | 'other';
+export type StopReason = 'end' | 'tool_use' | 'max_tokens' | 'refusal' | 'other';
 
 /** A model switch the provider made on its own (e.g. Anthropic server-side refusal fallback). */
 export type ProviderFallback = { from: string; to: string };
@@ -33,6 +71,9 @@ export type GenerateResult = {
   model: string;
   usage: { inputTokens: number; outputTokens: number };
   providerFallbacks: ProviderFallback[];
+  toolCalls: ToolCall[];
+  /** Raw assistant content to append to the transcript as-is. */
+  providerContent: unknown;
 };
 
 export type DiscoveredModel = {
@@ -42,10 +83,7 @@ export type DiscoveredModel = {
   maxOutputTokens?: number;
 };
 
-/**
- * One adapter per provider family (PRD §7.1). Streaming and tool calling are added with the
- * agent runtime (M6).
- */
+/** One adapter per provider family (PRD §7.1). */
 export interface ProviderAdapter {
   readonly provider: ProviderKind;
   listModels(): Promise<DiscoveredModel[]>;

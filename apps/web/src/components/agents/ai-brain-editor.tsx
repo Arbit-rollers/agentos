@@ -353,7 +353,37 @@ export function AiBrainEditor({
               />
             </Field>
           </div>
-          <p className="text-xs text-text-muted">{t('budgetHint')}</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label={t('maxToolCalls')} htmlFor="maxToolCalls">
+              <Input
+                id="maxToolCalls"
+                type="number"
+                min={0}
+                max={200}
+                value={value.budget.maxToolCalls ?? ''}
+                placeholder="10"
+                onChange={(e) =>
+                  update({ budget: { ...value.budget, maxToolCalls: number(e.target.value) } })
+                }
+              />
+            </Field>
+            <Field label={t('maxRuntimeSeconds')} htmlFor="maxRuntimeSeconds">
+              <Input
+                id="maxRuntimeSeconds"
+                type="number"
+                min={10}
+                max={86400}
+                value={value.budget.maxRuntimeSeconds ?? ''}
+                placeholder="300"
+                onChange={(e) =>
+                  update({ budget: { ...value.budget, maxRuntimeSeconds: number(e.target.value) } })
+                }
+              />
+            </Field>
+          </div>
+          <p className="text-xs text-text-muted">
+            {t('budgetHint')} {t('limitsHint')}
+          </p>
         </fieldset>
       </CardContent>
     </Card>

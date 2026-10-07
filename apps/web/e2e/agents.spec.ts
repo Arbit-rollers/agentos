@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { createAgentDraft, nextButton, registerUser } from './helpers';
+import { createAgentDraft, nextButton, openSettings, registerUser } from './helpers';
 
 test.describe('agents (M3)', () => {
   test.beforeEach(async ({ page }) => {
@@ -34,10 +34,12 @@ test.describe('agents (M3)', () => {
 
     await expect(page).toHaveURL(new RegExp(`/agents/${id}$`));
     await expect(page.getByRole('heading', { level: 1, name: 'Fact Checker' })).toBeVisible();
-    await expect(page.getByText('Configured', { exact: true })).toBeVisible();
-    await expect(page.getByText('Skeptical Reviewer · Version 2')).toBeVisible();
-    // Activation needs an AI model (M4).
-    await expect(page.getByRole('button', { name: 'Activate' })).toBeDisabled();
+    const drawer = await openSettings(page);
+    await expect(drawer.getByText('Configured', { exact: true })).toBeVisible();
+    await expect(drawer.getByText('Skeptical Reviewer · Version 2')).toBeVisible();
+    // Activation needs an AI model.
+    await expect(drawer.getByRole('button', { name: 'Activate' })).toBeDisabled();
+    await page.keyboard.press('Escape');
 
     await page.goto('/agents');
     await expect(page.getByRole('link', { name: /Fact Checker/ })).toBeVisible();
@@ -60,27 +62,35 @@ test.describe('agents (M3)', () => {
     await expect(page.getByRole('button', { name: 'Create agent' })).toBeDisabled();
     await page.getByRole('button', { name: 'Save as draft' }).click();
     await expect(page).toHaveURL(new RegExp(`/agents/${id}$`));
-    await expect(page.getByText('Draft', { exact: true })).toBeVisible();
+    const drawer = await openSettings(page);
+    await expect(drawer.getByText('Draft', { exact: true })).toBeVisible();
   });
 
   test('reporting hierarchy: specialists report to managers (PRD §5.1)', async ({ page }) => {
     await createAgentDraft(page, { name: 'Content Director', type: 'manager' });
     const id = await createAgentDraft(page, { name: 'Script Writer', parent: 'Content Director' });
     await page.goto(`/agents/${id}`);
-    await expect(page.getByRole('link', { name: 'Content Director' })).toBeVisible();
+    const drawer = await openSettings(page);
+    await expect(drawer.getByRole('link', { name: 'Content Director' })).toBeVisible();
 
-    await page.getByRole('link', { name: 'Content Director' }).click();
-    await expect(page.getByRole('link', { name: /Script Writer/ })).toBeVisible();
+    await drawer.getByRole('link', { name: 'Content Director' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Content Director' })).toBeVisible();
+    const parentDrawer = await openSettings(page);
+    await expect(parentDrawer.getByRole('link', { name: /Script Writer/ })).toBeVisible();
   });
 
   test('archive and restore', async ({ page }) => {
     const id = await createAgentDraft(page, { name: 'Temp' });
     await page.goto(`/agents/${id}`);
-    await page.getByRole('button', { name: 'Archive' }).click();
-    await expect(page.getByText('This agent is archived.')).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Edit' })).toHaveCount(0);
-    await page.getByRole('button', { name: 'Restore' }).click();
-    await expect(page.getByText('Configured', { exact: true })).toBeVisible();
+    let drawer = await openSettings(page);
+    await drawer.getByRole('button', { name: 'Archive' }).click();
+    await expect(page).toHaveURL(new RegExp(`/agents/${id}$`));
+    drawer = await openSettings(page);
+    await expect(drawer.getByText('This agent is archived.')).toBeVisible();
+    await expect(drawer.getByRole('link', { name: 'Edit' })).toHaveCount(0);
+    await drawer.getByRole('button', { name: 'Restore' }).click();
+    drawer = await openSettings(page);
+    await expect(drawer.getByText('Configured', { exact: true })).toBeVisible();
   });
 });
 

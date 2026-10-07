@@ -119,3 +119,49 @@ export async function connectMcp(
   await expect(page.getByRole('heading', { level: 1, name })).toBeVisible();
   return new URL(page.url()).pathname.split('/').pop()!;
 }
+
+/**
+ * Full v0.1 setup through the UI: provider, MCP server, an active agent on `fake-echo`
+ * with search_documents (auto allow) and gmail_send (approval required). Returns its id.
+ */
+export async function setupWorkingAgent(page: Page, name = 'Operator') {
+  await addProvider(page, {
+    kind: 'OpenAI-compatible',
+    name: 'Cloud',
+    endpoint: `${FAKE_PROVIDER}/openai/v1`,
+  });
+  await connectMcp(page, { name: 'Workspace' });
+  const id = await createAgentDraft(page, { name });
+  await pickModel(page, 'Primary model', 'Cloud', 'fake-echo');
+  await nextButton(page).click();
+  await expect(page).toHaveURL(/\/setup\/tools$/);
+  await page.getByRole('checkbox', { name: 'search_documents' }).check();
+  await page.getByRole('checkbox', { name: 'gmail_send' }).check();
+  await nextButton(page).click();
+  await expect(page).toHaveURL(/\/setup\/permissions$/);
+  await nextButton(page).click();
+  await expect(page).toHaveURL(/\/setup\/review$/);
+  await page.getByRole('button', { name: 'Create agent' }).click();
+  await expect(page).toHaveURL(new RegExp(`/agents/${id}$`));
+  await page.getByRole('button', { name: 'Agent settings' }).click();
+  await page.getByRole('button', { name: 'Activate' }).click();
+  await expect(page.getByText('Active', { exact: true }).first()).toBeVisible();
+  await page.goto(`/agents/${id}`);
+  await page.waitForLoadState('networkidle');
+  return id;
+}
+
+export async function sendChat(page: Page, message: string) {
+  await page.getByRole('textbox', { name: 'Ask anything…' }).fill(message);
+  await page.getByRole('button', { name: 'Send' }).click();
+}
+
+/** Opens the agent workspace's Settings drawer (status, lifecycle, configuration). */
+export async function openSettings(page: Page) {
+  const drawer = page.getByRole('dialog', { name: 'Agent settings' });
+  // The drawer stays open (and updates) after lifecycle actions taken inside it.
+  if (!(await drawer.isVisible()))
+    await page.getByRole('button', { name: 'Agent settings' }).click();
+  await expect(drawer).toBeVisible();
+  return drawer;
+}

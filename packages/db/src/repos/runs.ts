@@ -9,7 +9,8 @@ export type RunEvent = typeof runEvents.$inferSelect;
 export async function insertRun(
   db: Executor,
   ctx: TenantContext,
-  values: Pick<Run, 'agentId' | 'kind' | 'strategy' | 'taskCategory'>,
+  values: Pick<Run, 'agentId' | 'kind' | 'strategy' | 'taskCategory'> &
+    Partial<Pick<Run, 'status' | 'taskId' | 'conversationId'>>,
 ): Promise<Run> {
   const [row] = await db
     .insert(runs)

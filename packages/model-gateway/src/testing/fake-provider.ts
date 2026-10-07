@@ -1,8 +1,11 @@
 // Test double for model providers. Speaks the OpenAI-compatible wire format under /openai
 // (also what Ollama serves) and the Anthropic Messages format under /anthropic.
-// Behaviour is chosen by model name:
+// Behaviour is chosen by model name and message content:
 //   *-down      → HTTP 503 (outage; triggers fallback)
 //   *-limited   → HTTP 429 (rate limit; triggers fallback)
+//   with tools offered, a user message containing [[call:<name part>:<json args>]] makes the
+//   model call the first tool whose name contains <name part> (several markers → parallel
+//   calls); after tool results it answers "Tool results: <content>; …" (errors prefixed ERROR)
 //   Anthropic requests that opt into server-side fallbacks and say "refuse" → served by
 //   `claude-fallback` with a fallback block, as the real API does after a policy decline
 //   anything else echoes the last user message.
@@ -25,15 +28,40 @@ async function readBody(req: IncomingMessage): Promise<unknown> {
   return text ? JSON.parse(text) : undefined;
 }
 
+type Message = { role: string; content: unknown };
 type Body = {
   model: string;
   fallbacks?: unknown;
-  system?: string;
-  messages: { role: string; content: string }[];
+  messages: Message[];
+  tools?: { name?: string; function?: { name: string } }[];
 };
 
+const textOf = (content: unknown): string =>
+  typeof content === 'string'
+    ? content
+    : Array.isArray(content)
+      ? (content as { type?: string; text?: string }[])
+          .map((b) => (b.type === 'text' ? (b.text ?? '') : ''))
+          .join('')
+      : '';
+
 const lastUser = (body: Body) =>
-  [...body.messages].reverse().find((m) => m.role === 'user')?.content ?? '';
+  textOf([...body.messages].reverse().find((m) => m.role === 'user' && textOf(m.content))?.content);
+
+const MARKER = /\[\[call:([\w.-]+):(\{.*?\})\]\]/g;
+
+/** Tool calls requested by markers in the last message, if it is a plain user message. */
+function plannedCalls(body: Body): { name: string; args: unknown }[] {
+  const names = (body.tools ?? []).map((t) => t.function?.name ?? t.name ?? '');
+  const last = body.messages.at(-1);
+  if (!last || last.role !== 'user' || names.length === 0) return [];
+  return [...textOf(last.content).matchAll(MARKER)].flatMap(([, part, json]) => {
+    const name = names.find((n) => n.includes(part!));
+    return name ? [{ name, args: JSON.parse(json!) as unknown }] : [];
+  });
+}
+
+let sequence = 0;
 
 export function startFakeProvider(options: { port?: number; apiKey?: string } = {}) {
   const requests: RecordedRequest[] = [];
@@ -63,17 +91,38 @@ export function startFakeProvider(options: { port?: number; apiKey?: string } = 
     if (url === '/openai/v1/chat/completions' && body) {
       if (body.model.endsWith('-down')) return send(503, { error: { message: 'down' } });
       if (body.model.endsWith('-limited')) return send(429, { error: { message: 'slow down' } });
-      const text = `echo: ${lastUser(body)}`;
-      return send(200, {
-        id: 'chatcmpl-fake',
-        object: 'chat.completion',
-        created: 0,
-        model: body.model,
-        choices: [
-          { index: 0, message: { role: 'assistant', content: text }, finish_reason: 'stop' },
-        ],
-        usage: { prompt_tokens: 100, completion_tokens: 20, total_tokens: 120 },
-      });
+      const reply = (message: unknown, finish: string) =>
+        send(200, {
+          id: 'chatcmpl-fake',
+          object: 'chat.completion',
+          created: 0,
+          model: body.model,
+          choices: [{ index: 0, message, finish_reason: finish }],
+          usage: { prompt_tokens: 100, completion_tokens: 20, total_tokens: 120 },
+        });
+      const calls = plannedCalls(body);
+      if (calls.length > 0) {
+        return reply(
+          {
+            role: 'assistant',
+            content: null,
+            tool_calls: calls.map((call) => ({
+              id: `call_${++sequence}`,
+              type: 'function',
+              function: { name: call.name, arguments: JSON.stringify(call.args) },
+            })),
+          },
+          'tool_calls',
+        );
+      }
+      const trailing: string[] = [];
+      for (const m of [...body.messages].reverse()) {
+        if (m.role !== 'tool') break;
+        trailing.unshift(textOf(m.content));
+      }
+      const text =
+        trailing.length > 0 ? `Tool results: ${trailing.join('; ')}` : `echo: ${lastUser(body)}`;
+      return reply({ role: 'assistant', content: text }, 'stop');
     }
 
     // --- Anthropic Messages ---
@@ -96,22 +145,55 @@ export function startFakeProvider(options: { port?: number; apiKey?: string } = 
       if (body.model.endsWith('-down')) {
         return send(529, { type: 'error', error: { type: 'overloaded_error', message: 'down' } });
       }
+      const message = (content: unknown[], stopReason: string, model = body.model) =>
+        send(200, {
+          id: 'msg_fake',
+          type: 'message',
+          role: 'assistant',
+          model,
+          content,
+          stop_reason: stopReason,
+          stop_sequence: null,
+          usage: { input_tokens: 100, output_tokens: 20 },
+        });
+
+      const last = body.messages.at(-1);
+      const results = Array.isArray(last?.content)
+        ? (last.content as { type: string; content?: string; is_error?: boolean }[]).filter(
+            (b) => b.type === 'tool_result',
+          )
+        : [];
+      if (results.length > 0) {
+        const text = results.map((r) => `${r.is_error ? 'ERROR ' : ''}${r.content}`).join('; ');
+        return message([{ type: 'text', text: `Tool results: ${text}` }], 'end_turn');
+      }
+      const calls = plannedCalls(body);
+      if (calls.length > 0) {
+        return message(
+          [
+            // Current models think; the block must come back unchanged in the next turn.
+            { type: 'thinking', thinking: '', signature: 'sig-fake' },
+            ...calls.map((call) => ({
+              type: 'tool_use',
+              id: `toolu_${++sequence}`,
+              name: call.name,
+              input: call.args,
+            })),
+          ],
+          'tool_use',
+        );
+      }
       const refused = body.fallbacks !== undefined && lastUser(body).includes('refuse');
-      return send(200, {
-        id: 'msg_fake',
-        type: 'message',
-        role: 'assistant',
-        model: refused ? 'claude-fallback' : body.model,
-        content: [
+      return message(
+        [
           ...(refused
             ? [{ type: 'fallback', from: { model: body.model }, to: { model: 'claude-fallback' } }]
             : []),
           { type: 'text', text: `echo: ${lastUser(body)}` },
         ],
-        stop_reason: 'end_turn',
-        stop_sequence: null,
-        usage: { input_tokens: 100, output_tokens: 20 },
-      });
+        'end_turn',
+        refused ? 'claude-fallback' : body.model,
+      );
     }
 
     send(404, { error: { message: `no route ${req.method} ${url}` } });

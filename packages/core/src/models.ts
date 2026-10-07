@@ -54,6 +54,8 @@ const configSchema = z.object({
   budget: z.object({
     dailyUsd: z.number().min(0).max(100_000).optional(),
     perTaskUsd: z.number().min(0).max(100_000).optional(),
+    maxToolCalls: z.int().min(0).max(200, { error: 'invalid_max_tool_calls' }).optional(),
+    maxRuntimeSeconds: z.int().min(10).max(86_400, { error: 'invalid_max_runtime' }).optional(),
     onExceed: z.enum(['stop', 'request_approval']),
   }),
 });

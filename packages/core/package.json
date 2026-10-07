@@ -9,7 +9,8 @@
   },
   "scripts": {
     "typecheck": "tsc -p .",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "eval:personality": "tsx --env-file-if-exists=../../.env scripts/eval-personality.ts"
   },
   "dependencies": {
     "@agentos/db": "workspace:*",
@@ -19,11 +20,13 @@
     "@agentos/personality": "workspace:*",
     "@agentos/policy": "workspace:*",
     "@node-rs/argon2": "~2.2.1",
+    "ajv": "8.17.1",
     "bullmq": "^6.3.11",
     "ioredis": "^6.0.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@types/node": "^24"
+    "@types/node": "^24",
+    "tsx": "^4.23.15"
   }
 }

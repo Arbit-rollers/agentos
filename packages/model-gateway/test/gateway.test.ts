@@ -332,3 +332,91 @@ describe('cost estimation', () => {
     ).toBeNull();
   });
 });
+
+describe('tool calling across adapters', () => {
+  const tools = [
+    {
+      name: 'workspace__search_documents',
+      description: 'Search',
+      inputSchema: { type: 'object', properties: { query: { type: 'string' } } },
+    },
+  ];
+  const ask = { role: 'user' as const, content: 'find it [[call:search:{"query":"aviation"}]]' };
+
+  it.each([
+    ['openai_compatible', 'fake-echo'],
+    ['anthropic', 'claude-fake'],
+  ] as const)('%s: requests a tool, then answers from the result', async (provider, model) => {
+    const adapter = createAdapter({
+      provider,
+      endpoint: provider === 'anthropic' ? `${base}/anthropic` : `${base}/openai/v1`,
+      apiKey: 'k',
+    });
+    const first = await adapter.generate({ model, tools, messages: [ask] });
+    expect(first.stopReason).toBe('tool_use');
+    expect(first.toolCalls).toEqual([
+      expect.objectContaining({
+        name: 'workspace__search_documents',
+        arguments: { query: 'aviation' },
+      }),
+    ]);
+    const call = first.toolCalls[0]!;
+
+    fake.requests.length = 0;
+    const second = await adapter.generate({
+      model,
+      tools,
+      messages: [
+        ask,
+        {
+          role: 'assistant',
+          content: first.text,
+          toolCalls: first.toolCalls,
+          ...(first.providerContent
+            ? { providerContent: { provider, content: first.providerContent } }
+            : {}),
+        },
+        {
+          role: 'tool',
+          results: [
+            {
+              toolCallId: call.id,
+              name: call.name,
+              content: 'results for aviation',
+              isError: false,
+            },
+          ],
+        },
+      ],
+    });
+    expect(second).toMatchObject({ stopReason: 'end', text: 'Tool results: results for aviation' });
+
+    if (provider === 'anthropic') {
+      // The assistant turn went back unchanged, thinking block and signature included.
+      const sent = fake.requests.at(-1)!.body as {
+        messages: { role: string; content: { type: string }[] }[];
+      };
+      expect(sent.messages[1]!.content.map((b) => b.type)).toEqual(['thinking', 'tool_use']);
+      expect(sent.messages[2]!.content[0]).toMatchObject({
+        type: 'tool_result',
+        tool_use_id: call.id,
+      });
+    }
+  });
+});
+
+describe('echoing Anthropic content after a fallback', () => {
+  it('drops the declined partial’s thinking and tool_use before the marker', async () => {
+    const { echoableContent } = await import('../src/adapters/anthropic');
+    expect(
+      echoableContent([
+        { type: 'thinking', thinking: '' },
+        { type: 'text', text: 'partial' },
+        { type: 'tool_use', id: 'x' },
+        { type: 'fallback', from: {}, to: {} },
+        { type: 'thinking', thinking: '' },
+        { type: 'text', text: 'rest' },
+      ]).map((b) => b.type),
+    ).toEqual(['text', 'thinking', 'text']);
+  });
+});

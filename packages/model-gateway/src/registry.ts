@@ -57,7 +57,9 @@ export function describeModel(
   if (seed) return { ...seed, local };
   return {
     vision: false,
-    toolCalling: provider !== 'ollama' && provider !== 'openai_compatible',
+    // Unknown models get the benefit of the doubt; a model that can't call tools fails the
+    // request with a provider error rather than silently ignoring them.
+    toolCalling: true,
     structuredOutput: provider !== 'ollama' && provider !== 'openai_compatible',
     reasoning: false,
     sampling: provider !== 'anthropic',

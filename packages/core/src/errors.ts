@@ -10,7 +10,9 @@ export type AppErrorCode =
   | 'MODEL_CALL_FAILED'
   | 'MCP_UNAVAILABLE'
   | 'TOOL_BLOCKED'
-  | 'APPROVAL_REQUIRED';
+  | 'APPROVAL_REQUIRED'
+  | 'AGENT_NOT_RUNNABLE'
+  | 'ALREADY_DECIDED';
 
 /** Expected, user-facing failures. Anything else is a bug and should surface as a 500. */
 export class AppError extends Error {

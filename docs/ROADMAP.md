@@ -171,7 +171,7 @@ Legend: **AC n** = acceptance criterion n in PRD §28. **Screen n** = screen n i
 
 ---
 
-### M6: Runtime, Chat, Approvals, Logs, Budgets
+### M6: Runtime, Chat, Approvals, Logs, Budgets ✅
 
 **Scope**
 - Tables: `tasks` (minimal: chat-originated), `runs`, `run_events`, `tool_calls`, `approval_requests`
@@ -187,6 +187,13 @@ Legend: **AC n** = acceptance criterion n in PRD §28. **Screen n** = screen n i
 **Screens:** 7
 
 **Covers:** AC 17, 18, 22, 23, 24
+
+**As built (notes and known gaps)**
+- Chat creates a task per turn; the Tasks page lists them (creating/scheduling tasks directly is v0.2).
+- Live updates stream run *events* over SSE; token-by-token model streaming is not implemented.
+- Chat runs use the `general` task category, so Smart Router per-category routes don't apply to chat yet (primary + fallbacks do). Category selection or classification is a follow-up.
+- The personality eval against a real model is a script (`eval:personality`); it needs a provider key and has not been run in this environment. Automated tests verify the directives reach the model.
+- Rich output cards: assistant replies render as Markdown (no raw HTML). Domain-specific cards (script/storyboard) remain the open M6 question below.
 
 **Definition of done (= v0.1 done)**
 - The full v0.1 flow (see Overview) passes as one Playwright E2E test against the fixture MCP server and a mocked or local model.

@@ -1,12 +1,14 @@
 import OpenAI from 'openai';
 import { ProviderError, errorKindForStatus } from '../errors';
 import type {
+  ChatMessage,
   DiscoveredModel,
   GenerateRequest,
   GenerateResult,
   ProviderAccess,
   ProviderAdapter,
   StopReason,
+  ToolCall,
 } from '../types';
 
 const TIMEOUT_MS = 120_000;
@@ -30,9 +32,56 @@ function toProviderError(error: unknown): unknown {
 
 const STOP: Record<string, StopReason> = {
   stop: 'end',
+  tool_calls: 'tool_use',
   length: 'max_tokens',
   content_filter: 'refusal',
 };
+
+type Message = OpenAI.Chat.Completions.ChatCompletionMessageParam;
+
+function toMessages(system: string | undefined, messages: ChatMessage[]): Message[] {
+  const out: Message[] = system ? [{ role: 'system', content: system }] : [];
+  for (const message of messages) {
+    if (message.role === 'user') out.push({ role: 'user', content: message.content });
+    else if (message.role === 'assistant') {
+      out.push({
+        role: 'assistant',
+        content: message.content || null,
+        ...(message.toolCalls?.length && {
+          tool_calls: message.toolCalls.map((call) => ({
+            id: call.id,
+            type: 'function' as const,
+            function: {
+              name: call.name,
+              arguments: call.rawArguments ?? JSON.stringify(call.arguments ?? {}),
+            },
+          })),
+        }),
+      });
+    } else {
+      // Chat Completions has no error flag on tool messages; the text says so instead.
+      for (const result of message.results) {
+        out.push({
+          role: 'tool',
+          tool_call_id: result.toolCallId,
+          content: result.isError ? `Error: ${result.content}` : result.content,
+        });
+      }
+    }
+  }
+  return out;
+}
+
+function parseArguments(raw: string): Record<string, unknown> | null {
+  try {
+    const value: unknown = JSON.parse(raw || '{}');
+    return value && typeof value === 'object' && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * OpenAI, Ollama and any OpenAI-compatible server share the Chat Completions wire format.
@@ -69,28 +118,50 @@ export function createOpenAIAdapter(access: ProviderAccess): ProviderAdapter {
         const response = await client.chat.completions.create(
           {
             model: request.model,
-            messages: [
-              ...(request.system ? [{ role: 'system' as const, content: request.system }] : []),
-              ...request.messages,
-            ],
+            messages: toMessages(request.system, request.messages),
             // OpenAI's own API renamed the cap; compatible servers still expect max_tokens.
             ...(provider === 'openai'
               ? { max_completion_tokens: request.maxOutputTokens }
               : { max_tokens: request.maxOutputTokens }),
             ...(request.temperature !== undefined && { temperature: request.temperature }),
+            ...(request.tools?.length && {
+              tools: request.tools.map((tool) => ({
+                type: 'function' as const,
+                function: {
+                  name: tool.name,
+                  description: tool.description,
+                  parameters: tool.inputSchema,
+                },
+              })),
+            }),
           },
           { signal: request.signal },
         );
         const choice = response.choices[0];
+        const toolCalls: ToolCall[] = (choice?.message.tool_calls ?? []).flatMap((call) =>
+          call.type === 'function'
+            ? [
+                {
+                  id: call.id,
+                  name: call.function.name,
+                  arguments: parseArguments(call.function.arguments),
+                  rawArguments: call.function.arguments,
+                },
+              ]
+            : [],
+        );
         return {
           text: choice?.message.content ?? '',
-          stopReason: STOP[choice?.finish_reason ?? ''] ?? 'other',
+          stopReason:
+            toolCalls.length > 0 ? 'tool_use' : (STOP[choice?.finish_reason ?? ''] ?? 'other'),
           model: response.model || request.model,
           usage: {
             inputTokens: response.usage?.prompt_tokens ?? 0,
             outputTokens: response.usage?.completion_tokens ?? 0,
           },
           providerFallbacks: [],
+          toolCalls,
+          providerContent: null,
         };
       } catch (error) {
         throw toProviderError(error);
