@@ -11,10 +11,14 @@ export function ProfileForm({
   displayName,
   email,
   locale,
+  timezone,
+  timezones,
 }: {
   displayName: string;
   email: string;
   locale: Locale;
+  timezone: string;
+  timezones: string[];
 }) {
   const t = useTranslations();
   const errorText = useErrorText();
@@ -49,6 +53,19 @@ export function ProfileForm({
           name="locale"
           defaultValue={locale}
           options={locales.map((value) => ({ value, label: t(`languages.${value}`) }))}
+        />
+      </Field>
+      <Field
+        label={t('settings.timezone')}
+        htmlFor="timezone"
+        hint={t('settings.timezoneHint')}
+        error={errorText(state.fieldErrors?.timezone?.[0])}
+      >
+        <Select
+          id="timezone"
+          name="timezone"
+          defaultValue={timezone}
+          options={timezones.map((value) => ({ value, label: value.replace(/_/g, ' ') }))}
         />
       </Field>
       <div className="flex items-center gap-3">

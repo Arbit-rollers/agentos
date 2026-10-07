@@ -25,7 +25,7 @@ export async function findUserById(db: Executor, id: string): Promise<User | und
 export async function updateUserProfile(
   db: Executor,
   id: string,
-  values: { displayName?: string; locale?: string },
+  values: { displayName?: string; locale?: string; timezone?: string },
 ): Promise<User | undefined> {
   const [user] = await db.update(users).set(values).where(eq(users.id, id)).returning();
   return user;

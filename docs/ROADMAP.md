@@ -22,6 +22,7 @@ Legend: **AC n** = acceptance criterion n in PRD §28. **Screen n** = screen n i
 | v0.2 | M7 | Tasks & Schedules | 8 | — |
 | v0.3 | M8 | Knowledge, Memory, Feedback Learning | — | 21 |
 | v0.4 | M9 | Multi-Agent Orchestration | — | 19, 20 |
+| v0.4.1 | M9.5 | Per-user connections & Google Workspace | 2, 3 | 13, 15 (per user) |
 | v0.5 | M10 | Workflows | 9 | 25 |
 | v0.6 | M11 | Intelligence, Analytics, Hardening | — | 26 |
 
@@ -267,6 +268,24 @@ Legend: **AC n** = acceptance criterion n in PRD §28. **Screen n** = screen n i
 - The parent run waits as `waiting_agents` and resumes when all children have finished; child answers are wrapped as untrusted data. Failed or cancelled children come back as errors the parent can handle.
 - Task detail shows the delegation tree and links children to their parent; run logs show delegation started / finished / refused; the chat shows which team members it is waiting for.
 - Known gaps: the parent's per-task budget does not include its children's cost (each child counts against its own agent's budgets); there is no delegation to agents outside the direct-report line, and no per-agent override of that rule.
+
+---
+
+## v0.4.1: Per-user Connections & Google Workspace (M9.5)
+
+Lets every tenant, and every person in it, connect their own accounts to shared MCP servers. Google Workspace is the first catalog entry built on it.
+
+- **Per-user credentials:** an MCP connection is added once per workspace, but its sign-in can be *per user* ("Connect my account") or *shared* (one service account, the current behaviour). Per-user tokens are stored encrypted, bound to workspace + user + connection.
+- **Runtime picks the right identity:** a tool call uses the credentials of the person the run acts for (chat author, task creator, schedule creator; delegated tasks inherit the requesting person, never the parent agent's permissions). A person who has not connected gets "Connect your account to use this tool", never someone else's data. Tool discovery uses the admin's connection.
+- **OAuth with a pre-registered client:** client ID, client secret and scopes for servers without dynamic client registration (Google), alongside the existing DCR flow. Secrets live in the secret store.
+- **Google Workspace catalog template:** Google's hosted MCP servers (Gmail, Drive, Calendar, Docs, Sheets, Slides, Chat, People) with the right scopes per service; the tenant picks services. Client choice: the AgentOS platform OAuth client (from env) or the tenant's own client ("bring your own", needs no Google verification for Internal apps).
+- **MCP Hub UX:** per-user connection status ("Connected as you@domain" / "Connect my account"), disconnect / revoke for yourself; admins see who has connected (not their tokens).
+- **OpenArt fixes:** a 401 with `WWW-Authenticate: … resource_metadata` on a "None" connection reports "This server requires sign-in (OAuth)"; a connection's authentication type can be changed without removing it.
+
+**Covers:** AC 13, 15 per user (no cross-user credential use)
+**DoD:** two members of one workspace connect different Google accounts to the same Gmail connection; each one's agent reads only their own mailbox (tested against a fake OAuth + MCP server); a scheduled task uses its creator's account; a member who hasn't connected is told to connect, not served another member's data; revoking removes the token and the next call asks to connect again.
+
+**Outside our control:** Google's Workspace MCP servers are in the Developer Preview Program; using the AgentOS platform client with Gmail/Drive in production needs Google app verification plus a CASA security assessment. Until then: tenant-owned clients, or test mode (up to 100 test users).
 
 ---
 
