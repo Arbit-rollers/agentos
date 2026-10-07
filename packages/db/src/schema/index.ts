@@ -92,6 +92,36 @@ export const workspaceMembers = pgTable(
   ],
 );
 
+/**
+ * An invitation to join a workspace. The link carries a random token; only its SHA-256 is
+ * stored. Single use, expires, and only the invited email address can accept it.
+ */
+export const workspaceInvitations = pgTable(
+  'workspace_invitations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    /** Lower-cased. */
+    email: text('email').notNull(),
+    role: workspaceRole('role').notNull(),
+    tokenHash: text('token_hash').notNull(),
+    invitedBy: uuid('invited_by')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    acceptedAt: timestamp('accepted_at', { withTimezone: true }),
+    acceptedBy: uuid('accepted_by').references(() => users.id, { onDelete: 'set null' }),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex('workspace_invitations_token_key').on(t.tokenHash),
+    index('workspace_invitations_workspace_idx').on(t.workspaceId, t.createdAt),
+  ],
+);
+
 export const sessions = pgTable(
   'sessions',
   {

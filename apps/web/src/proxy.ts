@@ -12,7 +12,11 @@ export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (!token) {
-    if (pathname.startsWith('/api/') || PUBLIC_PATHS.includes(pathname)) {
+    if (
+      pathname.startsWith('/api/') ||
+      pathname.startsWith('/invite/') ||
+      PUBLIC_PATHS.includes(pathname)
+    ) {
       return NextResponse.next();
     }
     return NextResponse.redirect(new URL('/login', request.url));

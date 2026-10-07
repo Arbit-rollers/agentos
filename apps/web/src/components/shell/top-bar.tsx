@@ -14,15 +14,19 @@ import {
   MenuTrigger,
 } from '@agentos/ui';
 import { logoutAction } from '@/app/(auth)/actions';
+import { WorkspaceSwitcher } from './workspace-switcher';
 
 export type ShellUser = { displayName: string; email: string };
+export type ShellWorkspace = { id: string; name: string; current: boolean };
 
 export function TopBar({
   user,
+  workspaces,
   onOpenSearch,
   onOpenNavigation,
 }: {
   user: ShellUser;
+  workspaces: ShellWorkspace[];
   onOpenSearch: () => void;
   onOpenNavigation: () => void;
 }) {
@@ -55,6 +59,7 @@ export function TopBar({
       </button>
 
       <div className="ml-auto flex items-center gap-1">
+        <WorkspaceSwitcher workspaces={workspaces} />
         <Menu>
           <MenuTrigger asChild>
             <Button variant="ghost" size="icon" aria-label={t('shell.notifications')}>

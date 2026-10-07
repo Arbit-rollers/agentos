@@ -143,3 +143,17 @@ export {
   connectGoogleWorkspace,
 } from './google-workspace';
 export type { GoogleService, GoogleWorkspaceInput } from './google-workspace';
+export {
+  ASSIGNABLE_ROLES,
+  INVITATION_TTL_MS,
+  acceptInvitation,
+  changeMemberRole,
+  describeInvitation,
+  inviteMember,
+  removeMember,
+  renameCurrentWorkspace,
+  requireManager,
+  revokeInvitation,
+  switchWorkspace,
+} from './team';
+export type { InvitationView } from './team';

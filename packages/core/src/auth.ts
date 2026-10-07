@@ -16,6 +16,7 @@ import {
   type User,
   type Workspace,
   type WorkspaceRole,
+  setSessionWorkspace,
 } from '@agentos/db';
 import { locales, type Locale } from '@agentos/i18n';
 import { z } from 'zod';
@@ -199,10 +200,19 @@ export async function authenticate(
   const session = await findActiveSession(db, sessionId, now);
   if (!session) return null;
 
-  const [user, membership] = await Promise.all([
+  const [user, current] = await Promise.all([
     findUserById(db, session.userId),
     findMembership(db, session.userId, session.workspaceId),
   ]);
+  // Removed from the workspace this session was in: continue in their own workspace.
+  let membership = current;
+  if (user && !membership) {
+    const fallback = await findDefaultWorkspaceForUser(db, user.id);
+    if (fallback) {
+      await setSessionWorkspace(db, sessionId, fallback.id);
+      membership = await findMembership(db, user.id, fallback.id);
+    }
+  }
   if (!user || user.status !== 'active' || !membership) {
     await deleteSession(db, sessionId);
     return null;

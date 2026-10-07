@@ -99,6 +99,13 @@
       "when": 1791391714023,
       "tag": "0013_per_user_connections",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1791392583904,
+      "tag": "0014_workspace_invitations",
+      "breakpoints": true
     }
   ]
 }

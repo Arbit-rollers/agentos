@@ -180,7 +180,13 @@
     "google_service_required": "En az bir hizmet seçin.",
     "google_platform_missing": "AgentOS'un Google uygulaması burada yapılandırılmamış. Kendinizinkini kullanın.",
     "per_user_needs_signin": "Üye başına oturum açma için OAuth veya token gerekir.",
-    "mcp_needs_user_auth": "Önce bu sunucuya kendi hesabınızı bağlayın."
+    "mcp_needs_user_auth": "Önce bu sunucuya kendi hesabınızı bağlayın.",
+    "already_member": "Bu kişi zaten üye.",
+    "invite_wrong_account": "Bu davet farklı bir e-posta adresi için.",
+    "invite_invalid": "Bu davet artık geçerli değil.",
+    "owner_cannot_leave": "Sahip ayrılamaz veya çıkarılamaz.",
+    "workspace_name_required": "Bir ad girin.",
+    "FORBIDDEN": "Bunu yalnızca sahipler ve yöneticiler yapabilir."
   },
   "dashboard": {
     "greetingMorning": "Günaydın, {name}",
@@ -270,7 +276,14 @@
     "agent_delegated_denied": "Devretme reddedildi",
     "mcp_user_connected": "Üye hesabını bağladı",
     "mcp_user_disconnected": "Üye hesabının bağlantısını kesti",
-    "mcp_auth_changed": "Oturum açma yöntemi değişti"
+    "mcp_auth_changed": "Oturum açma yöntemi değişti",
+    "member_invited": "Üye davet edildi",
+    "member_invitation_revoked": "Davet geri çekildi",
+    "member_joined": "Üye katıldı",
+    "member_role_changed": "Üye rolü değişti",
+    "member_removed": "Üye çıkarıldı",
+    "member_left": "Üye ayrıldı",
+    "workspace_renamed": "Çalışma alanı yeniden adlandırıldı"
   },
   "outcome": {
     "success": "Başarılı",
@@ -312,7 +325,8 @@
     "sectionsLabel": "Ayar bölümleri",
     "knowledgeTab": "Bilgi",
     "timezone": "Saat dilimi",
-    "timezoneHint": "Ajanlar bunu “bugün”, “yarın” ve zamanlamalar için kullanır. Siz seçene kadar tarayıcınızdan algılanır."
+    "timezoneHint": "Ajanlar bunu “bugün”, “yarın” ve zamanlamalar için kullanır. Siz seçene kadar tarayıcınızdan algılanır.",
+    "membersTab": "Üyeler"
   },
   "languages": {
     "en": "English",
@@ -1309,5 +1323,58 @@
     "accepted": "Onaylandı",
     "dismissed": "Reddedildi",
     "reviseMessage": "Lütfen son yanıtını düzelt: {comment}"
+  },
+  "team": {
+    "title": "Üyeler",
+    "workspace": "Çalışma alanı",
+    "workspaceHint": "Ajanlar, araçlar, görevler ve ortak bilgiler çalışma alanına aittir. Hafıza, özel bilgiler ve bağlı hesaplar kişiseldir.",
+    "workspaceName": "Çalışma alanı adı",
+    "save": "Kaydet",
+    "saved": "Kaydedildi.",
+    "inviteHeading": "Kişi davet et",
+    "inviteHint": "Tek bir e-posta adresi için 7 gün geçerli, tek kullanımlık bir bağlantı oluşturur. AgentOS henüz e-posta göndermiyor: bağlantıyı kopyalayıp kendiniz gönderin.",
+    "email": "E-posta",
+    "role": "Rol",
+    "roles": {
+      "owner": "Sahip",
+      "admin": "Yönetici",
+      "member": "Üye",
+      "viewer": "İzleyici"
+    },
+    "invite": "Davet oluştur",
+    "inviting": "Oluşturuluyor…",
+    "linkReady": "{email} için davet hazır. Bu bağlantıyı gönderin:",
+    "inviteLink": "Davet bağlantısı",
+    "copy": "Kopyala",
+    "copied": "Kopyalandı",
+    "linkHint": "Yalnızca {email} hesabı kullanabilir. Aynı e-posta için yeni bir davet bunun yerine geçer.",
+    "members": "{count, plural, one {# üye} other {# üye}}",
+    "membersLabel": "Çalışma alanı üyeleri",
+    "you": "(siz)",
+    "joined": "Katılma: {date}",
+    "remove": "Çıkar",
+    "leave": "Çalışma alanından ayrıl",
+    "confirm": "Onaylamak için tekrar tıklayın",
+    "pending": "Bekleyen davetler",
+    "expires": "Bitiş: {date}",
+    "revoke": "Geri çek",
+    "switcher": "Çalışma alanı değiştir",
+    "workspaces": "Çalışma alanları",
+    "inviteMembers": "Üye davet et",
+    "inviteTitle": "Çalışma alanı daveti",
+    "inviteSummary": "{inviter} sizi “{workspace}” çalışma alanına {role} olarak davet etti.",
+    "inviteFor": "Bu davet {email} içindir.",
+    "signInToAccept": "Kabul etmek için oturum açın",
+    "createToAccept": "Kabul etmek için hesap oluşturun",
+    "accept": "Kabul et ve katıl",
+    "accepting": "Katılınıyor…",
+    "wrongAccount": "{current} olarak oturum açtınız, ancak bu davet {invited} için.",
+    "signOutToSwitch": "Başka bir hesap için oturumu kapat",
+    "inviteStatus": {
+      "unknown": "Bu davet bağlantısı geçerli değil.",
+      "expired": "Bu davetin süresi doldu. Yeni bir davet isteyin.",
+      "used": "Bu davet zaten kullanıldı.",
+      "revoked": "Bu davet geri çekildi."
+    }
   }
 }

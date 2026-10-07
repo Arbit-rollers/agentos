@@ -9,6 +9,7 @@ const SECTIONS = [
   { href: '/settings', key: 'profileTab' },
   { href: '/settings/providers', key: 'providersTab' },
   { href: '/settings/knowledge', key: 'knowledgeTab' },
+  { href: '/settings/members', key: 'membersTab' },
 ] as const;
 
 export function SettingsNav() {

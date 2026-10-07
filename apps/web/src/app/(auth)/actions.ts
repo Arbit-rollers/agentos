@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { AppError, login, logout, register } from '@agentos/core';
 import { isLocale } from '@agentos/i18n';
 import { LOCALE_COOKIE, resolveLocale } from '@/i18n/locale';
+import { safeNext } from '@/lib/safe-next';
 import { SESSION_COOKIE } from '@/lib/session-cookie';
 import { getServices } from '@/server/services';
 import { clearSessionCookie, setSessionCookie } from '@/server/session';
@@ -33,7 +34,7 @@ async function signIn(start: () => ReturnType<typeof login>, formData: FormData)
       },
     } satisfies AuthFormState;
   }
-  redirect('/dashboard');
+  redirect(safeNext(formData.get('next')));
 }
 
 export async function loginAction(_: AuthFormState, formData: FormData): Promise<AuthFormState> {

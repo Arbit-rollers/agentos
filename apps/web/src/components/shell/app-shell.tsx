@@ -6,15 +6,17 @@ import { Dialog, DialogContent } from '@agentos/ui';
 import { CommandPalette } from './command-palette';
 import type { NavKey } from './nav-items';
 import { Logo, SidebarNav } from './sidebar-nav';
-import { TopBar, type ShellUser } from './top-bar';
+import { TopBar, type ShellUser, type ShellWorkspace } from './top-bar';
 
 /** Sidebar + top bar frame for every signed-in page (PRD §35.2). */
 export function AppShell({
   user,
+  workspaces,
   badges = {},
   children,
 }: {
   user: ShellUser;
+  workspaces: ShellWorkspace[];
   /** Counts shown next to nav items, e.g. pending approvals. */
   badges?: Partial<Record<NavKey, number>>;
   children: ReactNode;
@@ -46,6 +48,7 @@ export function AppShell({
 
       <TopBar
         user={user}
+        workspaces={workspaces}
         onOpenSearch={() => setPaletteOpen(true)}
         onOpenNavigation={() => setNavOpen(true)}
       />
