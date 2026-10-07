@@ -174,7 +174,13 @@
     "not_on_team": "Bu ajan, bu ajanın ekibinde değil.",
     "delegation_too_deep": "Devretme zincirleri üç seviyeyle sınırlıdır.",
     "too_many_delegations": "Bir çalıştırmada çok fazla görev devredildi.",
-    "no_task": "Devretmek için bir görev gerekir."
+    "no_task": "Devretmek için bir görev gerekir.",
+    "client_id_required": "Client ID'yi girin.",
+    "client_secret_required": "Client secret'ı girin.",
+    "google_service_required": "En az bir hizmet seçin.",
+    "google_platform_missing": "AgentOS'un Google uygulaması burada yapılandırılmamış. Kendinizinkini kullanın.",
+    "per_user_needs_signin": "Üye başına oturum açma için OAuth veya token gerekir.",
+    "mcp_needs_user_auth": "Önce bu sunucuya kendi hesabınızı bağlayın."
   },
   "dashboard": {
     "greetingMorning": "Günaydın, {name}",
@@ -261,7 +267,10 @@
     "feedback_suggestion_accepted": "Öneri onaylandı",
     "feedback_suggestion_dismissed": "Öneri reddedildi",
     "agent_delegated": "Görev devredildi",
-    "agent_delegated_denied": "Devretme reddedildi"
+    "agent_delegated_denied": "Devretme reddedildi",
+    "mcp_user_connected": "Üye hesabını bağladı",
+    "mcp_user_disconnected": "Üye hesabının bağlantısını kesti",
+    "mcp_auth_changed": "Oturum açma yöntemi değişti"
   },
   "outcome": {
     "success": "Başarılı",
@@ -793,7 +802,20 @@
       "oauthHint": "Giriş yapmak için sunucuya yönlendirileceksiniz, ardından buraya geri döneceksiniz.",
       "submit": "Bağla",
       "submitting": "Bağlanıyor…",
-      "cancel": "Vazgeç"
+      "cancel": "Vazgeç",
+      "credentialMode": "Kim oturum açar",
+      "credentialModes": {
+        "shared": "Çalışma alanı için tek hesap",
+        "per_user": "Her üye kendi hesabını bağlar"
+      },
+      "credentialModeHint": "Üye başına: ajanlar yalnızca adına çalıştıkları kişinin hesabını kullanır, asla başkasınınkini.",
+      "advanced": "Gelişmiş OAuth ayarları",
+      "oauthClientId": "Client ID",
+      "oauthClientSecret": "Client secret",
+      "oauthClientHint": "Yalnızca uygulamaları otomatik kaydetmeyen sunucular için (ör. Google). Bu yönlendirme URI'sini sağlayıcıya kaydedin: {redirect}",
+      "oauthScopes": "Kapsamlar (scopes)",
+      "oauthScopesHint": "Boşlukla ayırın. Sunucunun istediğini kullanmak için boş bırakın.",
+      "perUserTokenHint": "İsteğe bağlı: kendi token'ınız. Her üye kendininkini bağlantı sayfasında ekler."
     },
     "detail": {
       "tabs": {
@@ -833,14 +855,57 @@
       "settingsEnabledHint": "Kapalıyken hiçbir ajan bu sunucunun araçlarını çağıramaz.",
       "noLogs": "Henüz etkinlik yok.",
       "oauthError": "Giriş başarısız. Tekrar deneyin.",
-      "connectedNotice": "Bağlandı. Araçlar keşfedildi."
+      "connectedNotice": "Bağlandı. Araçlar keşfedildi.",
+      "signIn": "Oturum açma",
+      "credentialMode": "Kim oturum açar",
+      "scopes": "Kapsamlar",
+      "yourAccount": "Hesabınız",
+      "youConnected": "Bağlı. Sizin için çalışan ajanlar sizin hesabınızı kullanır.",
+      "youNotConnected": "Bağlı değil. Siz bağlanana kadar sizin için çalışan ajanlar bu sunucuyu kullanamaz.",
+      "connectMine": "Hesabımı bağla",
+      "disconnectMine": "Hesabımın bağlantısını kes",
+      "confirmDisconnectMine": "Bağlantıyı kesmek için tekrar tıklayın",
+      "yourToken": "Token'ınız",
+      "saveToken": "Token'ımı kaydet",
+      "members": "Hesabını bağlayan üyeler",
+      "noMembers": "Henüz kimse bağlanmadı.",
+      "changeSignIn": "Oturum açma yöntemini değiştir",
+      "changeSignInHint": "Bağlantıyı, araçlarını ve ajan izinlerini korur. Mevcut kimlik bilgileri, her üyeninki dahil, silinir.",
+      "saveSignIn": "Oturum açma yöntemini kaydet",
+      "perUserBadge": "Her üye kendi oturumunu açar"
     },
     "errorCodes": {
       "auth": "Sunucu kimlik bilgilerini reddetti veya giriş gerektiriyor.",
       "unavailable": "Sunucuya ulaşılamadı.",
       "timeout": "Sunucu zamanında yanıt vermedi.",
       "protocol": "Sunucu bir MCP sunucusu gibi yanıt vermedi — URL'yi ve aktarımı kontrol edin.",
-      "tool_not_found": "Araç bulunamadı."
+      "tool_not_found": "Araç bulunamadı.",
+      "auth_required": "Bu sunucu oturum açmayı gerektiriyor. Oturum açma yöntemini (Kimlik doğrulama sekmesi) OAuth veya token olarak değiştirin."
+    },
+    "google": {
+      "title": "Google Workspace'i bağla",
+      "intro": "Google'ın barındırdığı MCP sunucularını kullanır (Developer Preview). Ardından her üye kendi Google hesabını bağlar; ajanlar yalnızca adına çalıştıkları kişinin hesabını kullanır.",
+      "services": {
+        "gmail": "Gmail",
+        "calendar": "Google Takvim",
+        "drive": "Google Drive",
+        "docs": "Google Dokümanlar",
+        "sheets": "Google E-Tablolar",
+        "slides": "Google Slaytlar",
+        "chat": "Google Chat",
+        "people": "Google Kişiler"
+      },
+      "servicesLabel": "Hizmetler",
+      "client": "Google uygulaması (OAuth client)",
+      "clients": {
+        "platform": "AgentOS'un Google uygulaması",
+        "own": "Kendi Google uygulamamız"
+      },
+      "platformHint": "Üyeler AgentOS'un doğrulanmış Google uygulamasıyla oturum açar.",
+      "platformMissing": "Bu AgentOS sunucusunda yapılandırılmamış; kendi Google uygulamanızı kullanın.",
+      "ownHint": "Google Cloud'da Web application türünde bir OAuth client oluşturun ve şu yönlendirme URI'sini ekleyin: {redirect}. Seçtiğiniz hizmetlerin API'lerini ve MCP API'lerini etkinleştirin.",
+      "submit": "Bağla ve oturum aç",
+      "afterFirst": "İlk hizmette oturum açtıktan sonra diğerlerini açıp Hesabımı bağla'ya tıklayın."
     }
   },
   "permissions": {

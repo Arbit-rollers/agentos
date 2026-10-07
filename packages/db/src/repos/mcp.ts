@@ -1,6 +1,13 @@
 import { and, asc, eq, inArray, notInArray, sql } from 'drizzle-orm';
 import type { Executor } from '../client';
-import { agentToolPermissions, agents, mcpConnections, mcpTools } from '../schema/index';
+import {
+  agentToolPermissions,
+  agents,
+  mcpConnections,
+  mcpTools,
+  mcpUserCredentials,
+  users,
+} from '../schema/index';
 import { tenantScope, type TenantContext } from '../tenant';
 
 export type McpConnection = typeof mcpConnections.$inferSelect;
@@ -15,7 +22,8 @@ export async function insertMcpConnection(
   values: Pick<
     McpConnection,
     'name' | 'serverType' | 'transport' | 'endpoint' | 'authType' | 'secretId'
-  >,
+  > &
+    Partial<Pick<McpConnection, 'credentialMode' | 'oauthScopes' | 'oauthParams'>>,
 ): Promise<McpConnection> {
   const [row] = await db
     .insert(mcpConnections)
@@ -77,6 +85,10 @@ export async function updateMcpConnection(
       | 'lastCheckedAt'
       | 'lastError'
       | 'secretId'
+      | 'authType'
+      | 'credentialMode'
+      | 'oauthScopes'
+      | 'oauthParams'
     >
   >,
 ): Promise<McpConnection | undefined> {
@@ -105,6 +117,141 @@ export async function deleteMcpConnection(
  * workspaces, with the workspace and owner needed to build a TenantContext per connection.
  * Never call this from request handlers.
  */
+// --- per-user credentials (v0.4.1) -------------------------------------------
+
+export type McpUserCredential = typeof mcpUserCredentials.$inferSelect;
+
+/** The caller's own credentials for a connection. */
+export async function findMyMcpCredential(
+  db: Executor,
+  ctx: TenantContext,
+  connectionId: string,
+): Promise<McpUserCredential | undefined> {
+  const [row] = await db
+    .select()
+    .from(mcpUserCredentials)
+    .where(
+      tenantScope(
+        ctx,
+        mcpUserCredentials,
+        eq(mcpUserCredentials.connectionId, connectionId),
+        eq(mcpUserCredentials.userId, ctx.userId),
+      ),
+    )
+    .limit(1);
+  return row;
+}
+
+/** Creates or updates the caller's credential row for a connection. */
+export async function upsertMyMcpCredential(
+  db: Executor,
+  ctx: TenantContext,
+  connectionId: string,
+  values: Partial<
+    Pick<McpUserCredential, 'secretId' | 'status' | 'oauthStateHash' | 'connectedAt'>
+  >,
+): Promise<McpUserCredential> {
+  const [row] = await db
+    .insert(mcpUserCredentials)
+    .values({ ...values, workspaceId: ctx.workspaceId, connectionId, userId: ctx.userId })
+    .onConflictDoUpdate({
+      target: [mcpUserCredentials.connectionId, mcpUserCredentials.userId],
+      set: values,
+    })
+    .returning();
+  return row!;
+}
+
+/** The caller's sign-in in progress, found by its `state`. Never another member's. */
+export async function findMyMcpCredentialByOAuthState(
+  db: Executor,
+  ctx: TenantContext,
+  stateHash: string,
+): Promise<McpUserCredential | undefined> {
+  const [row] = await db
+    .select()
+    .from(mcpUserCredentials)
+    .where(
+      tenantScope(
+        ctx,
+        mcpUserCredentials,
+        eq(mcpUserCredentials.oauthStateHash, stateHash),
+        eq(mcpUserCredentials.userId, ctx.userId),
+      ),
+    )
+    .limit(1);
+  return row;
+}
+
+export async function deleteMyMcpCredential(
+  db: Executor,
+  ctx: TenantContext,
+  connectionId: string,
+): Promise<McpUserCredential | undefined> {
+  const [row] = await db
+    .delete(mcpUserCredentials)
+    .where(
+      tenantScope(
+        ctx,
+        mcpUserCredentials,
+        eq(mcpUserCredentials.connectionId, connectionId),
+        eq(mcpUserCredentials.userId, ctx.userId),
+      ),
+    )
+    .returning();
+  return row;
+}
+
+/** Secret ids of every member's credentials for a connection (removed with it). */
+export async function listMcpCredentialSecretIds(
+  db: Executor,
+  ctx: TenantContext,
+  connectionId: string,
+): Promise<string[]> {
+  const rows = await db
+    .select({ secretId: mcpUserCredentials.secretId })
+    .from(mcpUserCredentials)
+    .where(tenantScope(ctx, mcpUserCredentials, eq(mcpUserCredentials.connectionId, connectionId)));
+  return rows.flatMap((r) => (r.secretId ? [r.secretId] : []));
+}
+
+/** Drops every member's credentials for a connection (its sign-in method changed). */
+export async function deleteMcpCredentialsForConnection(
+  db: Executor,
+  ctx: TenantContext,
+  connectionId: string,
+): Promise<void> {
+  await db
+    .delete(mcpUserCredentials)
+    .where(tenantScope(ctx, mcpUserCredentials, eq(mcpUserCredentials.connectionId, connectionId)));
+}
+
+/** Who has connected their own account (for admins): names and dates, never secrets. */
+export async function listMcpConnectedMembers(
+  db: Executor,
+  ctx: TenantContext,
+  connectionId: string,
+): Promise<{ userId: string; displayName: string; email: string; connectedAt: Date | null }[]> {
+  return db
+    .select({
+      userId: mcpUserCredentials.userId,
+      displayName: users.displayName,
+      email: users.email,
+      connectedAt: mcpUserCredentials.connectedAt,
+    })
+    .from(mcpUserCredentials)
+    .innerJoin(users, eq(users.id, mcpUserCredentials.userId))
+    .where(
+      tenantScope(
+        ctx,
+        mcpUserCredentials,
+        eq(mcpUserCredentials.connectionId, connectionId),
+        eq(mcpUserCredentials.status, 'connected'),
+      ),
+    )
+    .orderBy(asc(users.displayName));
+}
+
 export async function listMcpConnectionsForHealthCheck(db: Executor) {
   return db
     .select({

@@ -74,6 +74,9 @@ export {
   setMcpConnectionEnabled,
   startMcpAuthorization,
   updateToolDefaults,
+  disconnectMyMcpAccount,
+  setMyMcpToken,
+  updateMcpConnectionAuth,
 } from './mcp';
 export type { McpConnectionInput, McpDeps, ToolCallOutcome } from './mcp';
 export { DEFAULT_LIMITS, decideApproval, executeRun, startChatTurn } from './runtime';
@@ -134,3 +137,9 @@ export type { MemoryInput } from './memory';
 export { decideFeedbackSuggestion, submitFeedback, suggestTraitChanges } from './feedback';
 export { chunkText, toTsquery } from './text';
 export { fetchDocument, isPrivateAddress } from './fetch-url';
+export {
+  GOOGLE_SERVICES,
+  GOOGLE_WORKSPACE_SERVICES,
+  connectGoogleWorkspace,
+} from './google-workspace';
+export type { GoogleService, GoogleWorkspaceInput } from './google-workspace';

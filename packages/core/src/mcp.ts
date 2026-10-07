@@ -3,6 +3,12 @@ import {
   findAgent,
   findMcpConnection,
   findMcpConnectionByOAuthState,
+  findMyMcpCredential,
+  findMyMcpCredentialByOAuthState,
+  upsertMyMcpCredential,
+  deleteMyMcpCredential,
+  deleteMcpCredentialsForConnection,
+  listMcpCredentialSecretIds,
   findMcpTool,
   insertMcpConnection,
   deleteMcpConnection,
@@ -54,6 +60,8 @@ export type McpDeps = {
   secrets: SecretStore;
   /** Public app URL; OAuth redirects come back to `${appUrl}/api/mcp/oauth/callback`. */
   appUrl: string;
+  /** AgentOS's own Google OAuth client, offered to tenants for Google Workspace (optional). */
+  googleClient?: { id: string; secret: string };
 };
 
 const HEADER_NAME = /^[A-Za-z0-9!#$%&'*+.^_`|~-]+$/;
@@ -80,10 +88,27 @@ const connectionSchema = z
     token: z.string().trim().max(4000).optional(),
     /** One `Name: value` per line. */
     headers: z.string().max(8000).optional(),
+    /** Per-user: each member connects their own account (OAuth or token). */
+    credentialMode: z.enum(['shared', 'per_user']).default('shared'),
+    /** OAuth client registered beforehand, for servers without dynamic registration. */
+    oauthClientId: z.string().trim().max(500).optional(),
+    oauthClientSecret: z.string().trim().max(500).optional(),
+    oauthScopes: z.string().trim().max(2000).optional(),
+    oauthParams: z.record(z.string(), z.string().max(200)).default({}),
   })
   .superRefine((value, ctx) => {
-    if (value.authType === 'bearer' && !value.token) {
+    if (value.authType === 'bearer' && !value.token && value.credentialMode === 'shared') {
       ctx.addIssue({ code: 'custom', path: ['token'], message: 'token_required' });
+    }
+    if (
+      value.credentialMode === 'per_user' &&
+      value.authType !== 'oauth' &&
+      value.authType !== 'bearer'
+    ) {
+      ctx.addIssue({ code: 'custom', path: ['credentialMode'], message: 'per_user_needs_signin' });
+    }
+    if (value.oauthClientSecret && !value.oauthClientId) {
+      ctx.addIssue({ code: 'custom', path: ['oauthClientId'], message: 'client_id_required' });
     }
     if (value.authType === 'headers') {
       const lines = (value.headers ?? '')
@@ -121,26 +146,83 @@ function parseHeaders(raw: string): Record<string, string> {
 
 const hashState = (state: string) => createHash('sha256').update(state).digest('hex');
 
-function oauthProvider(deps: McpDeps, ctx: TenantContext, connection: McpConnection, state = '') {
+const perUser = (connection: McpConnection) => connection.credentialMode === 'per_user';
+
+const oauthOptions = (connection: McpConnection) => ({
+  ...(connection.oauthScopes && { scope: connection.oauthScopes }),
+  params: connection.oauthParams,
+});
+
+const redirectUrl = (deps: McpDeps) => `${deps.appUrl.replace(/\/+$/, '')}/api/mcp/oauth/callback`;
+
+/**
+ * OAuth client for a connection. Shared connections keep everything in the connection's
+ * secret. Per-user connections keep only the client registration there (one app for the
+ * whole workspace) and each member's tokens in that member's own secret.
+ */
+function oauthProvider(
+  deps: McpDeps,
+  ctx: TenantContext,
+  connection: McpConnection,
+  state = '',
+  userSecretId?: string,
+) {
   if (!connection.secretId) throw new AppError('MCP_UNAVAILABLE', 'Missing OAuth state');
-  const secretId = connection.secretId;
-  return new StoredOAuthProvider(
-    {
-      load: async () => JSON.parse(await deps.secrets.reveal(ctx, secretId)) as OAuthState,
-      save: (next) => deps.secrets.replace(ctx, secretId, JSON.stringify(next)),
-    },
-    `${deps.appUrl.replace(/\/+$/, '')}/api/mcp/oauth/callback`,
-    state,
-  );
+  const connectionSecret = connection.secretId;
+  const read = async (id: string) => JSON.parse(await deps.secrets.reveal(ctx, id)) as OAuthState;
+  const store = userSecretId
+    ? {
+        load: async () => ({
+          clientInformation: (await read(connectionSecret)).clientInformation,
+          ...(await read(userSecretId)),
+        }),
+        save: async ({ clientInformation, ...own }: OAuthState) => {
+          const shared = await read(connectionSecret);
+          if (JSON.stringify(shared.clientInformation) !== JSON.stringify(clientInformation))
+            await deps.secrets.replace(
+              ctx,
+              connectionSecret,
+              JSON.stringify({ clientInformation }),
+            );
+          await deps.secrets.replace(ctx, userSecretId, JSON.stringify(own));
+        },
+      }
+    : {
+        load: () => read(connectionSecret),
+        save: (next: OAuthState) =>
+          deps.secrets.replace(ctx, connectionSecret, JSON.stringify(next)),
+      };
+  return new StoredOAuthProvider(store, redirectUrl(deps), state, oauthOptions(connection));
 }
 
-/** Builds gateway access for a connection, decrypting credentials only for this call. */
+/**
+ * Builds gateway access for a connection, decrypting credentials only for this call. For a
+ * per-user connection these are the caller's own credentials (`ctx.userId`): a run acting for
+ * someone uses that person's account and never falls back to anyone else's.
+ */
 export async function accessFor(
+  db: Database,
   deps: McpDeps,
   ctx: TenantContext,
   connection: McpConnection,
 ): Promise<McpAccess> {
   const base = { endpoint: connection.endpoint, transport: connection.transport };
+  if (perUser(connection)) {
+    const mine = await findMyMcpCredential(db, ctx, connection.id);
+    if (!mine?.secretId || mine.status !== 'connected')
+      throw new AppError('MCP_NEEDS_USER_AUTH', 'Connect your account first', {
+        connection: ['mcp_needs_user_auth'],
+      });
+    if (connection.authType === 'bearer')
+      return {
+        ...base,
+        auth: { type: 'bearer', token: await deps.secrets.reveal(ctx, mine.secretId) },
+      };
+    return {
+      ...base,
+      auth: { type: 'oauth', provider: oauthProvider(deps, ctx, connection, '', mine.secretId) },
+    };
+  }
   const secret = async () =>
     connection.secretId ? deps.secrets.reveal(ctx, connection.secretId) : '';
   switch (connection.authType) {
@@ -167,6 +249,7 @@ async function requireConnection(db: Database, ctx: TenantContext, id: string) {
 /**
  * Connects to the server, then stores what it offers (PRD §8.3). New tools get a classified
  * workspace default; nothing is granted to any agent (PRD §9: connecting exposes nothing).
+ * A per-user connection discovers with the caller's own account.
  */
 export async function refreshMcpConnection(
   db: Database,
@@ -176,7 +259,7 @@ export async function refreshMcpConnection(
 ): Promise<McpConnection> {
   const connection = await requireConnection(db, ctx, id);
   try {
-    const found = await discover(await accessFor(deps, ctx, connection));
+    const found = await discover(await accessFor(db, deps, ctx, connection));
     await syncDiscoveredTools(
       db,
       ctx,
@@ -199,18 +282,33 @@ export async function refreshMcpConnection(
       lastError: null,
     }))!;
   } catch (error) {
+    // Nobody has connected an account yet: nothing to discover with, not a failure.
+    if (error instanceof AppError && error.code === 'MCP_NEEDS_USER_AUTH') {
+      return (await updateMcpConnection(db, ctx, id, {
+        status: connection.status === 'connected' ? 'connected' : 'needs_auth',
+        lastCheckedAt: new Date(),
+      }))!;
+    }
     if (!(error instanceof McpGatewayError)) throw error;
+    if (error.kind === 'auth' && perUser(connection))
+      await upsertMyMcpCredential(db, ctx, id, { status: 'needs_auth' });
     return (await updateMcpConnection(db, ctx, id, {
-      status: error.kind === 'auth' && connection.authType === 'oauth' ? 'needs_auth' : 'error',
+      status:
+        error.kind === 'auth' && (connection.authType === 'oauth' || perUser(connection))
+          ? 'needs_auth'
+          : 'error',
       lastCheckedAt: new Date(),
-      lastError: error.kind,
+      // The server wants sign-in but the connection has none: say so (OpenArt, Google…).
+      lastError:
+        error.kind === 'auth' && connection.authType === 'none' ? 'auth_required' : error.kind,
     }))!;
   }
 }
 
 /**
- * Starts OAuth for a connection. Returns the URL to send the browser to, or null when
- * stored tokens still work. The random `state` binds the callback to this workspace.
+ * Starts OAuth for a connection: the shared sign-in, or the caller's own for a per-user
+ * connection. Returns the URL to send the browser to, or null when stored tokens still work.
+ * The random `state` binds the callback to this workspace (and, per user, to this person).
  */
 export async function startMcpAuthorization(
   db: Database,
@@ -221,62 +319,206 @@ export async function startMcpAuthorization(
   const connection = await requireConnection(db, ctx, id);
   if (connection.authType !== 'oauth') throw new AppError('VALIDATION', 'Not an OAuth connection');
   const state = randomBytes(24).toString('base64url');
-  await updateMcpConnection(db, ctx, id, {
-    oauthStateHash: hashState(state),
-    status: 'needs_auth',
-  });
+  let userSecretId: string | undefined;
+  if (perUser(connection)) {
+    const mine = await findMyMcpCredential(db, ctx, id);
+    userSecretId = mine?.secretId ?? (await deps.secrets.create(ctx, 'mcp:oauth-user', '{}'));
+    await upsertMyMcpCredential(db, ctx, id, {
+      secretId: userSecretId,
+      oauthStateHash: hashState(state),
+      ...(!mine && { status: 'needs_auth' }),
+    });
+  } else {
+    await updateMcpConnection(db, ctx, id, {
+      oauthStateHash: hashState(state),
+      status: 'needs_auth',
+    });
+  }
+  const clearState = () =>
+    perUser(connection)
+      ? upsertMyMcpCredential(db, ctx, id, { oauthStateHash: null })
+      : updateMcpConnection(db, ctx, id, { oauthStateHash: null });
   try {
     const result = await beginOAuth(
-      oauthProvider(deps, ctx, connection, state),
+      oauthProvider(deps, ctx, connection, state, userSecretId),
       connection.endpoint,
     );
     if (result.status === 'redirect') return result.url;
   } catch (error) {
     if (!(error instanceof McpGatewayError)) throw error;
-    await updateMcpConnection(db, ctx, id, {
-      status: 'error',
-      lastError: 'auth',
-      oauthStateHash: null,
-    });
+    await clearState();
+    if (!perUser(connection))
+      await updateMcpConnection(db, ctx, id, { status: 'error', lastError: 'auth' });
     throw new AppError('MCP_UNAVAILABLE', 'Could not start authorization', {
       endpoint: ['mcp_auth'],
     });
   }
-  await updateMcpConnection(db, ctx, id, { oauthStateHash: null });
+  await clearState();
+  if (perUser(connection))
+    await upsertMyMcpCredential(db, ctx, id, { status: 'connected', connectedAt: new Date() });
   await refreshMcpConnection(db, deps, ctx, id);
   return null;
 }
 
-/** OAuth callback: exchanges the code, then discovers tools. `state` must match this workspace. */
+/**
+ * OAuth callback: exchanges the code, then discovers tools. `state` must belong to this
+ * workspace, and for a per-user connection to the signed-in person.
+ */
 export async function completeMcpAuthorization(
   db: Database,
   deps: McpDeps,
   ctx: TenantContext,
   input: { state: string; code: string },
 ): Promise<McpConnection> {
-  const connection = await findMcpConnectionByOAuthState(db, ctx, hashState(input.state));
+  const stateHash = hashState(input.state);
+  const mine = await findMyMcpCredentialByOAuthState(db, ctx, stateHash);
+  const connection = mine
+    ? await findMcpConnection(db, ctx, mine.connectionId)
+    : await findMcpConnectionByOAuthState(db, ctx, stateHash);
   if (!connection) throw new AppError('NOT_FOUND', 'Unknown or expired authorization');
-  await updateMcpConnection(db, ctx, connection.id, { oauthStateHash: null });
+  if (mine) await upsertMyMcpCredential(db, ctx, connection.id, { oauthStateHash: null });
+  else await updateMcpConnection(db, ctx, connection.id, { oauthStateHash: null });
   try {
     await completeOAuth(
-      oauthProvider(deps, ctx, connection, input.state),
+      oauthProvider(deps, ctx, connection, input.state, mine?.secretId ?? undefined),
       connection.endpoint,
       input.code,
     );
   } catch (error) {
     if (!(error instanceof McpGatewayError)) throw error;
-    await updateMcpConnection(db, ctx, connection.id, { status: 'needs_auth', lastError: 'auth' });
+    if (mine) await upsertMyMcpCredential(db, ctx, connection.id, { status: 'needs_auth' });
+    else
+      await updateMcpConnection(db, ctx, connection.id, {
+        status: 'needs_auth',
+        lastError: 'auth',
+      });
     throw new AppError('MCP_UNAVAILABLE', 'Authorization failed', { endpoint: ['mcp_auth'] });
   }
+  if (mine)
+    await upsertMyMcpCredential(db, ctx, connection.id, {
+      status: 'connected',
+      connectedAt: new Date(),
+    });
   await recordAudit(db, {
     workspaceId: ctx.workspaceId,
     actorUserId: ctx.userId,
-    action: 'mcp.authorized',
+    action: mine ? 'mcp.user_connected' : 'mcp.authorized',
     targetType: 'mcp_connection',
     targetId: connection.id,
     outcome: 'success',
   });
   return refreshMcpConnection(db, deps, ctx, connection.id);
+}
+
+/** Per-user bearer connections: saves (or replaces) the caller's own token. */
+export async function setMyMcpToken(
+  db: Database,
+  deps: McpDeps,
+  ctx: TenantContext,
+  id: string,
+  token: string,
+): Promise<McpConnection> {
+  const connection = await requireConnection(db, ctx, id);
+  if (!perUser(connection) || connection.authType !== 'bearer')
+    throw new AppError('VALIDATION', 'Not a per-user token connection');
+  const value = token.trim();
+  if (!value || value.length > 4000)
+    throw new AppError('VALIDATION', 'Token required', { token: ['token_required'] });
+  const mine = await findMyMcpCredential(db, ctx, id);
+  const secretId = mine?.secretId
+    ? (await deps.secrets.replace(ctx, mine.secretId, value), mine.secretId)
+    : await deps.secrets.create(ctx, 'mcp:bearer-user', value);
+  await upsertMyMcpCredential(db, ctx, id, {
+    secretId,
+    status: 'connected',
+    connectedAt: new Date(),
+  });
+  await recordAudit(db, {
+    workspaceId: ctx.workspaceId,
+    actorUserId: ctx.userId,
+    action: 'mcp.user_connected',
+    targetType: 'mcp_connection',
+    targetId: id,
+    outcome: 'success',
+  });
+  return refreshMcpConnection(db, deps, ctx, id);
+}
+
+/** Disconnect my account: deletes the caller's own tokens; agents acting for them lose access. */
+export async function disconnectMyMcpAccount(
+  db: Database,
+  deps: McpDeps,
+  ctx: TenantContext,
+  id: string,
+): Promise<void> {
+  await requireConnection(db, ctx, id);
+  const removed = await deleteMyMcpCredential(db, ctx, id);
+  if (removed?.secretId) await deps.secrets.remove(ctx, removed.secretId);
+  await recordAudit(db, {
+    workspaceId: ctx.workspaceId,
+    actorUserId: ctx.userId,
+    action: 'mcp.user_disconnected',
+    targetType: 'mcp_connection',
+    targetId: id,
+    outcome: 'success',
+  });
+}
+
+/** What the connection's own secret holds for its sign-in method. */
+function connectionSecretFor(data: z.output<typeof connectionSchema>) {
+  switch (data.authType) {
+    case 'bearer':
+      return data.credentialMode === 'per_user' ? null : { kind: 'mcp:bearer', value: data.token! };
+    case 'headers':
+      return { kind: 'mcp:headers', value: JSON.stringify(parseHeaders(data.headers!)) };
+    case 'oauth':
+      // A client registered beforehand (e.g. Google) is stored as the client information the
+      // SDK would otherwise obtain by dynamic registration.
+      return {
+        kind: 'mcp:oauth',
+        value: JSON.stringify(
+          data.oauthClientId
+            ? {
+                clientInformation: {
+                  client_id: data.oauthClientId,
+                  ...(data.oauthClientSecret && { client_secret: data.oauthClientSecret }),
+                },
+              }
+            : {},
+        ),
+      };
+    case 'none':
+      return null;
+  }
+}
+
+/** After a connection's sign-in method is set: start OAuth, store the admin's token, or test. */
+async function finishSetup(
+  db: Database,
+  deps: McpDeps,
+  ctx: TenantContext,
+  connection: McpConnection,
+  data: z.output<typeof connectionSchema>,
+): Promise<{ connection: McpConnection; authorizationUrl: string | null }> {
+  if (data.authType === 'oauth') {
+    const authorizationUrl = await startMcpAuthorization(db, deps, ctx, connection.id);
+    return { connection: (await findMcpConnection(db, ctx, connection.id))!, authorizationUrl };
+  }
+  if (data.authType === 'bearer' && data.credentialMode === 'per_user') {
+    if (data.token)
+      return {
+        connection: await setMyMcpToken(db, deps, ctx, connection.id, data.token),
+        authorizationUrl: null,
+      };
+    return {
+      connection: (await updateMcpConnection(db, ctx, connection.id, { status: 'needs_auth' }))!,
+      authorizationUrl: null,
+    };
+  }
+  return {
+    connection: await refreshMcpConnection(db, deps, ctx, connection.id),
+    authorizationUrl: null,
+  };
 }
 
 /**
@@ -290,14 +532,7 @@ export async function createMcpConnection(
   input: McpConnectionInput,
 ): Promise<{ connection: McpConnection; authorizationUrl: string | null }> {
   const data = parse(connectionSchema, input);
-  const secretValue =
-    data.authType === 'bearer'
-      ? { kind: 'mcp:bearer', value: data.token! }
-      : data.authType === 'headers'
-        ? { kind: 'mcp:headers', value: JSON.stringify(parseHeaders(data.headers!)) }
-        : data.authType === 'oauth'
-          ? { kind: 'mcp:oauth', value: '{}' }
-          : null;
+  const secretValue = connectionSecretFor(data);
   const secretId = secretValue
     ? await deps.secrets.create(ctx, secretValue.kind, secretValue.value)
     : null;
@@ -309,6 +544,9 @@ export async function createMcpConnection(
     endpoint: data.endpoint,
     authType: data.authType,
     secretId,
+    credentialMode: data.credentialMode,
+    oauthScopes: data.oauthScopes ?? null,
+    oauthParams: data.oauthParams,
   });
   await recordAudit(db, {
     workspaceId: ctx.workspaceId,
@@ -322,17 +560,65 @@ export async function createMcpConnection(
       serverType: data.serverType,
       transport: data.transport,
       authType: data.authType,
+      credentialMode: data.credentialMode,
     },
   });
+  return finishSetup(db, deps, ctx, connection, data);
+}
 
-  if (data.authType === 'oauth') {
-    const authorizationUrl = await startMcpAuthorization(db, deps, ctx, connection.id);
-    return { connection: (await findMcpConnection(db, ctx, connection.id))!, authorizationUrl };
-  }
-  return {
-    connection: await refreshMcpConnection(db, deps, ctx, connection.id),
-    authorizationUrl: null,
-  };
+/**
+ * MCP Hub → connection → Sign-in method: changes how AgentOS authenticates without removing
+ * the connection (its tools and agent grants stay). Old credentials, including every
+ * member's own, are deleted.
+ */
+export async function updateMcpConnectionAuth(
+  db: Database,
+  deps: McpDeps,
+  ctx: TenantContext,
+  id: string,
+  input: Omit<McpConnectionInput, 'name' | 'serverType' | 'endpoint' | 'transport'>,
+): Promise<{ connection: McpConnection; authorizationUrl: string | null }> {
+  const current = await requireConnection(db, ctx, id);
+  const data = parse(connectionSchema, {
+    ...input,
+    name: current.name,
+    serverType: current.serverType,
+    endpoint: current.endpoint,
+    transport: current.transport,
+  });
+  const oldSecrets = [
+    ...(current.secretId ? [current.secretId] : []),
+    ...(await listMcpCredentialSecretIds(db, ctx, id)),
+  ];
+  await deleteMcpCredentialsForConnection(db, ctx, id);
+  const secretValue = connectionSecretFor(data);
+  const secretId = secretValue
+    ? await deps.secrets.create(ctx, secretValue.kind, secretValue.value)
+    : null;
+  const connection = (await updateMcpConnection(db, ctx, id, {
+    authType: data.authType,
+    credentialMode: data.credentialMode,
+    secretId,
+    oauthScopes: data.oauthScopes ?? null,
+    oauthParams: data.oauthParams,
+    oauthStateHash: null,
+    status: 'untested',
+    lastError: null,
+  }))!;
+  for (const old of oldSecrets) await deps.secrets.remove(ctx, old);
+  await recordAudit(db, {
+    workspaceId: ctx.workspaceId,
+    actorUserId: ctx.userId,
+    action: 'mcp.auth_changed',
+    targetType: 'mcp_connection',
+    targetId: id,
+    outcome: 'success',
+    metadata: {
+      before: { authType: current.authType, credentialMode: current.credentialMode },
+      after: { authType: data.authType, credentialMode: data.credentialMode },
+    },
+  });
+  return finishSetup(db, deps, ctx, connection, data);
 }
 
 export async function setMcpConnectionEnabled(
@@ -361,8 +647,10 @@ export async function removeMcpConnection(
   id: string,
 ) {
   const connection = await requireConnection(db, ctx, id);
+  const memberSecrets = await listMcpCredentialSecretIds(db, ctx, id);
   await deleteMcpConnection(db, ctx, id);
   if (connection.secretId) await deps.secrets.remove(ctx, connection.secretId);
+  for (const secret of memberSecrets) await deps.secrets.remove(ctx, secret);
   await recordAudit(db, {
     workspaceId: ctx.workspaceId,
     actorUserId: ctx.userId,
@@ -549,7 +837,11 @@ export async function executeAgentTool(
   }
 
   try {
-    const result = await callTool(await accessFor(deps, ctx, connection), tool.name, input.args);
+    const result = await callTool(
+      await accessFor(db, deps, ctx, connection),
+      tool.name,
+      input.args,
+    );
     await recordAudit(db, {
       ...audit,
       action: 'tool.called',

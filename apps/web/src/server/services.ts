@@ -26,7 +26,17 @@ function createServices() {
   /** Model providers decrypt keys through the secret store only at call time. */
   const providerDeps = { secrets };
   /** MCP credentials and OAuth state, decrypted only at call time (PRD §21). */
-  const mcpDeps = { secrets, appUrl: env.APP_URL };
+  const mcpDeps = {
+    secrets,
+    appUrl: env.APP_URL,
+    ...(env.AGENTOS_GOOGLE_CLIENT_ID &&
+      env.AGENTOS_GOOGLE_CLIENT_SECRET && {
+        googleClient: {
+          id: env.AGENTOS_GOOGLE_CLIENT_ID,
+          secret: env.AGENTOS_GOOGLE_CLIENT_SECRET,
+        },
+      }),
+  };
   const agentQueue = createAgentQueue(redis);
   /** Chat turns, tasks and approvals hand runs to the worker; schedules go to the scheduler. */
   const knowledgeQueue = createKnowledgeQueue(redis);

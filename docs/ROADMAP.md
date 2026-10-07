@@ -271,7 +271,7 @@ Legend: **AC n** = acceptance criterion n in PRD §28. **Screen n** = screen n i
 
 ---
 
-## v0.4.1: Per-user Connections & Google Workspace (M9.5)
+## v0.4.1: Per-user Connections & Google Workspace (M9.5) ✅
 
 Lets every tenant, and every person in it, connect their own accounts to shared MCP servers. Google Workspace is the first catalog entry built on it.
 
@@ -286,6 +286,13 @@ Lets every tenant, and every person in it, connect their own accounts to shared 
 **DoD:** two members of one workspace connect different Google accounts to the same Gmail connection; each one's agent reads only their own mailbox (tested against a fake OAuth + MCP server); a scheduled task uses its creator's account; a member who hasn't connected is told to connect, not served another member's data; revoking removes the token and the next call asks to connect again.
 
 **Outside our control:** Google's Workspace MCP servers are in the Developer Preview Program; using the AgentOS platform client with Gmail/Drive in production needs Google app verification plus a CASA security assessment. Until then: tenant-owned clients, or test mode (up to 100 test users).
+
+**As built (notes and known gaps)**
+- Per-user mode works for OAuth and token connections; headers and "None" stay shared. The person a run acts for is `ctx.userId` (chat author, task creator, schedule creator; delegated tasks keep the requester). There is no fallback to another member's credentials.
+- Tool discovery for a per-user connection uses the account of whoever connects or refreshes it; the hourly health check uses the connection owner's.
+- Google Workspace creates one connection per service (Google runs one MCP server per product), so each member signs in once per service. The scopes and endpoints follow Google's published configuration; the flow is tested against a Google-like fake server, not against Google.
+- Workspace invitations don't exist yet (every sign-up gets its own workspace), so "two members, two accounts" is covered by tests that add a member directly. Invitations are the next prerequisite for teams.
+- Revoking at the provider is not called on disconnect; AgentOS deletes its stored tokens.
 
 ---
 

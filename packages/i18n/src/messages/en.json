@@ -174,7 +174,13 @@
     "not_on_team": "That agent isn't on this agent's team.",
     "delegation_too_deep": "Delegation chains are limited to three levels.",
     "too_many_delegations": "Too many delegated tasks in one run.",
-    "no_task": "Delegation needs a task."
+    "no_task": "Delegation needs a task.",
+    "client_id_required": "Enter the client ID.",
+    "client_secret_required": "Enter the client secret.",
+    "google_service_required": "Pick at least one service.",
+    "google_platform_missing": "AgentOS's Google app isn't configured here. Use your own.",
+    "per_user_needs_signin": "Per-member sign-in needs OAuth or a token.",
+    "mcp_needs_user_auth": "Connect your own account to this server first."
   },
   "dashboard": {
     "greetingMorning": "Good morning, {name}",
@@ -261,7 +267,10 @@
     "feedback_suggestion_accepted": "Suggestion accepted",
     "feedback_suggestion_dismissed": "Suggestion dismissed",
     "agent_delegated": "Task delegated",
-    "agent_delegated_denied": "Delegation refused"
+    "agent_delegated_denied": "Delegation refused",
+    "mcp_user_connected": "Member connected their account",
+    "mcp_user_disconnected": "Member disconnected their account",
+    "mcp_auth_changed": "Sign-in method changed"
   },
   "outcome": {
     "success": "Success",
@@ -793,7 +802,20 @@
       "oauthHint": "You'll be sent to the server to sign in, then brought back here.",
       "submit": "Connect",
       "submitting": "Connecting…",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "credentialMode": "Who signs in",
+      "credentialModes": {
+        "shared": "One account for the workspace",
+        "per_user": "Each member connects their own account"
+      },
+      "credentialModeHint": "Per-member: agents use the account of the person they're working for, never someone else's.",
+      "advanced": "Advanced OAuth settings",
+      "oauthClientId": "Client ID",
+      "oauthClientSecret": "Client secret",
+      "oauthClientHint": "Only for servers that don't register apps automatically (e.g. Google). Register this redirect URI with the provider: {redirect}",
+      "oauthScopes": "Scopes",
+      "oauthScopesHint": "Space-separated. Leave empty to use what the server asks for.",
+      "perUserTokenHint": "Optional: your own token. Every member adds theirs on the connection page."
     },
     "detail": {
       "tabs": {
@@ -833,14 +855,57 @@
       "settingsEnabledHint": "When off, no agent can call this server's tools.",
       "noLogs": "No activity yet.",
       "oauthError": "Sign-in failed. Try again.",
-      "connectedNotice": "Connected. Tools discovered."
+      "connectedNotice": "Connected. Tools discovered.",
+      "signIn": "Sign-in",
+      "credentialMode": "Who signs in",
+      "scopes": "Scopes",
+      "yourAccount": "Your account",
+      "youConnected": "Connected. Agents working for you use your account.",
+      "youNotConnected": "Not connected. Agents working for you can't use this server until you connect.",
+      "connectMine": "Connect my account",
+      "disconnectMine": "Disconnect my account",
+      "confirmDisconnectMine": "Click again to disconnect",
+      "yourToken": "Your token",
+      "saveToken": "Save my token",
+      "members": "Members who connected",
+      "noMembers": "Nobody has connected yet.",
+      "changeSignIn": "Change sign-in method",
+      "changeSignInHint": "Keeps the connection, its tools and agent permissions. Current credentials, including every member's own, are deleted.",
+      "saveSignIn": "Save sign-in method",
+      "perUserBadge": "Each member signs in"
     },
     "errorCodes": {
       "auth": "The server rejected the credentials or needs sign-in.",
       "unavailable": "Couldn't reach the server.",
       "timeout": "The server didn't answer in time.",
       "protocol": "The server didn't respond like an MCP server — check the URL and transport.",
-      "tool_not_found": "Tool not found."
+      "tool_not_found": "Tool not found.",
+      "auth_required": "This server requires sign-in. Change the sign-in method (Authentication tab) to OAuth or a token."
+    },
+    "google": {
+      "title": "Connect Google Workspace",
+      "intro": "Uses Google's hosted MCP servers (Developer Preview). Each member then connects their own Google account; agents only ever use the account of the person they work for.",
+      "services": {
+        "gmail": "Gmail",
+        "calendar": "Google Calendar",
+        "drive": "Google Drive",
+        "docs": "Google Docs",
+        "sheets": "Google Sheets",
+        "slides": "Google Slides",
+        "chat": "Google Chat",
+        "people": "Google People"
+      },
+      "servicesLabel": "Services",
+      "client": "Google app (OAuth client)",
+      "clients": {
+        "platform": "AgentOS's Google app",
+        "own": "Our own Google app"
+      },
+      "platformHint": "Members sign in through AgentOS's verified Google app.",
+      "platformMissing": "Not configured on this AgentOS server, so use your own Google app.",
+      "ownHint": "In Google Cloud: create an OAuth client of type Web application and add this redirect URI: {redirect}. Enable the APIs and MCP APIs for the services you pick.",
+      "submit": "Connect and sign in",
+      "afterFirst": "After signing in to the first service, open each other one and click Connect my account."
     }
   },
   "permissions": {
