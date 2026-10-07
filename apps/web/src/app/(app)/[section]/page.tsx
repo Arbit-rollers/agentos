@@ -11,7 +11,6 @@ const UPCOMING = {
   workflows: { nav: 'workflows', milestone: 'v0.5' },
   knowledge: { nav: 'knowledge', milestone: 'v0.3' },
   memory: { nav: 'memory', milestone: 'v0.3' },
-  schedules: { nav: 'schedules', milestone: 'v0.2' },
   analytics: { nav: 'analytics', milestone: 'v0.6' },
 } as const satisfies Record<
   string,

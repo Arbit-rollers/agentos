@@ -138,7 +138,20 @@
     "budget_rejected": "bütçe artışı reddedildi",
     "too_many_steps": "çok fazla adım",
     "agent_not_runnable": "ajan çalışamıyor",
-    "internal_error": "dahili bir hata"
+    "internal_error": "dahili bir hata",
+    "agent_required": "Bir ajan seçin.",
+    "objective_required": "Görevi tanımlayın.",
+    "objective_too_long": "Görevi 500 karakterin altında tutun.",
+    "input_too_long": "Ayrıntılar en fazla 20.000 karakter olabilir.",
+    "too_many_retries": "En fazla 5 yeniden deneme kullanın.",
+    "unknown_task": "Bu görev bu çalışma alanında yok.",
+    "dependency_failed": "beklediği bir görev başarısız oldu",
+    "schedule_name_required": "Zamanlamaya bir ad verin.",
+    "invalid_cron": "5 alanlı bir cron ifadesi kullanın (dakika hassasiyetinde).",
+    "invalid_timezone": "Geçerli bir saat dilimi seçin.",
+    "run_at_in_past": "Gelecekte bir zaman seçin.",
+    "interrupted": "yeniden başlatma nedeniyle kesildi",
+    "cancelled_by_user": "iptal edildi"
   },
   "dashboard": {
     "greetingMorning": "Günaydın, {name}",
@@ -202,7 +215,14 @@
     "tool_called_failure": "Araç çağrısı başarısız",
     "tool_blocked": "Araç çağrısı engellendi",
     "tool_approval_required": "Araç çağrısı onay bekliyor",
-    "approval_decided": "Onay kararı verildi"
+    "approval_decided": "Onay kararı verildi",
+    "task_created": "Görev oluşturuldu",
+    "task_cancelled": "Görev iptal edildi",
+    "task_retried": "Görev yeniden denendi",
+    "schedule_created": "Zamanlama oluşturuldu",
+    "schedule_paused": "Zamanlama duraklatıldı",
+    "schedule_resumed": "Zamanlama devam ettirildi",
+    "schedule_deleted": "Zamanlama silindi"
   },
   "outcome": {
     "success": "Başarılı",
@@ -221,9 +241,6 @@
     },
     "memory": {
       "description": "Ajanlarınızın hatırladıklarını inceleyin, düzenleyin ve silin."
-    },
-    "schedules": {
-      "description": "Görevleri ve iş akışlarını zamanlanmış olarak çalıştırın."
     },
     "analytics": {
       "description": "Token kullanımı, maliyet ve ajan performansı."
@@ -627,7 +644,8 @@
       "budget_exceeded": "Bütçe sınırına ulaşıldı: {kind}",
       "run_completed": "Çalıştırma tamamlandı",
       "outcomeOk": "bir sonuç",
-      "outcomeError": "bir hata"
+      "outcomeError": "bir hata",
+      "run_recovered": "Yeniden başlatmadan sonra devam edildi ({repairedCalls} kesilen araç çağrısı onarıldı)"
     },
     "reasons": {
       "fixed": "sabit model",
@@ -915,7 +933,7 @@
   },
   "tasksPage": {
     "title": "Görevler",
-    "subtitle": "Ajanlarınızın yaptığı her iş. Zamanlama ve elle görev oluşturma v0.2'de geliyor.",
+    "subtitle": "Ajanlarınız için görev oluşturun, izleyin ve otomatikleştirin.",
     "empty": "Henüz görev yok. Bir ajanla sohbet ederek oluşturun.",
     "agent": "Ajan",
     "objective": "Görev",
@@ -927,6 +945,47 @@
       "waiting": "Bekleyen",
       "completed": "Tamamlanan",
       "failed": "Başarısız"
+    },
+    "newTask": "Yeni Görev",
+    "create": "Görev oluştur",
+    "creating": "Oluşturuluyor…",
+    "chooseAgent": "Bir ajan seçin",
+    "objectivePlaceholder": "Ajan ne yapmalı?",
+    "input": "Ayrıntılar",
+    "inputHint": "Bağlam, kaynaklar, biçim. İsteğe bağlı.",
+    "priority": "Öncelik",
+    "priorities": {
+      "0": "Normal",
+      "1": "Yüksek",
+      "2": "Acil",
+      "3": "Kritik"
+    },
+    "dueAt": "Bitiş",
+    "dependsOn": "Bekleyeceği görevler",
+    "dependsOnHint": "Görev, bunlar bittikten sonra başlar.",
+    "maxRetries": "Sağlayıcı hatalarında yeniden deneme",
+    "type": "Tür",
+    "origins": {
+      "chat": "Sohbet",
+      "manual": "Tek seferlik",
+      "schedule": "Zamanlanmış"
+    },
+    "cancel": "İptal et",
+    "retry": "Yeniden dene",
+    "open": "Aç",
+    "output": "Çıktı",
+    "noOutput": "Henüz çıktı yok.",
+    "history": "Geçmiş",
+    "runs": "Çalıştırmalar",
+    "error": "Hata",
+    "attempt": "Deneme {n}",
+    "waitsFor": "{count, plural, one {# görevi} other {# görevi}} bekliyor",
+    "due": "Bitiş: {time}",
+    "back": "Görevler",
+    "schedule": "Zamanlama",
+    "notes": {
+      "cancelled_by_user": "Bir kişi tarafından iptal edildi",
+      "manual_retry": "Bir kişi tarafından yeniden denendi"
     }
   },
   "taskStates": {
@@ -938,5 +997,58 @@
     "completed": "Tamamlandı",
     "failed": "Başarısız",
     "cancelled": "İptal edildi"
+  },
+  "schedules": {
+    "title": "Zamanlamalar",
+    "subtitle": "Görevleri otomatik çalıştırın: belirli bir zamanda bir kez veya düzenli olarak.",
+    "new": "Yeni zamanlama",
+    "create": "Zamanlama oluştur",
+    "creating": "Oluşturuluyor…",
+    "empty": "Henüz zamanlama yok.",
+    "name": "Ad",
+    "namePlaceholder": "örn. Haftalık havacılık trendleri",
+    "agent": "Ajan",
+    "objective": "Görev",
+    "input": "Ayrıntılar",
+    "kind": "Tekrar",
+    "kinds": {
+      "recurring": "Düzenli",
+      "once": "Bir kez"
+    },
+    "frequency": "Sıklık",
+    "frequencies": {
+      "hourly": "Her saat",
+      "daily": "Her gün",
+      "weekly": "Her hafta",
+      "custom": "Özel (cron)"
+    },
+    "time": "Saat",
+    "day": "Gün",
+    "days": {
+      "1": "Pazartesi",
+      "2": "Salı",
+      "3": "Çarşamba",
+      "4": "Perşembe",
+      "5": "Cuma",
+      "6": "Cumartesi",
+      "0": "Pazar"
+    },
+    "minute": "Dakika",
+    "cron": "Cron ifadesi",
+    "cronHint": "5 alan: dakika saat ayın-günü ay haftanın-günü.",
+    "runAt": "Tarih ve saat",
+    "timezone": "Saat dilimi",
+    "nextRun": "Sonraki çalıştırma",
+    "lastRun": "Son çalıştırma",
+    "never": "—",
+    "runNow": "Şimdi çalıştır",
+    "pause": "Duraklat",
+    "resume": "Devam ettir",
+    "delete": "Sil",
+    "confirmDelete": "Silmek için tekrar tıklayın",
+    "active": "Aktif",
+    "paused": "Duraklatıldı",
+    "done": "Tamamlandı",
+    "whenLabel": "Ne zaman"
   }
 }

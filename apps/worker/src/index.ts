@@ -3,17 +3,23 @@ import { Worker } from 'bullmq';
 import { createDb, deleteExpiredSessions, listMcpConnectionsForHealthCheck } from '@agentos/db';
 import {
   QUEUES,
+  bullScheduler,
   createAgentQueue,
   createRedis,
+  createScheduleQueue,
   createSecretCipher,
   createSecretStore,
   createSystemQueue,
   executeRun,
+  fireSchedule,
   loadEnv,
   logger,
+  recoverStaleRuns,
   refreshMcpConnection,
+  syncSchedules,
   type AgentRunJob,
-  type RuntimeDeps,
+  type ScheduleDeps,
+  type ScheduleJob,
   type SystemJobData,
   type SystemJobName,
   type SystemJobResult,
@@ -25,10 +31,13 @@ const connection = createRedis(env.REDIS_URL);
 const { db, sql } = createDb(env.DATABASE_URL, { max: 10 });
 const secrets = createSecretStore(db, createSecretCipher(env.AGENTOS_MASTER_KEY));
 const agentQueue = createAgentQueue(connection);
-const runtimeDeps: RuntimeDeps = {
+const scheduleQueue = createScheduleQueue(connection);
+const deps: ScheduleDeps = {
   secrets,
   appUrl: env.APP_URL,
-  enqueueRun: async (job) => void (await agentQueue.add('run', job)),
+  enqueueRun: async (job, options) =>
+    void (await agentQueue.add('run', job, { delay: options?.delayMs ?? 0 })),
+  scheduler: bullScheduler(scheduleQueue),
 };
 
 const systemWorker = new Worker<SystemJobData, SystemJobResult, SystemJobName>(
@@ -53,12 +62,18 @@ const systemWorker = new Worker<SystemJobData, SystemJobResult, SystemJobName>(
         const connections = await listMcpConnectionsForHealthCheck(db);
         for (const c of connections) {
           const ctx = { workspaceId: c.workspaceId, userId: c.ownerUserId };
-          const checked = await refreshMcpConnection(db, runtimeDeps, ctx, c.id);
+          const checked = await refreshMcpConnection(db, deps, ctx, c.id);
           if (checked.status !== 'connected') failing += 1;
         }
         if (failing > 0)
           log.warn('mcp connections failing', { failing, checked: connections.length });
         return { checked: connections.length, failing };
+      }
+      case 'runs.recover': {
+        // Runs whose worker died mid-way go back on the queue and resume from saved state.
+        const recovered = await recoverStaleRuns(db, deps);
+        if (recovered > 0) log.warn('re-queued interrupted runs', { recovered });
+        return { recovered };
       }
       default:
         throw new Error(`Unknown system job: ${String(job.name)}`);
@@ -75,12 +90,22 @@ const agentWorker = new Worker<AgentRunJob, void, 'run'>(
   QUEUES.agent,
   async (job) => {
     const { runId, workspaceId, userId } = job.data;
-    await executeRun(db, runtimeDeps, { workspaceId, userId }, runId);
+    await executeRun(db, deps, { workspaceId, userId }, runId);
   },
   { connection, concurrency: 4 },
 );
 
-for (const worker of [systemWorker, agentWorker]) {
+/** Schedule firings (PRD §17): each creates a task under the schedule creator's context. */
+const scheduleWorker = new Worker<ScheduleJob>(
+  scheduleQueue.name,
+  async (job) => {
+    const { scheduleId, workspaceId, userId } = job.data;
+    await fireSchedule(db, deps, { workspaceId, userId }, scheduleId);
+  },
+  { connection },
+);
+
+for (const worker of [systemWorker, agentWorker, scheduleWorker]) {
   worker.on('ready', () => log.info('listening', { queue: worker.name }));
   worker.on('failed', (job, error) =>
     log.error('job failed', { queue: worker.name, jobId: job?.id, job: job?.name, error }),
@@ -99,6 +124,14 @@ await systemQueue.upsertJobScheduler(
   { every: 15 * 60 * 1000 },
   { name: 'mcp.health', data: {} },
 );
+await systemQueue.upsertJobScheduler(
+  'runs.recover',
+  { every: 60 * 1000 },
+  { name: 'runs.recover', data: {} },
+);
+
+// The database is the source of truth for schedules; make Redis match it.
+log.info('schedules synced', await syncSchedules(db, deps));
 
 // Liveness for Docker and the E2E harness.
 const healthPort = Number(process.env.WORKER_HEALTH_PORT ?? 4030);
@@ -110,8 +143,8 @@ const health = createServer((_req, res) => {
 async function shutdown(signal: string) {
   log.info('draining', { signal });
   health.close();
-  await Promise.all([systemWorker.close(), agentWorker.close()]);
-  await Promise.all([systemQueue.close(), agentQueue.close()]);
+  await Promise.all([systemWorker.close(), agentWorker.close(), scheduleWorker.close()]);
+  await Promise.all([systemQueue.close(), agentQueue.close(), scheduleQueue.close()]);
   await sql.end();
   connection.disconnect();
   process.exit(0);

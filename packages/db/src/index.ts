@@ -14,3 +14,4 @@ export * from './repos/model-configs';
 export * from './repos/runs';
 export * from './repos/mcp';
 export * from './repos/runtime';
+export * from './repos/schedules';

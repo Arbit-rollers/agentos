@@ -355,6 +355,8 @@ export const runs = pgTable(
     /** Resumable loop state: the provider-neutral transcript and counters (M6 runtime). */
     state: jsonb('state').$type<Record<string, unknown>>(),
     toolCallCount: integer('tool_call_count').notNull().default(0),
+    /** Updated while a worker executes the run; a stale heartbeat means the worker died. */
+    heartbeatAt: timestamp('heartbeat_at', { withTimezone: true }),
     status: runStatus('status').notNull().default('running'),
     strategy: modelStrategy('strategy'),
     taskCategory: text('task_category'),
@@ -576,12 +578,31 @@ export const tasks = pgTable(
     parentTaskId: uuid('parent_task_id').references((): AnyPgColumn => tasks.id, {
       onDelete: 'set null',
     }),
+    /** `chat`, `manual` or `schedule`. */
     origin: text('origin').notNull(),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    scheduleId: uuid('schedule_id').references((): AnyPgColumn => schedules.id, {
+      onDelete: 'set null',
+    }),
     objective: text('objective').notNull(),
+    /** Details and context for the agent (PRD §14 `input`). */
+    input: text('input').notNull().default(''),
     state: taskState('state').notNull().default('queued'),
     priority: integer('priority').notNull().default(0),
     budget: jsonb('budget').$type<Record<string, unknown>>(),
     dueAt: timestamp('due_at', { withTimezone: true }),
+    /** Tasks that must complete first (PRD §14 `dependencies`). */
+    dependsOn: uuid('depends_on')
+      .array()
+      .notNull()
+      .default(sql`'{}'::uuid[]`),
+    /** Extra attempts after a transient failure (provider outage, rate limit, timeout). */
+    maxRetries: integer('max_retries').notNull().default(0),
+    attempt: integer('attempt').notNull().default(0),
+    /** The agent's final answer (PRD §14 `outputs`). */
+    output: text('output'),
+    /** Failure code when state is failed. */
+    error: text('error'),
     createdAt: createdAt(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     completedAt: timestamp('completed_at', { withTimezone: true }),
@@ -666,4 +687,63 @@ export const approvalRequests = pgTable(
     index('approval_requests_workspace_status_idx').on(t.workspaceId, t.status),
     index('approval_requests_run_idx').on(t.runId),
   ],
+);
+
+// ---------------------------------------------------------------------------
+// v0.2: Task state history and schedules (PRD §14, §17)
+// ---------------------------------------------------------------------------
+
+/** Every state a task passed through, with an optional note (failure code, who cancelled). */
+export const taskStateHistory = pgTable(
+  'task_state_history',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    taskId: uuid('task_id')
+      .notNull()
+      .references(() => tasks.id, { onDelete: 'cascade' }),
+    state: taskState('state').notNull(),
+    note: text('note'),
+    createdAt: createdAt(),
+  },
+  (t) => [index('task_state_history_task_idx').on(t.taskId, t.createdAt)],
+);
+
+export const scheduleKind = pgEnum('schedule_kind', ['recurring', 'once']);
+
+/**
+ * PRD §17. The database is the source of truth; the worker mirrors active schedules into
+ * BullMQ job schedulers (recurring) or delayed jobs (once) and re-syncs on start.
+ */
+export const schedules = pgTable(
+  'schedules',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    agentId: uuid('agent_id')
+      .notNull()
+      .references(() => agents.id, { onDelete: 'cascade' }),
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => users.id),
+    name: text('name').notNull(),
+    objective: text('objective').notNull(),
+    input: text('input').notNull().default(''),
+    kind: scheduleKind('kind').notNull(),
+    /** 5-field cron (minute granularity) for recurring schedules. */
+    cron: text('cron'),
+    /** IANA timezone the cron is evaluated in. */
+    timezone: text('timezone').notNull(),
+    runAt: timestamp('run_at', { withTimezone: true }),
+    active: boolean('active').notNull().default(true),
+    lastFiredAt: timestamp('last_fired_at', { withTimezone: true }),
+    lastTaskId: uuid('last_task_id'),
+    createdAt: createdAt(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('schedules_workspace_idx').on(t.workspaceId)],
 );

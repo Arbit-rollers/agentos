@@ -10,6 +10,7 @@ import {
   findMcpTool,
   findModelConfig,
   findRun,
+  findTask,
   findToolCall,
   insertApprovalRequest,
   insertMessage,
@@ -21,7 +22,9 @@ import {
   listApprovalRequests,
   listMessages,
   listProviderConnections,
+  listToolCallsForRuns,
   resolveApprovalRequest,
+  touchRunHeartbeat,
   updateRun,
   updateTaskState,
   updateToolCall,
@@ -61,6 +64,7 @@ import { AppError } from './errors';
 import { accessFor, type McpDeps } from './mcp';
 import { buildSystemPrompt, canAgentRun } from './models';
 import type { ProviderDeps } from './providers';
+import { onTaskRunFinished } from './tasks';
 import { adapterForConnection } from './providers';
 import { redact } from './redact';
 
@@ -69,7 +73,7 @@ export type RunJob = { runId: string; workspaceId: string; userId: string };
 export type RuntimeDeps = ProviderDeps &
   McpDeps & {
     /** Hands a run to the worker queue (tests run it inline). */
-    enqueueRun(job: RunJob): Promise<void>;
+    enqueueRun(job: RunJob, options?: { delayMs?: number }): Promise<void>;
     now?: () => Date;
   };
 
@@ -261,19 +265,72 @@ const event = (c: Ctx, type: string, payload: Record<string, unknown>) =>
 const saveState = (c: Ctx) =>
   updateRun(c.db, c.ctx, c.run.id, { state: c.state as unknown as Record<string, unknown> });
 
-async function finish(c: Ctx, status: 'completed' | 'failed', error?: string) {
+async function finish(c: Ctx, status: 'completed' | 'failed', error?: string, output = '') {
   await updateRun(c.db, c.ctx, c.run.id, {
     status,
     error: error ?? null,
     endedAt: new Date(),
     state: c.state as unknown as Record<string, unknown>,
   });
-  if (c.run.taskId) await updateTaskState(c.db, c.ctx, c.run.taskId, status);
   await event(
     c,
     status === 'completed' ? 'run.completed' : 'run.failed',
     error ? { code: error } : {},
   );
+  if (c.run.taskId) {
+    await onTaskRunFinished(
+      c.db,
+      c.deps,
+      c.ctx,
+      c.run.taskId,
+      status === 'completed' ? { status, output } : { status, error: error ?? 'internal_error' },
+    );
+  }
+}
+
+/** True when the run was cancelled (e.g. its task was cancelled) since it was claimed. */
+async function cancelled(c: Ctx) {
+  return (await findRun(c.db, c.ctx, c.run.id))?.status === 'cancelled';
+}
+
+/**
+ * A worker can die after the model asked for tools but before their results were saved.
+ * On resume, answer every such call from what was recorded: a finished call keeps its
+ * result; anything else is reported to the model as interrupted, never as success.
+ */
+async function repairDanglingToolCalls(c: Ctx) {
+  const last = c.state.messages.at(-1);
+  if (!last || last.role !== 'assistant' || !last.toolCalls?.length || c.state.pendingTools) return;
+  const rows = await listToolCallsForRuns(c.db, c.ctx, [c.run.id]);
+  const results: ToolResultContent[] = [];
+  for (const call of last.toolCalls) {
+    const row = rows.find((r) => r.providerCallId === call.id);
+    if (row && (row.status === 'succeeded' || row.status === 'failed') && row.result !== null) {
+      results.push({
+        toolCallId: call.id,
+        name: call.name,
+        content: wrapOutput(row.toolName, row.result),
+        isError: row.status === 'failed',
+      });
+      continue;
+    }
+    if (row && !row.finishedAt) {
+      await updateToolCall(c.db, c.ctx, row.id, {
+        status: 'failed',
+        decisionReason: 'interrupted',
+        finishedAt: new Date(),
+      });
+    }
+    results.push({
+      toolCallId: call.id,
+      name: call.name,
+      content:
+        'This call was interrupted by a restart and may or may not have taken effect. Check before retrying.',
+      isError: true,
+    });
+  }
+  c.state.messages.push({ role: 'tool', results });
+  await event(c, 'run.recovered', { repairedCalls: results.length });
 }
 
 async function wait(c: Ctx) {
@@ -556,10 +613,13 @@ async function loop(c: Ctx) {
   if (budgetState === 'wait') return wait(c);
   if (budgetState === 'stop') return finish(c, 'failed', 'budget_rejected');
   if (!(await settlePendingTools(c))) return wait(c);
+  await repairDanglingToolCalls(c);
 
   const connections = new Map((await listProviderConnections(c.db, c.ctx)).map((p) => [p.id, p]));
   let costSkip: { kind: BudgetKind; limit: number; value: number } | null = null;
   for (;;) {
+    if (await cancelled(c)) return;
+    await touchRunHeartbeat(c.db, c.ctx, c.run.id);
     const exceeded = costSkip ?? (await exceededBudget(c, now()));
     costSkip = null;
     if (exceeded) {
@@ -657,12 +717,16 @@ async function loop(c: Ctx) {
           runId: c.run.id,
         });
       }
-      return finish(c, 'completed');
+      return finish(c, 'completed', undefined, outcome.result.text);
     }
 
     const results: ToolResultContent[] = [];
     const awaiting: { rowId: string; callId: string; name: string }[] = [];
+    // Saved before any tool runs, so a crash mid-step can be repaired on resume.
+    await saveState(c);
     for (const call of outcome.result.toolCalls) {
+      if (await cancelled(c)) return;
+      await touchRunHeartbeat(c.db, c.ctx, c.run.id);
       const counted = (await findRun(c.db, c.ctx, c.run.id))!.toolCallCount + 1;
       await updateRun(c.db, c.ctx, c.run.id, { toolCallCount: counted });
       const handled = await handleToolCall(c, call);
@@ -684,11 +748,20 @@ async function initialState(
   run: Run,
   now: Date,
 ): Promise<LoopState> {
-  const history = run.conversationId
-    ? await listMessages(db, ctx, run.conversationId, HISTORY_MESSAGES)
-    : [];
+  let messages: ChatMessage[] = [];
+  if (run.conversationId) {
+    const history = await listMessages(db, ctx, run.conversationId, HISTORY_MESSAGES);
+    messages = history.map((m) => ({ role: m.role, content: m.content }));
+  } else if (run.taskId) {
+    // Task runs (manual or scheduled) start from the task itself (PRD §25 item 12).
+    const task = await findTask(db, ctx, run.taskId);
+    if (task) {
+      const details = task.input.trim() ? `\n\nDetails:\n${task.input}` : '';
+      messages = [{ role: 'user', content: `Task: ${task.objective}${details}` }];
+    }
+  }
   return {
-    messages: history.map((m) => ({ role: m.role, content: m.content })),
+    messages,
     aliases: {},
     startedAt: now.toISOString(),
     modelCalls: 0,
