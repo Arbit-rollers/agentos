@@ -90,6 +90,17 @@ export async function RunLog({
         return t('runs.events.budget_exceeded', {
           kind: translate(`errors.budget_${String(p.kind)}`, String(p.kind)),
         });
+      case 'context.retrieved': {
+        const knowledge = (p.knowledge ?? []) as { source?: string }[];
+        const sources = [...new Set(knowledge.map((k) => k.source).filter(Boolean))];
+        return (
+          t('runs.events.context_retrieved', {
+            memories: ((p.memories ?? []) as unknown[]).length,
+            knowledge: knowledge.length,
+            sources: sources.length ? `: ${sources.join(', ')}` : '',
+          }) + (p.semantic ? '' : t('runs.events.context_keyword'))
+        );
+      }
       case 'run.recovered':
         return t('runs.events.run_recovered', { repairedCalls: String(p.repairedCalls ?? 0) });
       case 'run.completed':

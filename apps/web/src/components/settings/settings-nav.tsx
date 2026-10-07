@@ -8,6 +8,7 @@ import { cn } from '@agentos/ui';
 const SECTIONS = [
   { href: '/settings', key: 'profileTab' },
   { href: '/settings/providers', key: 'providersTab' },
+  { href: '/settings/knowledge', key: 'knowledgeTab' },
 ] as const;
 
 export function SettingsNav() {

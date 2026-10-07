@@ -3,6 +3,8 @@ import {
   agentSpendSince,
   claimRun,
   createConversation,
+  filterActiveMemoryIds,
+  filterReadySourceIds,
   findAgent,
   findApprovalRequest,
   findConversation,
@@ -64,6 +66,7 @@ import { AppError } from './errors';
 import { accessFor, type McpDeps } from './mcp';
 import { buildSystemPrompt, canAgentRun } from './models';
 import type { ProviderDeps } from './providers';
+import { formatContext, retrieveContext, type RetrievedContext } from './knowledge';
 import { onTaskRunFinished } from './tasks';
 import { adapterForConnection } from './providers';
 import { redact } from './redact';
@@ -100,6 +103,8 @@ type LoopState = {
     awaiting: { rowId: string; callId: string; name: string }[];
   };
   pendingBudget?: { approvalId: string; kind: BudgetKind };
+  /** Memory and knowledge retrieved when the run started (PRD §25 items 9–11). */
+  context?: Pick<RetrievedContext, 'knowledge' | 'memories'>;
 };
 
 const ajv = new Ajv({ strict: false, validateFormats: false, allErrors: true });
@@ -177,9 +182,59 @@ const RUNTIME_RULES = [
   "Reply in the language of the user's latest message. Use Markdown for structure.",
 ].join('\n');
 
-/** PRD §25 order; memory and knowledge (items 9–11) join in v0.3. */
-function systemPrompt(agent: AgentWithPersonality) {
-  return `${buildSystemPrompt(agent)}\n\n${RUNTIME_RULES}`;
+/** PRD §25 order: identity, personality and instructions, then memory and knowledge. */
+function systemPrompt(agent: AgentWithPersonality, context = '') {
+  return `${buildSystemPrompt(agent)}\n\n${RUNTIME_RULES}${context ? `\n\n${context}` : ''}`;
+}
+
+/**
+ * Retrieves memory and knowledge for the user's latest message, once per run, and logs
+ * what was used (provenance). A retrieval failure never stops the run.
+ */
+async function prepareContext(c: Ctx) {
+  if (c.state.context) return;
+  const query = [...c.state.messages].reverse().find((m) => m.role === 'user')?.content ?? '';
+  try {
+    const retrieved = await retrieveContext(c.db, c.deps, c.ctx, c.agent.id, query);
+    c.state.context = { knowledge: retrieved.knowledge, memories: retrieved.memories };
+    await event(c, 'context.retrieved', {
+      memories: retrieved.memories.map((m) => ({ id: m.id, type: m.type })),
+      knowledge: retrieved.knowledge.map((k) => ({
+        sourceId: k.sourceId,
+        source: k.sourceName,
+        chunkId: k.chunkId,
+      })),
+      semantic: retrieved.semantic,
+      ...(retrieved.embeddingError && { error: retrieved.embeddingError }),
+    });
+  } catch {
+    c.state.context = { knowledge: [], memories: [] };
+    await event(c, 'context.retrieved', {
+      memories: [],
+      knowledge: [],
+      semantic: false,
+      error: 'retrieval_failed',
+    });
+  }
+  await saveState(c);
+}
+
+/** Re-checked before every model call: a memory deleted or disabled mid-run is dropped. */
+async function liveContext(c: Ctx): Promise<string> {
+  const context = c.state.context;
+  if (!context || (context.memories.length === 0 && context.knowledge.length === 0)) return '';
+  const [memoryIds, sourceIds] = await Promise.all([
+    filterActiveMemoryIds(
+      c.db,
+      c.ctx,
+      context.memories.map((m) => m.id),
+    ),
+    filterReadySourceIds(c.db, c.ctx, [...new Set(context.knowledge.map((k) => k.sourceId))]),
+  ]);
+  return formatContext({
+    memories: context.memories.filter((m) => memoryIds.has(m.id)),
+    knowledge: context.knowledge.filter((k) => sourceIds.has(k.sourceId)),
+  });
 }
 
 /** Provider-safe tool name: [a-zA-Z_][a-zA-Z0-9_]{0,63}, unique within the run. */
@@ -284,6 +339,7 @@ async function finish(c: Ctx, status: 'completed' | 'failed', error?: string, ou
       c.ctx,
       c.run.taskId,
       status === 'completed' ? { status, output } : { status, error: error ?? 'internal_error' },
+      c.run.id,
     );
   }
 }
@@ -653,7 +709,7 @@ async function loop(c: Ctx) {
           plan: toPlan(c.config, connections),
           category: 'general',
           request: {
-            system: systemPrompt(c.agent),
+            system: systemPrompt(c.agent, await liveContext(c)),
             messages: c.state.messages,
             tools,
             maxOutputTokens: c.config.parameters.maxOutputTokens,
@@ -790,6 +846,7 @@ export async function executeRun(
   const c: Ctx = { db, deps, ctx, run, agent: agent!, config: config!, state };
   if (!agent || !config) return finish(c, 'failed', 'agent_not_runnable');
   try {
+    await prepareContext(c);
     await loop(c);
   } catch (error) {
     const code =

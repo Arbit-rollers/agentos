@@ -7,6 +7,8 @@ export const QUEUES = {
   agent: 'agent',
   /** Schedule firings (PRD §17). */
   schedules: 'schedules',
+  /** Knowledge ingestion and re-indexing (PRD §11). */
+  knowledge: 'knowledge',
 } as const;
 
 export type PingResult = { pong: true; requestedAt: string; processedAt: string };
@@ -49,6 +51,21 @@ export function createSystemQueue(connection: Redis) {
 }
 
 export type AgentRunJob = { runId: string; workspaceId: string; userId: string };
+
+export type KnowledgeQueueJob =
+  | { kind: 'ingest'; sourceId: string; workspaceId: string; userId: string }
+  | { kind: 'reindex'; workspaceId: string; userId: string };
+
+export function createKnowledgeQueue(connection: Redis) {
+  return new Queue<KnowledgeQueueJob, void, string>(QUEUES.knowledge, {
+    connection,
+    defaultJobOptions: {
+      attempts: 3,
+      backoff: { type: 'exponential', delay: 10_000 },
+      removeOnComplete: 500,
+    },
+  });
+}
 
 export function createAgentQueue(connection: Redis) {
   return new Queue<AgentRunJob, void, 'run'>(QUEUES.agent, { connection });

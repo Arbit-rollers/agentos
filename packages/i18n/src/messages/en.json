@@ -151,7 +151,26 @@
     "invalid_timezone": "Choose a valid timezone.",
     "run_at_in_past": "Choose a time in the future.",
     "interrupted": "interrupted by a restart",
-    "cancelled_by_user": "cancelled"
+    "cancelled_by_user": "cancelled",
+    "provider_no_embeddings": "This provider has no embeddings API. Pick OpenAI, Google, Ollama or an OpenAI-compatible server.",
+    "embedding_failed": "The model didn't return embeddings. Check the model name and the provider.",
+    "embedding_dimensions": "This model's vectors aren't 768-dimensional. Pick another embedding model.",
+    "note_required": "Write the note's text.",
+    "note_too_long": "Notes can be up to 200,000 characters. Upload a file instead.",
+    "invalid_url": "Enter an http or https URL.",
+    "url_private": "Private and local network addresses can't be fetched.",
+    "url_unreachable": "The page couldn't be fetched.",
+    "source_too_large": "That's too large. The limit is 10 MB.",
+    "file_required": "Choose a file.",
+    "file_type_unsupported": "That file type isn't supported yet.",
+    "file_unreadable": "The file couldn't be read.",
+    "no_text_found": "No text found. Scanned PDFs need OCR, which isn't supported yet.",
+    "ingestion_failed": "Indexing failed. Try re-indexing.",
+    "memory_required": "Write the memory.",
+    "memory_too_long": "Memories can be up to 2,000 characters.",
+    "comment_required": "Say what should change.",
+    "comment_too_long": "Keep it under 1,000 characters.",
+    "retrieval_failed": "Memory and knowledge couldn't be retrieved."
   },
   "dashboard": {
     "greetingMorning": "Good morning, {name}",
@@ -222,7 +241,21 @@
     "schedule_created": "Schedule created",
     "schedule_paused": "Schedule paused",
     "schedule_resumed": "Schedule resumed",
-    "schedule_deleted": "Schedule deleted"
+    "schedule_deleted": "Schedule deleted",
+    "knowledge_source_added": "Knowledge added",
+    "knowledge_source_deleted": "Knowledge deleted",
+    "knowledge_embedding_changed": "Embedding model changed",
+    "memory_created": "Memory added",
+    "memory_suggested": "Memory suggested",
+    "memory_edited": "Memory edited",
+    "memory_pinned": "Memory pinned",
+    "memory_unpinned": "Memory unpinned",
+    "memory_enabled": "Memory enabled",
+    "memory_disabled": "Memory disabled",
+    "memory_deleted": "Memory deleted",
+    "feedback_submitted": "Feedback given",
+    "feedback_suggestion_accepted": "Suggestion accepted",
+    "feedback_suggestion_dismissed": "Suggestion dismissed"
   },
   "outcome": {
     "success": "Success",
@@ -261,7 +294,8 @@
     "saved": "Saved.",
     "profileTab": "Profile",
     "providersTab": "AI Providers",
-    "sectionsLabel": "Settings sections"
+    "sectionsLabel": "Settings sections",
+    "knowledgeTab": "Knowledge"
   },
   "languages": {
     "en": "English",
@@ -645,7 +679,9 @@
       "run_completed": "Run completed",
       "outcomeOk": "a result",
       "outcomeError": "an error",
-      "run_recovered": "Resumed after a restart ({repairedCalls} interrupted tool calls repaired)"
+      "run_recovered": "Resumed after a restart ({repairedCalls} interrupted tool calls repaired)",
+      "context_retrieved": "Used {memories, plural, =0 {no memories} one {# memory} other {# memories}} and {knowledge, plural, =0 {no knowledge} one {# knowledge excerpt} other {# knowledge excerpts}}{sources}",
+      "context_keyword": " (keyword search)"
     },
     "reasons": {
       "fixed": "fixed model",
@@ -1050,5 +1086,139 @@
     "paused": "Paused",
     "done": "Done",
     "whenLabel": "When"
+  },
+  "embedding": {
+    "title": "Embedding model",
+    "subtitle": "Turns knowledge and memories into vectors so agents can find them by meaning. Without one, AgentOS searches by keyword.",
+    "provider": "Provider",
+    "model": "Model",
+    "modelHint": "Must produce 768-dimension vectors, e.g. text-embedding-3-small (OpenAI), gemini-embedding-001 (Google) or nomic-embed-text (Ollama).",
+    "save": "Save and re-index",
+    "saving": "Checking the model…",
+    "turnOff": "Use keyword search only",
+    "current": "In use: {provider} · {model}",
+    "none": "Keyword search only. Choose a model to let agents search by meaning.",
+    "noProviders": "Add an OpenAI, Google, Ollama or OpenAI-compatible provider first. Anthropic has no embeddings API.",
+    "saved": "Saved. Knowledge and memories are being re-indexed in the background."
+  },
+  "knowledge": {
+    "title": "Knowledge",
+    "subtitle": "Documents, notes and web pages your agents can draw on. Only the relevant excerpts are sent to the model.",
+    "add": "Add source",
+    "adding": "Adding…",
+    "empty": "No knowledge yet.",
+    "emptyHint": "Add a note, a file or a web page. Agents use the relevant parts when they answer.",
+    "emptyAgent": "No files attached to this agent yet.",
+    "type": "Type",
+    "types": {
+      "note": "Note",
+      "file": "File",
+      "url": "Web page"
+    },
+    "name": "Name",
+    "namePlaceholder": "e.g. Brand style guide",
+    "nameOptional": "Name (optional)",
+    "text": "Text",
+    "file": "File",
+    "fileHint": "PDF, text, Markdown, CSV, JSON or HTML, up to 10 MB.",
+    "url": "URL",
+    "scope": "Visible to",
+    "scopes": {
+      "workspace": "Whole workspace",
+      "agent": "One agent",
+      "user": "Only me"
+    },
+    "agent": "Agent",
+    "status": {
+      "pending": "Queued",
+      "processing": "Indexing",
+      "ready": "Ready",
+      "failed": "Failed"
+    },
+    "excerpts": "{count, plural, one {# excerpt} other {# excerpts}}",
+    "keywordOnly": "Keyword search only",
+    "reindex": "Re-index",
+    "refetch": "Fetch again",
+    "delete": "Delete",
+    "confirmDelete": "Click again to delete",
+    "source": "Source",
+    "added": "Added",
+    "preview": "Preview",
+    "manage": "Manage knowledge"
+  },
+  "memoryPage": {
+    "title": "Memory",
+    "subtitle": "What your agents have learned while working with you. Your memories are private to you.",
+    "add": "Add memory",
+    "adding": "Adding…",
+    "empty": "No memories yet.",
+    "emptyHint": "Agents remember finished tasks, and your feedback can become rules once you accept it.",
+    "search": "Search memories",
+    "type": "Type",
+    "types": {
+      "procedural": "Rule",
+      "semantic": "Fact",
+      "episodic": "Past task"
+    },
+    "typeHints": {
+      "procedural": "Always applied, e.g. \"Answer in bullet points.\"",
+      "semantic": "Used when relevant, e.g. \"Our fiscal year starts in April.\"",
+      "episodic": "Something that happened, e.g. a finished task."
+    },
+    "content": "Memory",
+    "agent": "Applies to",
+    "allAgents": "All agents",
+    "pinned": "Pinned",
+    "pinHint": "Pinned memories are included in every run.",
+    "pin": "Pin",
+    "unpin": "Unpin",
+    "disable": "Disable",
+    "enable": "Enable",
+    "edit": "Edit",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "confirmDelete": "Click again to delete",
+    "disabled": "Disabled",
+    "filters": {
+      "all": "All",
+      "procedural": "Rules",
+      "semantic": "Facts",
+      "episodic": "Past tasks",
+      "disabled": "Disabled"
+    },
+    "provenance": {
+      "manual": "Added by you",
+      "feedback": "From your feedback",
+      "run": "From a task"
+    },
+    "lastUsed": "Last used {time}",
+    "neverUsed": "Not used yet",
+    "suggestions": "Suggested from your feedback",
+    "suggestionsHint": "Nothing changes until you accept it.",
+    "accept": "Accept",
+    "dismiss": "Dismiss",
+    "ruleSuggestion": "New rule: {content}",
+    "traitSuggestion": "{trait}: {from} → {to}",
+    "feedbackOn": "Feedback on {agent}",
+    "manage": "Manage memory",
+    "agentHint": "Memories for this agent. Memories for all agents also apply."
+  },
+  "feedback": {
+    "label": "Feedback on this answer",
+    "approve": "Good answer",
+    "reject": "Bad answer",
+    "revise": "Revise",
+    "feedback": "Feedback",
+    "comment": "What should change?",
+    "placeholder": "e.g. Too long. Give me only the important information.",
+    "send": "Send",
+    "cancel": "Cancel",
+    "approved": "Marked as a good answer.",
+    "recorded": "Feedback recorded.",
+    "suggestions": "Suggested changes",
+    "accepted": "Accepted",
+    "dismissed": "Dismissed",
+    "reviseMessage": "Please revise your last answer: {comment}"
   }
 }

@@ -95,7 +95,7 @@ export function useAgentFixture() {
       approvalPolicy: { requireApprovalForHighRisk: true, categories: ['send_email'] },
     });
     await changeAgentStatus(db, user.ctx, agent.id, 'activate');
-    return { ...user, agent, tools };
+    return { ...user, agent, tools, provider };
   }
 
   return { db, sql, llm, mcp, queue, deps, drain, setup };

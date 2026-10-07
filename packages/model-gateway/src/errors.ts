@@ -33,3 +33,14 @@ export function errorKindForStatus(status: number | undefined): ProviderErrorKin
   if (status >= 400) return 'bad_request';
   return 'unknown';
 }
+
+/** Throws unless every vector has EMBEDDING_DIMENSIONS entries. */
+export function checkDimensions(vectors: number[][], expected: number, count: number): number[][] {
+  if (vectors.length !== count || vectors.some((v) => v.length !== expected)) {
+    throw new ProviderError(
+      'bad_request',
+      `Embedding model returned ${vectors[0]?.length ?? 0} dimensions; ${expected} are required`,
+    );
+  }
+  return vectors;
+}

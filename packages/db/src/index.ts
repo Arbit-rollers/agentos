@@ -15,3 +15,7 @@ export * from './repos/runs';
 export * from './repos/mcp';
 export * from './repos/runtime';
 export * from './repos/schedules';
+export * from './repos/knowledge';
+export * from './repos/memories';
+export * from './repos/feedback';
+export { EMBEDDING_DIMENSIONS as DB_EMBEDDING_DIMENSIONS } from './schema/index';

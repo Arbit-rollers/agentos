@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
+  EMBEDDING_DIMENSIONS,
   NoEligibleModelError,
   ProviderError,
   createAdapter,
@@ -418,5 +419,35 @@ describe('echoing Anthropic content after a fallback', () => {
         { type: 'text', text: 'rest' },
       ]).map((b) => b.type),
     ).toEqual(['text', 'thinking', 'text']);
+  });
+});
+
+describe('embeddings', () => {
+  const adapter = () =>
+    createAdapter({ provider: 'openai_compatible', endpoint: `${base}/openai/v1` });
+
+  it('returns one vector of EMBEDDING_DIMENSIONS per input, in order', async () => {
+    const result = await adapter().embed!({
+      model: 'fake-embed',
+      inputs: ['aviation trends', 'cooking pasta'],
+      purpose: 'document',
+    });
+    expect(result.vectors).toHaveLength(2);
+    expect(result.vectors.every((v) => v.length === EMBEDDING_DIMENSIONS)).toBe(true);
+    const [query] = (
+      await adapter().embed!({ model: 'fake-embed', inputs: ['aviation'], purpose: 'query' })
+    ).vectors;
+    const dot = (a: number[], b: number[]) => a.reduce((sum, x, i) => sum + x * b[i]!, 0);
+    expect(dot(query!, result.vectors[0]!)).toBeGreaterThan(dot(query!, result.vectors[1]!));
+  });
+
+  it('rejects a model with the wrong vector size instead of storing it', async () => {
+    await expect(
+      adapter().embed!({ model: 'fake-embed-small-dim', inputs: ['x'], purpose: 'query' }),
+    ).rejects.toMatchObject({ kind: 'bad_request', message: /384 dimensions; 768/ });
+  });
+
+  it('has no embed method for Anthropic', () => {
+    expect(createAdapter({ provider: 'anthropic', apiKey: 'k' }).embed).toBeUndefined();
   });
 });

@@ -1,8 +1,10 @@
 import OpenAI from 'openai';
-import { ProviderError, errorKindForStatus } from '../errors';
+import { ProviderError, checkDimensions, errorKindForStatus } from '../errors';
 import type {
   ChatMessage,
   DiscoveredModel,
+  EmbedRequest,
+  EmbedResult,
   GenerateRequest,
   GenerateResult,
   ProviderAccess,
@@ -10,6 +12,7 @@ import type {
   StopReason,
   ToolCall,
 } from '../types';
+import { EMBEDDING_DIMENSIONS } from '../types';
 
 const TIMEOUT_MS = 120_000;
 
@@ -108,6 +111,30 @@ export function createOpenAIAdapter(access: ProviderAccess): ProviderAdapter {
         const models: DiscoveredModel[] = [];
         for await (const model of client.models.list()) models.push({ id: model.id });
         return models.sort((a, b) => a.id.localeCompare(b.id));
+      } catch (error) {
+        throw toProviderError(error);
+      }
+    },
+
+    async embed(request: EmbedRequest): Promise<EmbedResult> {
+      try {
+        const response = await client.embeddings.create(
+          {
+            model: request.model,
+            input: request.inputs,
+            encoding_format: 'float',
+            // Only OpenAI's own API is known to accept a target size.
+            ...(provider === 'openai' && { dimensions: EMBEDDING_DIMENSIONS }),
+          },
+          { signal: request.signal },
+        );
+        const vectors = [...response.data]
+          .sort((a, b) => a.index - b.index)
+          .map((item) => item.embedding);
+        return {
+          vectors: checkDimensions(vectors, EMBEDDING_DIMENSIONS, request.inputs.length),
+          inputTokens: response.usage?.prompt_tokens ?? 0,
+        };
       } catch (error) {
         throw toProviderError(error);
       }

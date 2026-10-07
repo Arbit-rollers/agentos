@@ -1,4 +1,4 @@
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, sql } from 'drizzle-orm';
 import type { Executor } from '../client';
 import { workspaceMembers, workspaces } from '../schema/index';
 import type { TenantContext } from '../tenant';
@@ -54,4 +54,22 @@ export async function getWorkspace(
   workspaceId: string,
 ): Promise<Workspace | undefined> {
   return (await findMembership(db, ctx.userId, workspaceId))?.workspace;
+}
+
+/** Shallow-merges keys into the caller's workspace settings; `null` removes a key. */
+export async function updateWorkspaceSettings(
+  db: Executor,
+  ctx: TenantContext,
+  patch: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  const removed = Object.keys(patch).filter((key) => patch[key] === null);
+  const kept = Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== null));
+  let expression = sql`${workspaces.settings} || ${JSON.stringify(kept)}::jsonb`;
+  for (const key of removed) expression = sql`(${expression}) - ${key}`;
+  const [row] = await db
+    .update(workspaces)
+    .set({ settings: expression })
+    .where(eq(workspaces.id, ctx.workspaceId))
+    .returning({ settings: workspaces.settings });
+  return row?.settings ?? {};
 }

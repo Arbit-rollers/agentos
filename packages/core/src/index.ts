@@ -1,6 +1,12 @@
 export { loadEnv } from './env';
 export type { Env } from './env';
-export { QUEUES, createAgentQueue, createRedis, createSystemQueue } from './queue';
+export {
+  QUEUES,
+  createAgentQueue,
+  createKnowledgeQueue,
+  createRedis,
+  createSystemQueue,
+} from './queue';
 export type {
   AgentRunJob,
   PingResult,
@@ -92,3 +98,38 @@ export {
 export type { ScheduleDeps, ScheduleInput, SchedulerPort } from './schedules';
 export { bullScheduler, createScheduleQueue } from './scheduler-bullmq';
 export type { ScheduleJob } from './scheduler-bullmq';
+export {
+  CONTEXT_LIMITS,
+  MAX_UPLOAD_BYTES,
+  createKnowledgeSource,
+  deleteKnowledgeSource,
+  extractDocumentText,
+  formatContext,
+  fuseRankings,
+  getEmbeddingSetting,
+  ingestKnowledgeSource,
+  reindexKnowledgeSource,
+  reindexWorkspace,
+  retrieveContext,
+  setEmbeddingSetting,
+  suggestedEmbeddingModel,
+  workspaceEmbedder,
+} from './knowledge';
+export type {
+  EmbeddingSetting,
+  KnowledgeDeps,
+  KnowledgeJob,
+  KnowledgeSourceInput,
+  RetrievedContext,
+} from './knowledge';
+export {
+  createMemory,
+  deleteMemory,
+  editMemory,
+  recordTaskEpisode,
+  setMemoryFlags,
+} from './memory';
+export type { MemoryInput } from './memory';
+export { decideFeedbackSuggestion, submitFeedback, suggestTraitChanges } from './feedback';
+export { chunkText, toTsquery } from './text';
+export { fetchDocument, isPrivateAddress } from './fetch-url';

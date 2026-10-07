@@ -14,11 +14,11 @@ test.describe('app shell', () => {
       'page',
     );
 
-    await nav.getByRole('link', { name: 'Knowledge' }).click();
-    await expect(page).toHaveURL(/\/knowledge$/);
-    await expect(page.getByRole('heading', { level: 1, name: 'Knowledge' })).toBeVisible();
-    await expect(page.getByText('Coming in v0.3')).toBeVisible();
-    await expect(nav.getByRole('link', { name: 'Knowledge' })).toHaveAttribute(
+    await nav.getByRole('link', { name: 'Workflows' }).click();
+    await expect(page).toHaveURL(/\/workflows$/);
+    await expect(page.getByRole('heading', { level: 1, name: 'Workflows' })).toBeVisible();
+    await expect(page.getByText('Coming in v0.5')).toBeVisible();
+    await expect(nav.getByRole('link', { name: 'Workflows' })).toHaveAttribute(
       'aria-current',
       'page',
     );

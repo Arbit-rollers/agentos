@@ -5,6 +5,7 @@ import {
   QUEUES,
   bullScheduler,
   createAgentQueue,
+  createKnowledgeQueue,
   createRedis,
   createScheduleQueue,
   createSecretCipher,
@@ -12,12 +13,16 @@ import {
   createSystemQueue,
   executeRun,
   fireSchedule,
+  ingestKnowledgeSource,
   loadEnv,
   logger,
   recoverStaleRuns,
   refreshMcpConnection,
+  reindexWorkspace,
   syncSchedules,
   type AgentRunJob,
+  type KnowledgeDeps,
+  type KnowledgeJob,
   type ScheduleDeps,
   type ScheduleJob,
   type SystemJobData,
@@ -32,12 +37,14 @@ const { db, sql } = createDb(env.DATABASE_URL, { max: 10 });
 const secrets = createSecretStore(db, createSecretCipher(env.AGENTOS_MASTER_KEY));
 const agentQueue = createAgentQueue(connection);
 const scheduleQueue = createScheduleQueue(connection);
-const deps: ScheduleDeps = {
+const knowledgeQueue = createKnowledgeQueue(connection);
+const deps: ScheduleDeps & KnowledgeDeps = {
   secrets,
   appUrl: env.APP_URL,
   enqueueRun: async (job, options) =>
     void (await agentQueue.add('run', job, { delay: options?.delayMs ?? 0 })),
   scheduler: bullScheduler(scheduleQueue),
+  enqueueKnowledge: async (job) => void (await knowledgeQueue.add(job.kind, job)),
 };
 
 const systemWorker = new Worker<SystemJobData, SystemJobResult, SystemJobName>(
@@ -105,7 +112,21 @@ const scheduleWorker = new Worker<ScheduleJob>(
   { connection },
 );
 
-for (const worker of [systemWorker, agentWorker, scheduleWorker]) {
+/**
+ * Knowledge (PRD §11): fetch, chunk and embed a source, or re-index the workspace after the
+ * embedding model changed. Runs as the source's owner, so private sources stay private.
+ */
+const knowledgeWorker = new Worker<KnowledgeJob>(
+  knowledgeQueue.name,
+  async (job) => {
+    const ctx = { workspaceId: job.data.workspaceId, userId: job.data.userId };
+    if (job.data.kind === 'ingest') await ingestKnowledgeSource(db, deps, ctx, job.data.sourceId);
+    else log.info('workspace re-indexed', await reindexWorkspace(db, deps, ctx));
+  },
+  { connection, concurrency: 2 },
+);
+
+for (const worker of [systemWorker, agentWorker, scheduleWorker, knowledgeWorker]) {
   worker.on('ready', () => log.info('listening', { queue: worker.name }));
   worker.on('failed', (job, error) =>
     log.error('job failed', { queue: worker.name, jobId: job?.id, job: job?.name, error }),
@@ -143,8 +164,18 @@ const health = createServer((_req, res) => {
 async function shutdown(signal: string) {
   log.info('draining', { signal });
   health.close();
-  await Promise.all([systemWorker.close(), agentWorker.close(), scheduleWorker.close()]);
-  await Promise.all([systemQueue.close(), agentQueue.close(), scheduleQueue.close()]);
+  await Promise.all([
+    systemWorker.close(),
+    agentWorker.close(),
+    scheduleWorker.close(),
+    knowledgeWorker.close(),
+  ]);
+  await Promise.all([
+    systemQueue.close(),
+    agentQueue.close(),
+    scheduleQueue.close(),
+    knowledgeQueue.close(),
+  ]);
   await sql.end();
   connection.disconnect();
   process.exit(0);
