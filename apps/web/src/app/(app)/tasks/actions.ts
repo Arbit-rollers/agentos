@@ -52,7 +52,8 @@ export async function createTaskAction(
 export async function cancelTaskAction(id: string): Promise<TaskFormState> {
   const { ctx } = await requireSession();
   try {
-    await cancelTask(getServices().db, ctx, id);
+    const { db, runtimeDeps } = getServices();
+    await cancelTask(db, ctx, id, { deps: runtimeDeps });
   } catch (error) {
     return failure(error);
   }

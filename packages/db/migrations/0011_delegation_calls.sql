@@ -1,0 +1,2 @@
+ALTER TABLE "tool_calls" ADD COLUMN "delegated_task_id" uuid;--> statement-breakpoint
+ALTER TABLE "tool_calls" ADD CONSTRAINT "tool_calls_delegated_task_id_tasks_id_fk" FOREIGN KEY ("delegated_task_id") REFERENCES "public"."tasks"("id") ON DELETE set null ON UPDATE no action;

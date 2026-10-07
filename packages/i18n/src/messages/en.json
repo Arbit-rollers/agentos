@@ -170,7 +170,11 @@
     "memory_too_long": "Memories can be up to 2,000 characters.",
     "comment_required": "Say what should change.",
     "comment_too_long": "Keep it under 1,000 characters.",
-    "retrieval_failed": "Memory and knowledge couldn't be retrieved."
+    "retrieval_failed": "Memory and knowledge couldn't be retrieved.",
+    "not_on_team": "That agent isn't on this agent's team.",
+    "delegation_too_deep": "Delegation chains are limited to three levels.",
+    "too_many_delegations": "Too many delegated tasks in one run.",
+    "no_task": "Delegation needs a task."
   },
   "dashboard": {
     "greetingMorning": "Good morning, {name}",
@@ -255,7 +259,9 @@
     "memory_deleted": "Memory deleted",
     "feedback_submitted": "Feedback given",
     "feedback_suggestion_accepted": "Suggestion accepted",
-    "feedback_suggestion_dismissed": "Suggestion dismissed"
+    "feedback_suggestion_dismissed": "Suggestion dismissed",
+    "agent_delegated": "Task delegated",
+    "agent_delegated_denied": "Delegation refused"
   },
   "outcome": {
     "success": "Success",
@@ -662,7 +668,8 @@
       "failed": "Failed",
       "queued": "Queued",
       "waiting_approval": "Waiting for approval",
-      "cancelled": "Cancelled"
+      "cancelled": "Cancelled",
+      "waiting_agents": "Waiting for team"
     },
     "events": {
       "selected": "Selected {target}: {reason}",
@@ -681,7 +688,10 @@
       "outcomeError": "an error",
       "run_recovered": "Resumed after a restart ({repairedCalls} interrupted tool calls repaired)",
       "context_retrieved": "Used {memories, plural, =0 {no memories} one {# memory} other {# memories}} and {knowledge, plural, =0 {no knowledge} one {# knowledge excerpt} other {# knowledge excerpts}}{sources}",
-      "context_keyword": " (keyword search)"
+      "context_keyword": " (keyword search)",
+      "delegation_started": "Delegated to {agent}: {objective}",
+      "delegation_finished": "{agent} finished: {state}",
+      "delegation_refused": "Delegation refused: {reason}"
     },
     "reasons": {
       "fixed": "fixed model",
@@ -920,7 +930,11 @@
     },
     "approvalTitle": "Approval needed",
     "reviewInInbox": "Open in Approvals",
-    "comingSoon": "Coming in {milestone}"
+    "comingSoon": "Coming in {milestone}",
+    "waitingTeam": "Waiting for {agents}",
+    "team": "Team",
+    "teamHint": "Can hand tasks to its direct reports: {agents}.",
+    "noTeam": "Add agents that report to this one to give it a team."
   },
   "approvals": {
     "title": "Approvals",
@@ -1004,7 +1018,8 @@
     "origins": {
       "chat": "Chat",
       "manual": "One-time",
-      "schedule": "Scheduled"
+      "schedule": "Scheduled",
+      "delegation": "Delegated"
     },
     "cancel": "Cancel",
     "retry": "Retry",
@@ -1021,8 +1036,15 @@
     "schedule": "Schedule",
     "notes": {
       "cancelled_by_user": "Cancelled by a person",
-      "manual_retry": "Retried by a person"
-    }
+      "manual_retry": "Retried by a person",
+      "delegations_finished": "Team finished; resuming",
+      "parent_cancelled": "Cancelled with the task that delegated it"
+    },
+    "delegation": "Delegation",
+    "delegatedBy": "Delegated by {agent}",
+    "delegatedTo": "Handed to the team",
+    "noDelegation": "This task didn't delegate any work.",
+    "openParent": "Open the delegating task"
   },
   "taskStates": {
     "draft": "Draft",

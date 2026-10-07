@@ -7,6 +7,7 @@ export const RUN_TONE: Record<RunWithDetails['status'], StatusTone> = {
   queued: 'neutral',
   running: 'info',
   waiting_approval: 'warning',
+  waiting_agents: 'info',
   completed: 'success',
   failed: 'danger',
   cancelled: 'neutral',
@@ -101,6 +102,20 @@ export async function RunLog({
           }) + (p.semantic ? '' : t('runs.events.context_keyword'))
         );
       }
+      case 'delegation.started':
+        return t('runs.events.delegation_started', {
+          agent: String(p.agent),
+          objective: String(p.objective ?? ''),
+        });
+      case 'delegation.finished':
+        return t('runs.events.delegation_finished', {
+          agent: String(p.agent ?? '?'),
+          state: translate(`taskStates.${String(p.state)}`, String(p.state)),
+        });
+      case 'delegation.refused':
+        return t('runs.events.delegation_refused', {
+          reason: translate(`errors.${String(p.reason)}`, String(p.reason)),
+        });
       case 'run.recovered':
         return t('runs.events.run_recovered', { repairedCalls: String(p.repairedCalls ?? 0) });
       case 'run.completed':

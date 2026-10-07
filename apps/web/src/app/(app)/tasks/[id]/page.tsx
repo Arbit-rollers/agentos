@@ -13,6 +13,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, StatusBadge } from '@agentos/ui';
 import { Markdown } from '@/components/markdown';
 import { RunLog } from '@/components/runs/run-log';
+import { DelegationTree, loadDelegationTree } from '@/components/tasks/delegation-tree';
 import { TaskActions } from '@/components/tasks/task-actions';
 import { TASK_TONE } from '@/components/tasks/task-table';
 import { isUuid } from '@/server/api';
@@ -38,12 +39,15 @@ export default async function TaskPage({ params }: Params) {
   const db = getServices().db;
   const t = await getTranslations();
   const format = await getFormatter();
-  const [agent, history, runs, blockers] = await Promise.all([
+  const [agent, history, runs, blockers, delegated, parent] = await Promise.all([
     findAgent(db, ctx, task.agentId),
     listTaskHistory(db, ctx, task.id),
     listRunsWithDetails(db, ctx, { taskId: task.id, limit: 20 }),
     listTasksByIds(db, ctx, task.dependsOn),
+    loadDelegationTree(ctx, task.id),
+    task.parentTaskId ? findTask(db, ctx, task.parentTaskId) : undefined,
   ]);
+  const parentAgent = parent ? await findAgent(db, ctx, parent.agentId) : undefined;
   const active = ['queued', 'running', 'waiting_for_agent', 'waiting_for_approval'].includes(
     task.state,
   );
@@ -84,6 +88,14 @@ export default async function TaskPage({ params }: Params) {
             {task.dueAt &&
               ` · ${t('tasksPage.due', { time: format.dateTime(task.dueAt, { dateStyle: 'medium', timeStyle: 'short' }) })}`}
           </p>
+          {parent && (
+            <p className="mt-1 text-sm text-text-muted">
+              {t('tasksPage.delegatedBy', { agent: parentAgent?.name ?? '—' })} ·{' '}
+              <Link href={`/tasks/${parent.id}`} className="text-primary hover:underline">
+                {t('tasksPage.openParent')}
+              </Link>
+            </p>
+          )}
           {blockers.length > 0 && (
             <p className="mt-1 text-sm text-text-muted">
               {t('tasksPage.dependsOn')}:{' '}
@@ -134,6 +146,16 @@ export default async function TaskPage({ params }: Params) {
               )}
             </CardContent>
           </Card>
+          {delegated.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>{t('tasksPage.delegatedTo')}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <DelegationTree nodes={delegated} />
+              </CardContent>
+            </Card>
+          )}
           <Card>
             <CardHeader>
               <CardTitle>{t('tasksPage.runs')}</CardTitle>

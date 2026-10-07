@@ -246,6 +246,8 @@ export const runStatus = pgEnum('run_status', [
   'queued',
   'running',
   'waiting_approval',
+  /** Paused until tasks it delegated to other agents finish (PRD §15). */
+  'waiting_agents',
   'completed',
   'failed',
   'cancelled',
@@ -583,10 +585,15 @@ export const tasks = pgTable(
     agentId: uuid('agent_id')
       .notNull()
       .references(() => agents.id, { onDelete: 'cascade' }),
+    /** The task that delegated this one (PRD §15). */
     parentTaskId: uuid('parent_task_id').references((): AnyPgColumn => tasks.id, {
       onDelete: 'set null',
     }),
-    /** `chat`, `manual` or `schedule`. */
+    /** The delegating run, resumed when this task finishes. */
+    parentRunId: uuid('parent_run_id').references((): AnyPgColumn => runs.id, {
+      onDelete: 'set null',
+    }),
+    /** `chat`, `manual`, `schedule` or `delegation`. */
     origin: text('origin').notNull(),
     createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
     scheduleId: uuid('schedule_id').references((): AnyPgColumn => schedules.id, {
@@ -618,6 +625,7 @@ export const tasks = pgTable(
   (t) => [
     index('tasks_workspace_state_idx').on(t.workspaceId, t.state),
     index('tasks_agent_created_idx').on(t.agentId, t.createdAt),
+    index('tasks_parent_idx').on(t.parentTaskId),
   ],
 );
 
@@ -654,6 +662,10 @@ export const toolCalls = pgTable(
     decisionReason: text('decision_reason'),
     /** Tool output (truncated) or an error code; untrusted content. */
     result: text('result'),
+    /** For the built-in delegate_task tool: the task handed to another agent (PRD §15). */
+    delegatedTaskId: uuid('delegated_task_id').references((): AnyPgColumn => tasks.id, {
+      onDelete: 'set null',
+    }),
     createdAt: createdAt(),
     finishedAt: timestamp('finished_at', { withTimezone: true }),
   },

@@ -71,6 +71,20 @@
       "when": 1791360667812,
       "tag": "0009_knowledge_memory",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791369367080,
+      "tag": "0010_delegation",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791369468005,
+      "tag": "0011_delegation_calls",
+      "breakpoints": true
     }
   ]
 }
