@@ -234,7 +234,14 @@ export const providerKind = pgEnum('provider_kind', [
 ]);
 export const connectionStatus = pgEnum('connection_status', ['connected', 'error', 'untested']);
 export const modelStrategy = pgEnum('model_strategy', ['fixed', 'smart_router', 'fallback_chain']);
-export const runStatus = pgEnum('run_status', ['running', 'completed', 'failed']);
+export const runStatus = pgEnum('run_status', [
+  'queued',
+  'running',
+  'waiting_approval',
+  'completed',
+  'failed',
+  'cancelled',
+]);
 
 export type DiscoveredModelRow = {
   id: string;
@@ -272,6 +279,9 @@ export type ModelParameters = { temperature?: number; maxOutputTokens?: number }
 export type BudgetPolicy = {
   dailyUsd?: number;
   perTaskUsd?: number;
+  /** PRD §18 runtime limits per task. */
+  maxToolCalls?: number;
+  maxRuntimeSeconds?: number;
   onExceed: 'stop' | 'request_approval';
 };
 
@@ -337,8 +347,14 @@ export const runs = pgTable(
     agentId: uuid('agent_id')
       .notNull()
       .references(() => agents.id, { onDelete: 'cascade' }),
-    taskId: uuid('task_id'),
+    taskId: uuid('task_id').references((): AnyPgColumn => tasks.id, { onDelete: 'set null' }),
+    conversationId: uuid('conversation_id').references((): AnyPgColumn => conversations.id, {
+      onDelete: 'set null',
+    }),
     kind: text('kind').notNull(),
+    /** Resumable loop state: the provider-neutral transcript and counters (M6 runtime). */
+    state: jsonb('state').$type<Record<string, unknown>>(),
+    toolCallCount: integer('tool_call_count').notNull().default(0),
     status: runStatus('status').notNull().default('running'),
     strategy: modelStrategy('strategy'),
     taskCategory: text('task_category'),
@@ -487,5 +503,167 @@ export const agentToolPermissions = pgTable(
   (t) => [
     primaryKey({ columns: [t.agentId, t.toolId] }),
     index('agent_tool_permissions_tool_idx').on(t.toolId),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// M6: Runtime — conversations, tasks, tool calls, approvals (PRD §10, §14, §20, §22)
+// ---------------------------------------------------------------------------
+
+export const conversations = pgTable(
+  'conversations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    agentId: uuid('agent_id')
+      .notNull()
+      .references(() => agents.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
+    title: text('title').notNull(),
+    createdAt: createdAt(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('conversations_agent_idx').on(t.agentId, t.updatedAt)],
+);
+
+export const messageRole = pgEnum('message_role', ['user', 'assistant']);
+
+export const messages = pgTable(
+  'messages',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    conversationId: uuid('conversation_id')
+      .notNull()
+      .references(() => conversations.id, { onDelete: 'cascade' }),
+    role: messageRole('role').notNull(),
+    content: text('content').notNull(),
+    /** The run that answered (assistant) or was started by (user) this message. */
+    runId: uuid('run_id').references((): AnyPgColumn => runs.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+  },
+  (t) => [index('messages_conversation_idx').on(t.conversationId, t.createdAt)],
+);
+
+export const taskState = pgEnum('task_state', [
+  'draft',
+  'queued',
+  'running',
+  'waiting_for_agent',
+  'waiting_for_approval',
+  'completed',
+  'failed',
+  'cancelled',
+]);
+
+/** PRD §14. Chat turns create tasks too, so every piece of agent work has a state. */
+export const tasks = pgTable(
+  'tasks',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    agentId: uuid('agent_id')
+      .notNull()
+      .references(() => agents.id, { onDelete: 'cascade' }),
+    parentTaskId: uuid('parent_task_id').references((): AnyPgColumn => tasks.id, {
+      onDelete: 'set null',
+    }),
+    origin: text('origin').notNull(),
+    objective: text('objective').notNull(),
+    state: taskState('state').notNull().default('queued'),
+    priority: integer('priority').notNull().default(0),
+    budget: jsonb('budget').$type<Record<string, unknown>>(),
+    dueAt: timestamp('due_at', { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+  },
+  (t) => [
+    index('tasks_workspace_state_idx').on(t.workspaceId, t.state),
+    index('tasks_agent_created_idx').on(t.agentId, t.createdAt),
+  ],
+);
+
+export const toolCallStatus = pgEnum('tool_call_status', [
+  'approval_required',
+  'approved',
+  'rejected',
+  'blocked',
+  'succeeded',
+  'failed',
+]);
+
+/** Every tool call an agent attempted, with the policy decision and outcome (PRD §22). */
+export const toolCalls = pgTable(
+  'tool_calls',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    runId: uuid('run_id')
+      .notNull()
+      .references(() => runs.id, { onDelete: 'cascade' }),
+    agentId: uuid('agent_id')
+      .notNull()
+      .references(() => agents.id, { onDelete: 'cascade' }),
+    toolId: uuid('tool_id').references(() => mcpTools.id, { onDelete: 'set null' }),
+    /** Snapshot: the tool may later be renamed or removed. */
+    toolName: text('tool_name').notNull(),
+    connectionName: text('connection_name'),
+    providerCallId: text('provider_call_id').notNull(),
+    arguments: jsonb('arguments').$type<Record<string, unknown>>(),
+    status: toolCallStatus('status').notNull(),
+    decisionReason: text('decision_reason'),
+    /** Tool output (truncated) or an error code; untrusted content. */
+    result: text('result'),
+    createdAt: createdAt(),
+    finishedAt: timestamp('finished_at', { withTimezone: true }),
+  },
+  (t) => [index('tool_calls_run_idx').on(t.runId, t.createdAt)],
+);
+
+export const approvalStatus = pgEnum('approval_status', ['pending', 'approved', 'rejected']);
+
+/** Human-in-the-loop decisions (PRD §10). A run waits until each of its requests is decided. */
+export const approvalRequests = pgTable(
+  'approval_requests',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    agentId: uuid('agent_id')
+      .notNull()
+      .references(() => agents.id, { onDelete: 'cascade' }),
+    runId: uuid('run_id')
+      .notNull()
+      .references(() => runs.id, { onDelete: 'cascade' }),
+    taskId: uuid('task_id').references(() => tasks.id, { onDelete: 'set null' }),
+    toolCallId: uuid('tool_call_id').references(() => toolCalls.id, { onDelete: 'cascade' }),
+    kind: text('kind').notNull(),
+    /** Tool name, server, arguments; or the budget that was hit. */
+    payload: jsonb('payload').$type<Record<string, unknown>>().notNull(),
+    risk: text('risk').notNull(),
+    reason: text('reason').notNull(),
+    estimatedCostUsd: numeric('estimated_cost_usd', { precision: 12, scale: 6, mode: 'number' }),
+    status: approvalStatus('status').notNull().default('pending'),
+    approverUserId: uuid('approver_user_id').references(() => users.id),
+    editedArguments: jsonb('edited_arguments').$type<Record<string, unknown>>(),
+    note: text('note'),
+    requestedAt: timestamp('requested_at', { withTimezone: true }).notNull().defaultNow(),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+  },
+  (t) => [
+    index('approval_requests_workspace_status_idx').on(t.workspaceId, t.status),
+    index('approval_requests_run_idx').on(t.runId),
   ],
 );

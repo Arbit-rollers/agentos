@@ -5,7 +5,9 @@ import {
   createAgentDraft,
   nextButton,
   pickModel,
+  openSettings,
   registerUser,
+  sendChat,
 } from './helpers';
 
 test.describe('model gateway (M4)', () => {
@@ -58,14 +60,16 @@ test.describe('model gateway (M4)', () => {
     await expect(page).toHaveURL(new RegExp(`/agents/${id}$`));
 
     // Has a working model now, so it can be activated.
-    await page.getByRole('button', { name: 'Activate' }).click();
-    await expect(page.getByText('Active', { exact: true }).first()).toBeVisible();
+    const drawer = await openSettings(page);
+    await drawer.getByRole('button', { name: 'Activate' }).click();
+    await expect(drawer.getByText('Active', { exact: true })).toBeVisible();
+    await page.goto(`/agents/${id}`);
+    await page.waitForLoadState('networkidle');
 
-    await page.getByLabel('Prompt', { exact: true }).fill('hello world');
-    await page.getByRole('button', { name: 'Send' }).click();
-    await expect(page.getByTestId('agent-response')).toHaveText('echo: hello world');
-    await expect(page.getByText(/Served by openai_compatible\/fake-echo/)).toBeVisible();
+    await sendChat(page, 'hello world');
+    await expect(page.getByTestId('assistant-message').last()).toContainText('echo: hello world');
 
+    await page.goto(`/agents/${id}?tab=logs`);
     await page.locator('details summary').first().click();
     await expect(page.locator('[data-event="model.fallback"]')).toContainText(
       'fake-down failed (unavailable)',
@@ -93,12 +97,19 @@ test.describe('model gateway (M4)', () => {
       await pickModel(page, 'Primary model', provider, model);
       await nextButton(page).click();
       await expect(page).toHaveURL(/\/setup\/tools$/);
-      await page.goto(`/agents/${id}`);
-      await page.getByLabel('Prompt', { exact: true }).fill(`hi from ${name}`);
-      await page.getByRole('button', { name: 'Send' }).click();
-      await expect(page.getByTestId('agent-response')).toHaveText(`echo: hi from ${name}`);
+      await page.goto(`/agents/${id}/setup/review`);
+      await page.getByRole('button', { name: 'Create agent' }).click();
+      await expect(page).toHaveURL(new RegExp(`/agents/${id}$`));
+      await page.waitForLoadState('networkidle');
+      await sendChat(page, `hi from ${name}`);
+      await expect(page.getByTestId('assistant-message').last()).toContainText(
+        `echo: hi from ${name}`,
+      );
+      await page.goto(`/agents/${id}?tab=logs`);
+      await expect(
+        page.getByText(`${provider === 'Cloud' ? 'openai_compatible' : 'ollama'}/${model}`).first(),
+      ).toBeVisible();
     }
-    await expect(page.getByText(/Served by ollama\/fake-local/)).toBeVisible();
   });
 
   test('a provider in use cannot be removed', async ({ page }) => {

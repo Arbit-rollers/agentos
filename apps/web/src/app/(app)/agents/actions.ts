@@ -7,14 +7,14 @@ import {
   changeAgentStatus,
   completeAgentSetup,
   createAgent,
-  runAgentPrompt,
+  decideApproval,
   saveAgentModelConfig,
   setAgentPermissions,
   setAgentTools,
+  startChatTurn,
   updateAgentBasics,
   updatePersonality,
   type AgentAction,
-  type PromptRunResult,
 } from '@agentos/core';
 import { requireSession } from '@/server/session';
 import { getServices } from '@/server/services';
@@ -142,36 +142,52 @@ export async function changeStatusAction(
   });
 }
 
-export type PromptState = {
-  result?: PromptRunResult;
-  error?: string;
-  fieldErrors?: AgentFormState['fieldErrors'];
-};
-
-/** "Try this agent": one test prompt through the agent's model strategy, recorded as a run. */
-export async function runPromptAction(
+/** Agent Workspace → Chat: records the message and queues the run (PRD §20). */
+export async function sendMessageAction(
   agentId: string,
-  _: PromptState,
+  conversationId: string | null,
+  _: ChatFormState,
   formData: FormData,
-): Promise<PromptState> {
+): Promise<ChatFormState> {
   const { ctx } = await requireSession();
-  const { db, providerDeps } = getServices();
+  const { db, runtimeDeps } = getServices();
   try {
-    const result = await runAgentPrompt(db, providerDeps, ctx, agentId, {
-      prompt: text(formData, 'prompt'),
-      category: (text(formData, 'category') || 'general') as never,
+    const turn = await startChatTurn(db, runtimeDeps, ctx, agentId, {
+      message: text(formData, 'message'),
+      ...(conversationId && { conversationId }),
     });
     revalidatePath(`/agents/${agentId}`);
-    return { result };
+    return { conversationId: turn.conversationId, runId: turn.runId, sentAt: Date.now() };
   } catch (error) {
     if (!(error instanceof AppError)) throw error;
-    revalidatePath(`/agents/${agentId}`);
-    return {
-      error:
-        error.code === 'VALIDATION' || error.code === 'MODEL_CALL_FAILED' ? undefined : error.code,
-      fieldErrors: error.details,
-    };
+    return { error: error.code === 'VALIDATION' ? error.details?.message?.[0] : error.code };
   }
+}
+
+export type ChatFormState = {
+  conversationId?: string;
+  runId?: string;
+  sentAt?: number;
+  error?: string;
+};
+
+/** Approval Inbox and inline chat approvals (PRD §10). */
+export async function decideApprovalAction(input: {
+  approvalId: string;
+  decision: 'approve' | 'reject';
+  editedArguments?: Record<string, unknown>;
+}): Promise<{ error?: string }> {
+  const { ctx } = await requireSession();
+  const { db, runtimeDeps } = getServices();
+  try {
+    await decideApproval(db, runtimeDeps, ctx, input.approvalId, input);
+  } catch (error) {
+    if (!(error instanceof AppError)) throw error;
+    return { error: error.code === 'VALIDATION' ? 'invalid_arguments' : error.code };
+  }
+  revalidatePath('/approvals');
+  revalidatePath('/agents', 'layout');
+  return {};
 }
 
 /** Wizard step 3 (Screen 5): the agent's tool selection. */

@@ -3,6 +3,8 @@ import { Redis } from 'ioredis';
 
 export const QUEUES = {
   system: 'system',
+  /** Agent runs (chat turns and, later, tasks): one job per run step. */
+  agent: 'agent',
 } as const;
 
 export type PingResult = { pong: true; requestedAt: string; processedAt: string };
@@ -41,4 +43,10 @@ export function createSystemQueue(connection: Redis) {
   return new Queue<SystemJobData, SystemJobResult, SystemJobName>(QUEUES.system, {
     connection,
   });
+}
+
+export type AgentRunJob = { runId: string; workspaceId: string; userId: string };
+
+export function createAgentQueue(connection: Redis) {
+  return new Queue<AgentRunJob, void, 'run'>(QUEUES.agent, { connection });
 }

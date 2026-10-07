@@ -25,7 +25,11 @@ function niceMax(max: number): { top: number; ticks: number[] } {
   if (max <= 0) return { top: 4, ticks: [0, 2, 4] };
   const rough = max / 4;
   const magnitude = 10 ** Math.floor(Math.log10(rough));
-  const step = [1, 2, 5, 10].map((m) => m * magnitude).find((s) => s >= rough) ?? rough;
+  // Task counts are whole numbers, so the axis never steps by less than 1.
+  const step = Math.max(
+    1,
+    [1, 2, 5, 10].map((m) => m * magnitude).find((s) => s >= rough) ?? rough,
+  );
   const top = Math.ceil(max / step) * step;
   return { top, ticks: Array.from({ length: top / step + 1 }, (_, i) => i * step) };
 }

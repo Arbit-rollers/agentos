@@ -1,12 +1,15 @@
-import { ApiError, GoogleGenAI } from '@google/genai';
+import { randomUUID } from 'node:crypto';
+import { ApiError, GoogleGenAI, type Content, type Part } from '@google/genai';
 import { ProviderError, errorKindForStatus } from '../errors';
 import type {
+  ChatMessage,
   DiscoveredModel,
   GenerateRequest,
   GenerateResult,
   ProviderAccess,
   ProviderAdapter,
   StopReason,
+  ToolCall,
 } from '../types';
 
 const TIMEOUT_MS = 120_000;
@@ -33,6 +36,37 @@ const STOP: Record<string, StopReason> = {
   PROHIBITED_CONTENT: 'refusal',
   BLOCKLIST: 'refusal',
 };
+
+/** Gemini turns; model turns from Gemini go back unchanged (they carry thought signatures). */
+function toContents(messages: ChatMessage[]): Content[] {
+  return messages.map((message): Content => {
+    if (message.role === 'user') return { role: 'user', parts: [{ text: message.content }] };
+    if (message.role === 'assistant') {
+      if (message.providerContent?.provider === 'google') {
+        return { role: 'model', parts: message.providerContent.content as Part[] };
+      }
+      return {
+        role: 'model',
+        parts: [
+          ...(message.content ? [{ text: message.content }] : []),
+          ...(message.toolCalls ?? []).map((call) => ({
+            functionCall: { id: call.id, name: call.name, args: call.arguments ?? {} },
+          })),
+        ],
+      };
+    }
+    return {
+      role: 'user',
+      parts: message.results.map((result) => ({
+        functionResponse: {
+          id: result.toolCallId,
+          name: result.name,
+          response: result.isError ? { error: result.content } : { output: result.content },
+        },
+      })),
+    };
+  });
+}
 
 export function createGoogleAdapter(access: ProviderAccess): ProviderAdapter {
   const client = new GoogleGenAI({
@@ -65,26 +99,51 @@ export function createGoogleAdapter(access: ProviderAccess): ProviderAdapter {
       try {
         const response = await client.models.generateContent({
           model: request.model,
-          contents: request.messages.map((message) => ({
-            role: message.role === 'assistant' ? 'model' : 'user',
-            parts: [{ text: message.content }],
-          })),
+          contents: toContents(request.messages),
           config: {
             ...(request.system && { systemInstruction: request.system }),
             ...(request.maxOutputTokens && { maxOutputTokens: request.maxOutputTokens }),
             ...(request.temperature !== undefined && { temperature: request.temperature }),
             ...(request.signal && { abortSignal: request.signal }),
+            ...(request.tools?.length && {
+              tools: [
+                {
+                  functionDeclarations: request.tools.map((tool) => ({
+                    name: tool.name,
+                    description: tool.description,
+                    parametersJsonSchema: tool.inputSchema,
+                  })),
+                },
+              ],
+            }),
           },
         });
+        const parts = response.candidates?.[0]?.content?.parts ?? [];
+        const toolCalls: ToolCall[] = parts.flatMap((part) =>
+          part.functionCall?.name
+            ? [
+                {
+                  id: part.functionCall.id ?? randomUUID(),
+                  name: part.functionCall.name,
+                  arguments: part.functionCall.args ?? {},
+                },
+              ]
+            : [],
+        );
         return {
-          text: response.text ?? '',
-          stopReason: STOP[response.candidates?.[0]?.finishReason ?? ''] ?? 'other',
+          text: parts.flatMap((part) => (part.text && !part.thought ? [part.text] : [])).join(''),
+          stopReason:
+            toolCalls.length > 0
+              ? 'tool_use'
+              : (STOP[response.candidates?.[0]?.finishReason ?? ''] ?? 'other'),
           model: response.modelVersion ?? request.model,
           usage: {
             inputTokens: response.usageMetadata?.promptTokenCount ?? 0,
             outputTokens: response.usageMetadata?.candidatesTokenCount ?? 0,
           },
           providerFallbacks: [],
+          toolCalls,
+          providerContent: parts,
         };
       } catch (error) {
         throw toProviderError(error);

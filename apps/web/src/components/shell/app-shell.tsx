@@ -4,11 +4,21 @@ import { useTranslations } from 'next-intl';
 import { useState, type ReactNode } from 'react';
 import { Dialog, DialogContent } from '@agentos/ui';
 import { CommandPalette } from './command-palette';
+import type { NavKey } from './nav-items';
 import { Logo, SidebarNav } from './sidebar-nav';
 import { TopBar, type ShellUser } from './top-bar';
 
 /** Sidebar + top bar frame for every signed-in page (PRD §35.2). */
-export function AppShell({ user, children }: { user: ShellUser; children: ReactNode }) {
+export function AppShell({
+  user,
+  badges = {},
+  children,
+}: {
+  user: ShellUser;
+  /** Counts shown next to nav items, e.g. pending approvals. */
+  badges?: Partial<Record<NavKey, number>>;
+  children: ReactNode;
+}) {
   const t = useTranslations('shell');
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
@@ -24,13 +34,13 @@ export function AppShell({ user, children }: { user: ShellUser; children: ReactN
 
       <aside className="fixed inset-y-0 left-0 hidden w-56 flex-col border-r border-border bg-surface lg:flex">
         <Logo />
-        <SidebarNav />
+        <SidebarNav badges={badges} />
       </aside>
 
       <Dialog open={navOpen} onOpenChange={setNavOpen}>
         <DialogContent title={t('openNavigation')} hideTitle side="left">
           <Logo />
-          <SidebarNav onNavigate={() => setNavOpen(false)} />
+          <SidebarNav badges={badges} onNavigate={() => setNavOpen(false)} />
         </DialogContent>
       </Dialog>
 

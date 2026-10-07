@@ -125,7 +125,20 @@
     "mcp_auth_err": "Giriş gerekli.",
     "mcp_unavailable": "MCP sunucusuna ulaşılamadı.",
     "mcp_timeout": "MCP sunucusu zaman aşımına uğradı.",
-    "mcp_protocol": "MCP sunucusu beklenmeyen bir yanıt verdi."
+    "mcp_protocol": "MCP sunucusu beklenmeyen bir yanıt verdi.",
+    "AGENT_NOT_RUNNABLE": "Bu ajan çalışamaz: etkinleştirin ve çalışan bir yapay zekâ modeli verin.",
+    "ALREADY_DECIDED": "Bu konuda zaten karar verildi.",
+    "invalid_arguments": "Bu parametreler araçla eşleşmiyor.",
+    "invalid_max_tool_calls": "0–200 arası araç çağrısı kullanın.",
+    "invalid_max_runtime": "10 saniye ile 24 saat arası kullanın.",
+    "budget_max_tool_calls": "araç çağrısı sınırına ulaşıldı",
+    "budget_max_runtime": "çalışma süresi sınırına ulaşıldı",
+    "budget_per_task": "görev bütçesine ulaşıldı",
+    "budget_daily": "günlük bütçeye ulaşıldı",
+    "budget_rejected": "bütçe artışı reddedildi",
+    "too_many_steps": "çok fazla adım",
+    "agent_not_runnable": "ajan çalışamıyor",
+    "internal_error": "dahili bir hata"
   },
   "dashboard": {
     "greetingMorning": "Günaydın, {name}",
@@ -188,7 +201,8 @@
     "tool_called": "Araç çağrıldı",
     "tool_called_failure": "Araç çağrısı başarısız",
     "tool_blocked": "Araç çağrısı engellendi",
-    "tool_approval_required": "Araç çağrısı onay bekliyor"
+    "tool_approval_required": "Araç çağrısı onay bekliyor",
+    "approval_decided": "Onay kararı verildi"
   },
   "outcome": {
     "success": "Başarılı",
@@ -199,9 +213,6 @@
     "agents": {
       "description": "Yapay zekâ ajanlarınızı oluşturun, yapılandırın ve yönetin."
     },
-    "tasks": {
-      "description": "Ajanlarınız için görev oluşturun, izleyin ve otomatikleştirin."
-    },
     "workflows": {
       "description": "MCP araçları ve otomasyonla çok ajanlı iş akışları kurun."
     },
@@ -211,14 +222,8 @@
     "memory": {
       "description": "Ajanlarınızın hatırladıklarını inceleyin, düzenleyin ve silin."
     },
-    "approvals": {
-      "description": "Riskli işlemleri ajanlarınız gerçekleştirmeden önce inceleyin."
-    },
     "schedules": {
       "description": "Görevleri ve iş akışlarını zamanlanmış olarak çalıştırın."
-    },
-    "logs": {
-      "description": "Ajanlarınızın her çalıştırması, araç çağrısı ve kararı."
     },
     "analytics": {
       "description": "Token kullanımı, maliyet ve ajan performansı."
@@ -577,10 +582,13 @@
       "stop": "Durdur",
       "request_approval": "Onay iste"
     },
-    "budgetHint": "Görev başına sınır, tahmini maliyeti daha yüksek olan modelleri atlar. Günlük sınırlar, ajanlar görev çalıştırdığında uygulanır (M6).",
+    "budgetHint": "Görev başına ve günlük sınırlar, aşağıdaki seçime göre çalıştırmayı durdurur veya onay ister.",
     "local": "yerel",
     "pricePerM": "1M token başına ${input} / ${output}",
-    "priceUnknown": "fiyat bilinmiyor"
+    "priceUnknown": "fiyat bilinmiyor",
+    "maxToolCalls": "Görev başına en fazla araç çağrısı",
+    "maxRuntimeSeconds": "Görev başına en fazla süre (saniye)",
+    "limitsHint": "Varsayılanlar: 10 araç çağrısı, 300 saniye."
   },
   "runs": {
     "tryTitle": "Bu ajanı dene",
@@ -600,7 +608,10 @@
     "status": {
       "running": "Çalışıyor",
       "completed": "Tamamlandı",
-      "failed": "Başarısız"
+      "failed": "Başarısız",
+      "queued": "Sırada",
+      "waiting_approval": "Onay bekleniyor",
+      "cancelled": "İptal edildi"
     },
     "events": {
       "selected": "{target} seçildi: {reason}",
@@ -608,7 +619,15 @@
       "fallback": "{target} başarısız ({reason}); yedeğe geçiliyor",
       "provider_fallback": "Sağlayıcı modeli değiştirdi: {from} → {to}",
       "completed": "{target} üzerinde tamamlandı",
-      "failed": "Çalıştırma başarısız: {reason}"
+      "failed": "Çalıştırma başarısız: {reason}",
+      "tool_call": "{tool}: {decision}",
+      "tool_result": "{tool} {outcome} döndürdü",
+      "approval_requested": "Onay istendi",
+      "approval_decided": "Karar: {decision}",
+      "budget_exceeded": "Bütçe sınırına ulaşıldı: {kind}",
+      "run_completed": "Çalıştırma tamamlandı",
+      "outcomeOk": "bir sonuç",
+      "outcomeError": "bir hata"
     },
     "reasons": {
       "fixed": "sabit model",
@@ -806,5 +825,118 @@
     "title": "Araçlar",
     "none": "Araç verilmedi.",
     "manage": "Araçları yönet"
+  },
+  "workspace": {
+    "tabs": {
+      "chat": "Sohbet",
+      "tasks": "Görevler",
+      "tools": "Araçlar",
+      "files": "Dosyalar",
+      "memory": "Hafıza",
+      "logs": "Kayıtlar"
+    },
+    "tabsLabel": "Ajan çalışma alanı",
+    "settings": "Ajan ayarları",
+    "presence": {
+      "online": "Çevrimiçi",
+      "working": "Çalışıyor",
+      "idle": "Boşta",
+      "offline": "Çevrimdışı"
+    },
+    "costToday": "Bugün {cost}",
+    "newChat": "Yeni sohbet",
+    "placeholder": "Bir şey sorun…",
+    "send": "Gönder",
+    "sending": "Gönderiliyor…",
+    "emptyChat": "Bir sohbet başlatın. Ajan rolünü, kişiliğini, modelini ve araçlarını kullanır.",
+    "notRunnable": "Bu ajan henüz sohbet edemez: etkinleştirin ve çalışan bir yapay zekâ modeli verin.",
+    "availableTools": "Mevcut Araçlar",
+    "searchTools": "Ara…",
+    "noTools": "Araç yok. Ayarlar → Düzenle → MCP Araçları'ndan ekleyin.",
+    "thinking": "Düşünüyor…",
+    "waitingApproval": "Onayınız bekleniyor",
+    "failed": "Çalıştırma başarısız: {reason}",
+    "toolStatus": {
+      "approval_required": "onay bekliyor",
+      "approved": "çalışıyor",
+      "rejected": "reddedildi",
+      "blocked": "engellendi",
+      "succeeded": "tamam",
+      "failed": "başarısız"
+    },
+    "approvalTitle": "Onay gerekli",
+    "reviewInInbox": "Onaylar'da aç",
+    "comingSoon": "{milestone} sürümünde geliyor"
+  },
+  "approvals": {
+    "title": "Onaylar",
+    "subtitle": "Hassas işlemleri ajanlarınız gerçekleştirmeden önce inceleyin.",
+    "pending": "Bekleyen",
+    "history": "Geçmiş",
+    "empty": "Onay bekleyen bir şey yok.",
+    "emptyHistory": "Henüz karar yok.",
+    "agent": "Ajan",
+    "tool": "Araç",
+    "server": "Sunucu",
+    "parameters": "Parametreler",
+    "risk": "Risk",
+    "reason": "Neden",
+    "estimatedCost": "Tahmini maliyet",
+    "requested": "İstendi: {time}",
+    "budget": "Bütçe",
+    "budgetKinds": {
+      "max_tool_calls": "Araç çağrısı sınırına ulaşıldı ({value}/{limit})",
+      "max_runtime": "Çalışma süresi sınırına ulaşıldı ({value}s/{limit}s)",
+      "per_task": "Görev bütçesine ulaşıldı",
+      "daily": "Günlük bütçeye ulaşıldı"
+    },
+    "approve": "Bir kez onayla",
+    "reject": "Reddet",
+    "edit": "Düzenle ve onayla",
+    "saveEdited": "Değişikliklerle onayla",
+    "cancel": "Vazgeç",
+    "continue": "İzin ver ve devam et",
+    "status": {
+      "pending": "Bekliyor",
+      "approved": "Onaylandı",
+      "rejected": "Reddedildi"
+    },
+    "decidedBy": "Karar: {time}",
+    "invalidJson": "Parametreler geçerli JSON olmalıdır.",
+    "task": "Görev"
+  },
+  "logs": {
+    "title": "Kayıtlar",
+    "subtitle": "Ajanlarınızın her çalıştırması, model seçimi, araç çağrısı ve kararı.",
+    "filtersLabel": "Çalıştırmaları filtrele",
+    "all": "Tümü",
+    "empty": "Henüz çalıştırma yok.",
+    "toolCalls": "Araç çağrıları"
+  },
+  "tasksPage": {
+    "title": "Görevler",
+    "subtitle": "Ajanlarınızın yaptığı her iş. Zamanlama ve elle görev oluşturma v0.2'de geliyor.",
+    "empty": "Henüz görev yok. Bir ajanla sohbet ederek oluşturun.",
+    "agent": "Ajan",
+    "objective": "Görev",
+    "state": "Durum",
+    "created": "Oluşturuldu",
+    "filters": {
+      "all": "Tüm Görevler",
+      "active": "Çalışan",
+      "waiting": "Bekleyen",
+      "completed": "Tamamlanan",
+      "failed": "Başarısız"
+    }
+  },
+  "taskStates": {
+    "draft": "Taslak",
+    "queued": "Sırada",
+    "running": "Çalışıyor",
+    "waiting_for_agent": "Ajan bekleniyor",
+    "waiting_for_approval": "Onay bekleniyor",
+    "completed": "Tamamlandı",
+    "failed": "Başarısız",
+    "cancelled": "İptal edildi"
   }
 }

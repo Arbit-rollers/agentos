@@ -125,7 +125,20 @@
     "mcp_auth_err": "Sign-in required.",
     "mcp_unavailable": "Couldn't reach the MCP server.",
     "mcp_timeout": "The MCP server timed out.",
-    "mcp_protocol": "The MCP server returned an unexpected response."
+    "mcp_protocol": "The MCP server returned an unexpected response.",
+    "AGENT_NOT_RUNNABLE": "This agent can't run: activate it and give it a working AI model.",
+    "ALREADY_DECIDED": "Someone already decided this.",
+    "invalid_arguments": "These parameters don't match the tool.",
+    "invalid_max_tool_calls": "Use 0–200 tool calls.",
+    "invalid_max_runtime": "Use 10 seconds to 24 hours.",
+    "budget_max_tool_calls": "the tool-call limit was reached",
+    "budget_max_runtime": "the runtime limit was reached",
+    "budget_per_task": "the per-task budget was reached",
+    "budget_daily": "the daily budget was reached",
+    "budget_rejected": "a budget increase was rejected",
+    "too_many_steps": "too many steps",
+    "agent_not_runnable": "the agent can't run",
+    "internal_error": "an internal error"
   },
   "dashboard": {
     "greetingMorning": "Good morning, {name}",
@@ -188,7 +201,8 @@
     "tool_called": "Tool called",
     "tool_called_failure": "Tool call failed",
     "tool_blocked": "Tool call blocked",
-    "tool_approval_required": "Tool call needs approval"
+    "tool_approval_required": "Tool call needs approval",
+    "approval_decided": "Approval decided"
   },
   "outcome": {
     "success": "Success",
@@ -199,9 +213,6 @@
     "agents": {
       "description": "Create, configure and supervise your AI agents."
     },
-    "tasks": {
-      "description": "Create, monitor and automate tasks for your agents."
-    },
     "workflows": {
       "description": "Build multi-agent workflows with MCP tools and automation."
     },
@@ -211,14 +222,8 @@
     "memory": {
       "description": "Inspect, edit and delete what your agents remember."
     },
-    "approvals": {
-      "description": "Review risky actions before your agents take them."
-    },
     "schedules": {
       "description": "Run tasks and workflows on a schedule."
-    },
-    "logs": {
-      "description": "Every run, tool call and decision your agents make."
     },
     "analytics": {
       "description": "Token usage, cost and agent performance."
@@ -577,10 +582,13 @@
       "stop": "Stop",
       "request_approval": "Ask for approval"
     },
-    "budgetHint": "Per-task limit skips models whose estimated cost is higher. Daily limits are enforced when agents run tasks (M6).",
+    "budgetHint": "Per-task and daily limits stop the run or ask for approval, as chosen below.",
     "local": "local",
     "pricePerM": "${input} / ${output} per 1M tokens",
-    "priceUnknown": "price unknown"
+    "priceUnknown": "price unknown",
+    "maxToolCalls": "Max tool calls per task",
+    "maxRuntimeSeconds": "Max runtime per task (seconds)",
+    "limitsHint": "Defaults: 10 tool calls, 300 seconds."
   },
   "runs": {
     "tryTitle": "Try this agent",
@@ -600,7 +608,10 @@
     "status": {
       "running": "Running",
       "completed": "Completed",
-      "failed": "Failed"
+      "failed": "Failed",
+      "queued": "Queued",
+      "waiting_approval": "Waiting for approval",
+      "cancelled": "Cancelled"
     },
     "events": {
       "selected": "Selected {target}: {reason}",
@@ -608,7 +619,15 @@
       "fallback": "{target} failed ({reason}); falling back",
       "provider_fallback": "Provider switched {from} → {to}",
       "completed": "Completed on {target}",
-      "failed": "Run failed: {reason}"
+      "failed": "Run failed: {reason}",
+      "tool_call": "{tool}: {decision}",
+      "tool_result": "{tool} returned {outcome}",
+      "approval_requested": "Approval requested",
+      "approval_decided": "Decision: {decision}",
+      "budget_exceeded": "Budget limit reached: {kind}",
+      "run_completed": "Run completed",
+      "outcomeOk": "a result",
+      "outcomeError": "an error"
     },
     "reasons": {
       "fixed": "fixed model",
@@ -806,5 +825,118 @@
     "title": "Tools",
     "none": "No tools granted.",
     "manage": "Manage tools"
+  },
+  "workspace": {
+    "tabs": {
+      "chat": "Chat",
+      "tasks": "Tasks",
+      "tools": "Tools",
+      "files": "Files",
+      "memory": "Memory",
+      "logs": "Logs"
+    },
+    "tabsLabel": "Agent workspace",
+    "settings": "Agent settings",
+    "presence": {
+      "online": "Online",
+      "working": "Working",
+      "idle": "Idle",
+      "offline": "Offline"
+    },
+    "costToday": "{cost} today",
+    "newChat": "New chat",
+    "placeholder": "Ask anything…",
+    "send": "Send",
+    "sending": "Sending…",
+    "emptyChat": "Start a conversation. The agent uses its role, personality, model and tools.",
+    "notRunnable": "This agent can't chat yet: activate it and give it a working AI model.",
+    "availableTools": "Available Tools",
+    "searchTools": "Search…",
+    "noTools": "No tools. Add some in Settings → Edit → MCP Tools.",
+    "thinking": "Thinking…",
+    "waitingApproval": "Waiting for your approval",
+    "failed": "The run failed: {reason}",
+    "toolStatus": {
+      "approval_required": "needs approval",
+      "approved": "running",
+      "rejected": "rejected",
+      "blocked": "blocked",
+      "succeeded": "done",
+      "failed": "failed"
+    },
+    "approvalTitle": "Approval needed",
+    "reviewInInbox": "Open in Approvals",
+    "comingSoon": "Coming in {milestone}"
+  },
+  "approvals": {
+    "title": "Approvals",
+    "subtitle": "Review sensitive actions before your agents take them.",
+    "pending": "Pending",
+    "history": "History",
+    "empty": "Nothing waiting for approval.",
+    "emptyHistory": "No decisions yet.",
+    "agent": "Agent",
+    "tool": "Tool",
+    "server": "Server",
+    "parameters": "Parameters",
+    "risk": "Risk",
+    "reason": "Reason",
+    "estimatedCost": "Estimated cost",
+    "requested": "Requested {time}",
+    "budget": "Budget",
+    "budgetKinds": {
+      "max_tool_calls": "Tool-call limit reached ({value} of {limit})",
+      "max_runtime": "Runtime limit reached ({value}s of {limit}s)",
+      "per_task": "Per-task budget reached",
+      "daily": "Daily budget reached"
+    },
+    "approve": "Approve once",
+    "reject": "Reject",
+    "edit": "Edit & approve",
+    "saveEdited": "Approve with changes",
+    "cancel": "Cancel",
+    "continue": "Allow and continue",
+    "status": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "decidedBy": "Decided {time}",
+    "invalidJson": "Parameters must be valid JSON.",
+    "task": "Task"
+  },
+  "logs": {
+    "title": "Logs",
+    "subtitle": "Every run, model choice, tool call and decision your agents make.",
+    "filtersLabel": "Filter runs",
+    "all": "All",
+    "empty": "No runs yet.",
+    "toolCalls": "Tool calls"
+  },
+  "tasksPage": {
+    "title": "Tasks",
+    "subtitle": "Every piece of work your agents do. Scheduling and manual tasks arrive in v0.2.",
+    "empty": "No tasks yet. Chat with an agent to create one.",
+    "agent": "Agent",
+    "objective": "Task",
+    "state": "Status",
+    "created": "Created",
+    "filters": {
+      "all": "All Tasks",
+      "active": "Running",
+      "waiting": "Waiting",
+      "completed": "Completed",
+      "failed": "Failed"
+    }
+  },
+  "taskStates": {
+    "draft": "Draft",
+    "queued": "Queued",
+    "running": "Running",
+    "waiting_for_agent": "Waiting for agent",
+    "waiting_for_approval": "Waiting for approval",
+    "completed": "Completed",
+    "failed": "Failed",
+    "cancelled": "Cancelled"
   }
 }

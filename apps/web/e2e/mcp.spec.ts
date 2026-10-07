@@ -30,6 +30,8 @@ test.describe('MCP Hub (M5)', () => {
     // Changing a workspace default sticks.
     await page.getByRole('combobox', { name: 'Default permission: read_document' }).click();
     await page.getByRole('option', { name: 'Approval required' }).click();
+    // Let the save finish before reloading.
+    await page.waitForLoadState('networkidle');
     await page.reload();
     await expect(
       page.getByRole('combobox', { name: 'Default permission: read_document' }),
@@ -75,8 +77,8 @@ test.describe('MCP Hub (M5)', () => {
     await nextButton(page).click();
     await expect(page).toHaveURL(/\/setup\/review$/);
 
-    await page.goto(`/agents/${id}`);
-    const tools = page.locator('section', { has: page.getByRole('heading', { name: 'Tools' }) });
+    await page.goto(`/agents/${id}?tab=tools`);
+    const tools = page.locator('main');
     await expect(tools.getByText('search_documents')).toBeVisible();
     await expect(tools.getByText('Blocked')).toBeVisible();
     await expect(tools.getByText('Approval required')).toBeVisible();

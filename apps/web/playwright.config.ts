@@ -19,6 +19,12 @@ export default defineConfig({
       reuseExistingServer: !process.env.CI,
     },
     {
+      // Agent runs execute in the worker (health endpoint on 4030).
+      command: 'pnpm --filter @agentos/worker start',
+      url: 'http://127.0.0.1:4030',
+      reuseExistingServer: !process.env.CI,
+    },
+    {
       // Reference MCP server (no auth, bearer, OAuth with an auto-approving login, SSE).
       command: 'pnpm --filter @agentos/mcp-gateway fake-mcp',
       url: 'http://127.0.0.1:4020/.well-known/oauth-authorization-server',

@@ -56,8 +56,15 @@ export class NoEligibleModelError extends Error {
 function skipReason(input: InvokeInput, capabilities: ModelCapabilities): SkipReason | undefined {
   if (input.category === 'vision' && !capabilities.vision) return 'unsupported_modality';
   if (input.category === 'private' && !capabilities.local) return 'unsupported_modality';
+  if (input.request.tools?.length && !capabilities.toolCalling) return 'unsupported_modality';
   const promptTokens = estimateTokens(
-    [input.request.system ?? '', ...input.request.messages.map((m) => m.content)].join('\n'),
+    [
+      input.request.system ?? '',
+      JSON.stringify(input.request.tools ?? []),
+      ...input.request.messages.map((m) =>
+        m.role === 'tool' ? JSON.stringify(m.results) : m.content,
+      ),
+    ].join('\n'),
   );
   if (capabilities.contextWindow && promptTokens > capabilities.contextWindow) {
     return 'context_limit';

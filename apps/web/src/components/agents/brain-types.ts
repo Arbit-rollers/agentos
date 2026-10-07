@@ -24,7 +24,13 @@ export type BrainValue = {
   fallbacks: BrainTarget[];
   temperature?: number;
   maxOutputTokens?: number;
-  budget: { dailyUsd?: number; perTaskUsd?: number; onExceed: 'stop' | 'request_approval' };
+  budget: {
+    dailyUsd?: number;
+    perTaskUsd?: number;
+    maxToolCalls?: number;
+    maxRuntimeSeconds?: number;
+    onExceed: 'stop' | 'request_approval';
+  };
 };
 
 export const TASK_CATEGORY_KEYS = [

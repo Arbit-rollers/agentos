@@ -1,7 +1,8 @@
 export { loadEnv } from './env';
 export type { Env } from './env';
-export { QUEUES, createRedis, createSystemQueue } from './queue';
+export { QUEUES, createAgentQueue, createRedis, createSystemQueue } from './queue';
 export type {
+  AgentRunJob,
   PingResult,
   SystemJobData,
   SystemJobName,
@@ -68,3 +69,5 @@ export {
   updateToolDefaults,
 } from './mcp';
 export type { McpConnectionInput, McpDeps, ToolCallOutcome } from './mcp';
+export { DEFAULT_LIMITS, decideApproval, executeRun, startChatTurn } from './runtime';
+export type { RunJob, RuntimeDeps } from './runtime';

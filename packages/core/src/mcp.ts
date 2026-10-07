@@ -135,7 +135,7 @@ function oauthProvider(deps: McpDeps, ctx: TenantContext, connection: McpConnect
 }
 
 /** Builds gateway access for a connection, decrypting credentials only for this call. */
-async function accessFor(
+export async function accessFor(
   deps: McpDeps,
   ctx: TenantContext,
   connection: McpConnection,

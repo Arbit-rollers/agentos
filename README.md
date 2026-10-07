@@ -6,7 +6,7 @@ A multi-user operating system for persistent, personality-driven AI agents that 
 - Build plan: [`docs/ROADMAP.md`](docs/ROADMAP.md)
 - Reference screens: [`docs/AgentOS Dark-Mode AI Dashboard Collage.png`](<docs/AgentOS Dark-Mode AI Dashboard Collage.png>)
 
-**Status:** M5 (MCP Hub, OAuth, tool discovery, per-agent tool permissions, policy enforcement) done. Next: M6 runtime, chat and approvals.
+**Status:** v0.1 complete (M0–M6): agents with personalities and per-agent models, MCP tools with server-side permissions, chat with tool use, approvals, budgets and full run logs. Next: v0.2 tasks & schedules.
 
 ## Repository layout
 
@@ -85,5 +85,8 @@ CI (`.github/workflows/ci.yml`) runs all of these, plus E2E against Postgres (pg
 - **Every tool call goes through `executeAgentTool()` (`packages/core/src/mcp.ts`).** It evaluates `@agentos/policy` server-side on each call: tools an agent was never granted, disabled tools/servers and BLOCKED tools are refused and audited; APPROVAL_REQUIRED (or a high-risk category the agent's approval policy covers) is refused until the approval inbox lands in M6. An agent's mode can never be looser than the tool's workspace default, and connecting a server grants nothing to any agent.
 - **MCP credentials** (bearer token, custom headers, OAuth client registration and tokens) live in the secret store per connection. OAuth: `startMcpAuthorization()` returns the server's sign-in URL; `/api/mcp/oauth/callback` resolves the `state` only inside the signed-in user's workspace. Tokens refresh automatically through the official MCP SDK.
 - **Testing MCP:** `pnpm --filter @agentos/mcp-gateway fake-mcp` runs a reference MCP server (built from the SDK) on port 4020: `/mcp` (no auth), `/secure/mcp` (bearer `test-token`), `/oauth/mcp` (OAuth with an auto-approving login), `/sse` (legacy transport). Playwright starts it automatically.
+- **Agent runs execute in the worker** (`executeRun` in `packages/core/src/runtime.ts`). A chat turn records the message, creates a task and a queued run, and enqueues it on the `agent` queue. The loop assembles the PRD §25 context, offers only non-blocked tools (aliased to provider-safe names), validates every tool call's arguments against the tool's JSON Schema (ajv), evaluates policy on every call, wraps tool output as `<tool_output trust="untrusted">`, and enforces budgets (tool calls, runtime, per-task and daily cost; stop or ask for approval). A step that needs approval persists the transcript in `runs.state` and stops; `decideApproval()` re-queues the run, which resumes in a later worker process. `claimRun()` makes duplicate job delivery harmless.
+- **Live updates:** `/api/runs/[id]/events` streams a run's events (server-sent events) until it settles; the chat refreshes when it does. Token-by-token streaming is not implemented yet.
+- **Personality eval against a real model:** `pnpm --filter @agentos/core eval:personality` (needs `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` + `EVAL_MODEL`, or `EVAL_PROVIDER=ollama`). It compares a terse/skeptical agent with a verbose/credulous one and fails if answers aren't measurably shorter and more hedged.
 - **Dev server caches services on `globalThis`** to survive hot reloads; restart `pnpm dev` after changing `apps/web/src/server/services.ts`.
 - **Changing the schema:** edit `packages/db/src/schema`, run `pnpm db:generate`, then rename the new migration to something descriptive and update `migrations/meta/_journal.json` to match.
