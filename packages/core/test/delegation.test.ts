@@ -133,6 +133,11 @@ describe('multi-agent orchestration (PRD §15, AC 19–20)', () => {
     expect(JSON.stringify(researcher!.messages)).not.toContain('Make the reel');
     // Only leaders get the delegate tool and the team section.
     expect(researcher!.tools ?? []).toHaveLength(0);
+    // Nobody can answer the child mid-task: it is told to proceed, not to ask.
+    expect(researcher!.messages[0]!.content).toContain('## Working without a person in the loop');
+    expect(requestsFor('Make the reel')[0]!.messages[0]!.content).not.toContain(
+      'Working without a person in the loop',
+    );
     const [lead] = requestsFor('Make the reel');
     expect(lead!.tools!.map((t) => t.function.name)).toContain(DELEGATE_TOOL);
     expect(lead!.messages[0]!.content).toContain('## Your team\n');

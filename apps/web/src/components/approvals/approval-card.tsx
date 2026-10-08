@@ -12,7 +12,8 @@ import { useErrorText } from '@/components/error-text';
 export type ApprovalView = {
   id: string;
   kind: string;
-  agentId: string;
+  /** Null for workflow approvals (agentName then holds the workflow's name). */
+  agentId: string | null;
   agentName: string;
   status: 'pending' | 'approved' | 'rejected';
   risk: string;
@@ -42,7 +43,8 @@ export function ApprovalCard({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(JSON.stringify(approval.payload.arguments ?? {}, null, 2));
   const [error, setError] = useState<string>();
-  const isTool = approval.kind === 'tool_call';
+  const isTool = approval.kind === 'tool_call' || approval.kind === 'workflow_tool';
+  const isStep = approval.kind === 'workflow_approval';
   const budgetKind = String(approval.payload.kind ?? '');
 
   const decide = (decision: 'approve' | 'reject', editedArguments?: Record<string, unknown>) =>
@@ -79,7 +81,11 @@ export function ApprovalCard({
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <ShieldAlert aria-hidden className="size-4 text-warning" />
         <p className="font-medium">
-          {isTool ? String(approval.payload.tool) : t('approvals.budget')}
+          {isTool
+            ? String(approval.payload.tool)
+            : isStep
+              ? String(approval.payload.step ?? '')
+              : t('approvals.budget')}
         </p>
         <StatusBadge tone="warning">{riskLabel}</StatusBadge>
         {approval.status !== 'pending' && (
@@ -96,11 +102,17 @@ export function ApprovalCard({
       <dl className="mb-3 grid gap-x-4 gap-y-1 text-sm sm:grid-cols-[8rem_1fr]">
         {!compact && (
           <>
-            <dt className="text-text-muted">{t('approvals.agent')}</dt>
+            <dt className="text-text-muted">
+              {approval.agentId ? t('approvals.agent') : t('approvals.workflow')}
+            </dt>
             <dd>
-              <Link href={`/agents/${approval.agentId}`} className="hover:text-primary">
-                {approval.agentName}
-              </Link>
+              {approval.agentId ? (
+                <Link href={`/agents/${approval.agentId}`} className="hover:text-primary">
+                  {approval.agentName}
+                </Link>
+              ) : (
+                approval.agentName
+              )}
             </dd>
           </>
         )}
@@ -131,6 +143,11 @@ export function ApprovalCard({
                 </pre>
               )}
             </dd>
+          </>
+        ) : isStep ? (
+          <>
+            <dt className="text-text-muted">{t('approvals.message')}</dt>
+            <dd className="whitespace-pre-wrap">{String(approval.payload.message ?? '')}</dd>
           </>
         ) : (
           <>
@@ -186,7 +203,7 @@ export function ApprovalCard({
           ) : (
             <>
               <Button size="sm" disabled={pending} onClick={() => decide('approve')}>
-                {isTool ? t('approvals.approve') : t('approvals.continue')}
+                {isTool || isStep ? t('approvals.approve') : t('approvals.continue')}
               </Button>
               <Button
                 size="sm"

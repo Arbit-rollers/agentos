@@ -69,46 +69,75 @@ export function GoogleWorkspaceForm({
             {error('services') && <p className="mt-1 text-sm text-danger">{error('services')}</p>}
           </fieldset>
           <input type="hidden" name="client" value={client} />
-          <Field
-            label={t('google.client')}
-            htmlFor="google-client"
-            hint={
-              client === 'platform'
-                ? t('google.platformHint')
-                : platformAvailable
-                  ? t('google.ownHint', { redirect: redirectUri })
-                  : `${t('google.platformMissing')} ${t('google.ownHint', { redirect: redirectUri })}`
-            }
-            error={error('client')}
-          >
-            <Select
-              id="google-client"
-              value={client}
-              onValueChange={(value) => setClient(value as 'platform' | 'own')}
-              options={(platformAvailable
-                ? (['platform', 'own'] as const)
-                : (['own'] as const)
-              ).map((value) => ({ value, label: t(`google.clients.${value}`) }))}
-            />
-          </Field>
+          {platformAvailable ? (
+            // AgentOS's own Google app: nothing to configure, each person just signs in.
+            <p className="rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm text-text-muted">
+              {t('google.platformHint')}
+            </p>
+          ) : (
+            <Field
+              label={t('google.client')}
+              htmlFor="google-client"
+              hint={
+                client === 'platform'
+                  ? t('google.platformHint')
+                  : platformAvailable
+                    ? t('google.ownHint', { redirect: redirectUri })
+                    : `${t('google.platformMissing')} ${t('google.ownHint', { redirect: redirectUri })}`
+              }
+              error={error('client')}
+            >
+              <Select
+                id="google-client"
+                value={client}
+                onValueChange={(value) => setClient(value as 'platform' | 'own')}
+                options={(platformAvailable
+                  ? (['platform', 'own'] as const)
+                  : (['own'] as const)
+                ).map((value) => ({ value, label: t(`google.clients.${value}`) }))}
+              />
+            </Field>
+          )}
           {client === 'own' && (
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label={t('form.oauthClientId')} htmlFor="clientId" error={error('clientId')}>
-                <Input id="clientId" name="clientId" autoComplete="off" spellCheck={false} />
+                {/* Not a login: keep browsers and password managers from filling it. */}
+                <Input
+                  id="clientId"
+                  name="clientId"
+                  autoComplete="off"
+                  spellCheck={false}
+                  placeholder="1234…apps.googleusercontent.com"
+                  data-1p-ignore
+                  data-lpignore="true"
+                  data-form-type="other"
+                />
               </Field>
               <Field
                 label={t('form.oauthClientSecret')}
                 htmlFor="clientSecret"
                 error={error('clientSecret')}
               >
-                <Input id="clientSecret" name="clientSecret" type="password" autoComplete="off" />
+                <Input
+                  id="clientSecret"
+                  name="clientSecret"
+                  type="password"
+                  autoComplete="new-password"
+                  data-1p-ignore
+                  data-lpignore="true"
+                  data-form-type="other"
+                />
               </Field>
             </div>
           )}
-          <p className="text-xs text-text-muted">{t('google.afterFirst')}</p>
+          {client === 'own' && <p className="text-xs text-text-muted">{t('google.afterFirst')}</p>}
           <div className="flex gap-2">
             <Button type="submit" disabled={pending || Boolean(state.authorizationUrl)}>
-              {pending || state.authorizationUrl ? t('form.submitting') : t('google.submit')}
+              {pending || state.authorizationUrl
+                ? t('form.submitting')
+                : client === 'platform'
+                  ? t('google.connectWithGoogle')
+                  : t('google.submit')}
             </Button>
             <Button variant="secondary" asChild>
               <Link href="/mcp">{t('form.cancel')}</Link>

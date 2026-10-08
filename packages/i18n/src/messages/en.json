@@ -188,7 +188,34 @@
     "workspace_name_required": "Enter a name.",
     "FORBIDDEN": "Only owners and admins can do that.",
     "admin_only": "Only owners and admins can do that.",
-    "creator_or_admin": "Only the person who created it, or an admin, can do that."
+    "creator_or_admin": "Only the person who created it, or an admin, can do that.",
+    "workflow_empty": "Add at least one step.",
+    "duplicate_step_id": "Two steps have the same id.",
+    "step_name_required": "Give the step a name.",
+    "step_name_taken": "Another step has this name.",
+    "invalid_connection": "A connection is invalid.",
+    "no_start_step": "There's no starting step (every step has an arrow coming in).",
+    "several_start_steps": "Only one step can start the workflow; connect the others.",
+    "workflow_cycle": "Steps can't loop back to an earlier step.",
+    "step_unreachable": "This step can't be reached from the start.",
+    "condition_branches": "Connect the Yes and/or No branch, one step each.",
+    "output_is_last": "An Output step must be last.",
+    "step_settings_invalid": "Check this step's settings.",
+    "tool_required": "Choose a tool.",
+    "tool_blocked": "This tool is blocked in this workspace.",
+    "message_required": "Write a message.",
+    "template_required": "Write the text.",
+    "workflow_name_required": "Give the workflow a name.",
+    "workflow_inactive": "Activate the workflow first (or use Test run).",
+    "approval_rejected": "A person rejected this step.",
+    "tool_error": "The tool returned an error.",
+    "tool_unavailable": "The tool isn't available.",
+    "model_call_failed": "The model call failed.",
+    "task_missing": "The agent's task is gone.",
+    "workflow_stopped": "The workflow stopped.",
+    "step_failed": "A step failed.",
+    "google_client_id_invalid": "That isn't a Google client ID. It ends in .apps.googleusercontent.com (Google Cloud → Credentials).",
+    "client_id_is_email": "That's an email address, not a client ID. Leave Client ID empty unless the provider gave you one."
   },
   "dashboard": {
     "greetingMorning": "Good morning, {name}",
@@ -285,7 +312,13 @@
     "member_role_changed": "Member role changed",
     "member_removed": "Member removed",
     "member_left": "Member left",
-    "workspace_renamed": "Workspace renamed"
+    "workspace_renamed": "Workspace renamed",
+    "workflow_created": "Workflow created",
+    "workflow_saved": "Workflow saved",
+    "workflow_activated": "Workflow activated",
+    "workflow_deactivated": "Workflow deactivated",
+    "workflow_deleted": "Workflow deleted",
+    "workflow_run_started": "Workflow run started"
   },
   "outcome": {
     "success": "Success",
@@ -672,7 +705,7 @@
     "priceUnknown": "price unknown",
     "maxToolCalls": "Max tool calls per task",
     "maxRuntimeSeconds": "Max runtime per task (seconds)",
-    "limitsHint": "Defaults: 10 tool calls, 300 seconds."
+    "limitsHint": "Defaults: 25 tool calls, 300 seconds."
   },
   "runs": {
     "tryTitle": "Try this agent",
@@ -917,11 +950,12 @@
         "platform": "AgentOS's Google app",
         "own": "Our own Google app"
       },
-      "platformHint": "Members sign in through AgentOS's verified Google app.",
+      "platformHint": "Each person signs in with their own Google account through AgentOS's Google app. Nothing to set up.",
       "platformMissing": "Not configured on this AgentOS server, so use your own Google app.",
       "ownHint": "In Google Cloud: create an OAuth client of type Web application and add this redirect URI: {redirect}. Enable the APIs and MCP APIs for the services you pick.",
       "submit": "Connect and sign in",
-      "afterFirst": "After signing in to the first service, open each other one and click Connect my account."
+      "afterFirst": "After signing in to the first service, open each other one and click Connect my account.",
+      "connectWithGoogle": "Connect with Google"
     }
   },
   "permissions": {
@@ -1055,7 +1089,9 @@
     "decidedBy": "Decided {time}",
     "invalidJson": "Parameters must be valid JSON.",
     "task": "Task",
-    "notYours": "Waiting for the person this run works for, or an admin."
+    "notYours": "Waiting for the person this run works for, or an admin.",
+    "workflow": "Workflow",
+    "message": "Message"
   },
   "logs": {
     "title": "Logs",
@@ -1380,5 +1416,124 @@
       "revoked": "This invitation was withdrawn."
     },
     "adminOnly": "Only owners and admins can change this. Ask one of them if something needs to change."
+  },
+  "workflows": {
+    "title": "Workflows",
+    "subtitle": "Chain agents, tools and approvals into automations that run on demand or on a schedule.",
+    "new": "New workflow",
+    "name": "Name",
+    "namePlaceholder": "e.g. Weekly aviation content",
+    "description": "Description",
+    "creating": "Creating…",
+    "create": "Create workflow",
+    "empty": "No workflows yet.",
+    "emptyHint": "Create one, add steps from the left, connect them and save.",
+    "status": "Status",
+    "trigger": "Trigger",
+    "updated": "Updated",
+    "version": "Version {version}",
+    "activeLabel": "Active",
+    "inactive": "Inactive",
+    "manual": "Manual",
+    "types": {
+      "agent": "Agent",
+      "tool": "MCP tool",
+      "model": "Model",
+      "condition": "Condition",
+      "approval": "Human approval",
+      "transform": "Transform",
+      "delay": "Delay",
+      "output": "Output"
+    },
+    "yes": "Yes",
+    "no": "No",
+    "delayMinutes": "Wait {minutes} min",
+    "unsaved": "Unsaved changes",
+    "testInput": "Input for a test run",
+    "saveFirst": "Save before running",
+    "testRun": "Test run",
+    "runNow": "Run now",
+    "saving": "Saving…",
+    "save": "Save workflow",
+    "issues": "Fix before activating",
+    "palette": "Steps",
+    "agents": "Agents",
+    "noAgents": "No agents yet.",
+    "tools": "Tools",
+    "logic": "Logic",
+    "add": "Add",
+    "stepSettings": "Step settings",
+    "removeStep": "Remove step",
+    "stepName": "Step name",
+    "stepNameHint": "Later steps can use its result as '{{'steps.{label}'}}'.",
+    "agent": "Agent",
+    "prompt": "Instructions",
+    "templateHint": "Use '{{input}}', '{{previous}}' or '{{steps.Name}}' to pass results along.",
+    "tool": "Tool",
+    "toolPermission": {
+      "APPROVAL_REQUIRED": "Asks for approval before running",
+      "BLOCKED": "Blocked in this workspace"
+    },
+    "provider": "Provider",
+    "model": "Model",
+    "subject": "Check",
+    "operator": "Rule",
+    "operators": {
+      "contains": "contains",
+      "not_contains": "doesn't contain",
+      "equals": "equals",
+      "matches": "matches pattern",
+      "not_empty": "is not empty"
+    },
+    "value": "Value",
+    "branchesHint": "Connect the green handle (Yes) and the red handle (No) to the next steps.",
+    "message": "Message to the approver",
+    "template": "Text",
+    "minutes": "Minutes",
+    "settings": "Workflow settings",
+    "schedule": "schedule",
+    "schedulesLabel": "Schedules",
+    "removeSchedule": "Remove schedule",
+    "manualOnly": "Runs only when started by hand.",
+    "addSchedule": "Add schedule",
+    "active": "Active",
+    "activeHint": "Active workflows run on their schedules. Inactive ones only run as tests.",
+    "noRuns": "No runs yet. Save, then use Test run.",
+    "runs": "Runs",
+    "runStatus": {
+      "queued": "Queued",
+      "running": "Running",
+      "waiting": "Waiting",
+      "completed": "Completed",
+      "failed": "Failed",
+      "cancelled": "Cancelled"
+    },
+    "triggers": {
+      "test": "Test run",
+      "manual": "Run",
+      "schedule": "Scheduled"
+    },
+    "input": "Input",
+    "steps": "Steps",
+    "stepStatus": {
+      "running": "Running",
+      "waiting": "Waiting",
+      "completed": "Done",
+      "failed": "Failed",
+      "skipped": "Skipped"
+    },
+    "openTask": "Open task",
+    "openApprovals": "Open approvals",
+    "output": "Output",
+    "cancelRun": "Cancel run",
+    "restore": "Restore",
+    "delete": "Delete workflow",
+    "versions": "Versions",
+    "current": "Current",
+    "tabs": {
+      "builder": "Builder",
+      "runs": "Runs",
+      "versions": "Versions"
+    }
   }
 }

@@ -334,13 +334,20 @@ Makes multi-user workspaces real, so per-user connections and private memory mat
 
 ---
 
-## v0.5: Workflows (M10)
+## v0.5: Workflows (M10) ✅
 
 - Workflow Builder (Screen 9) with React Flow: nodes Agent, MCP Tool, Model, Condition, Human Approval, Transform, Delay, Schedule, Output; agents/tools palette; settings panel (name, description, trigger, schedule, active)
 - Graph validation, execution engine on the worker, versioning, test run, activate/deactivate, workflow logs
 
 **Covers:** AC 25
 **DoD:** a saved workflow is versioned, test-run, activated, and run on schedule.
+
+**As built (notes and known gaps)**
+- Builder (Screen 9): palette of agents, tools and logic steps; click to add (inserted after the selected step, or before Output); drag to connect; Yes/No handles on conditions; step settings and Workflow settings (name, description, schedules, Active) on the right; problems listed and highlighted.
+- The PRD's Schedule node is the workflow's trigger setting (schedules targeting the workflow), not a step. "Web Search / File Operation / API Request" from the visual are MCP tool steps.
+- Engine runs on the worker; parallel branches run step by step within one advance, while agent steps run concurrently as tasks. Conditions compare text (contains, equals, pattern, not empty); there is no expression language.
+- A rejected approval or a failed step fails the run and stops its waiting work (tasks cancelled, approvals withdrawn). Retries are per agent task (provider errors), not per workflow step.
+- Event and condition triggers (PRD §17 "later") are not built.
 
 ---
 

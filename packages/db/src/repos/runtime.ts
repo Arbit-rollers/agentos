@@ -10,6 +10,8 @@ import {
   taskStateHistory,
   tasks,
   toolCalls,
+  workflowRuns,
+  workflows,
 } from '../schema/index';
 import { tenantScope, type TenantContext } from '../tenant';
 import type { Run, RunEvent } from './runs';
@@ -530,13 +532,20 @@ export async function findApprovalRequest(db: Executor, ctx: TenantContext, id: 
 export async function listApprovalRequests(
   db: Executor,
   ctx: TenantContext,
-  options: { status?: ApprovalRequest['status']; runIds?: string[]; limit?: number } = {},
-): Promise<(ApprovalRequest & { agentName: string })[]> {
-  if (options.runIds?.length === 0) return [];
+  options: {
+    status?: ApprovalRequest['status'];
+    runIds?: string[];
+    workflowRunIds?: string[];
+    limit?: number;
+  } = {},
+): Promise<(ApprovalRequest & { agentName: string; workflowName: string | null })[]> {
+  if (options.runIds?.length === 0 || options.workflowRunIds?.length === 0) return [];
   const rows = await db
-    .select({ approval: approvalRequests, agentName: agents.name })
+    .select({ approval: approvalRequests, agentName: agents.name, workflowName: workflows.name })
     .from(approvalRequests)
-    .innerJoin(agents, eq(agents.id, approvalRequests.agentId))
+    .leftJoin(agents, eq(agents.id, approvalRequests.agentId))
+    .leftJoin(workflowRuns, eq(workflowRuns.id, approvalRequests.workflowRunId))
+    .leftJoin(workflows, eq(workflows.id, workflowRuns.workflowId))
     .where(
       tenantScope(
         ctx,
@@ -544,12 +553,20 @@ export async function listApprovalRequests(
         and(
           options.status ? eq(approvalRequests.status, options.status) : undefined,
           options.runIds ? inArray(approvalRequests.runId, options.runIds) : undefined,
+          options.workflowRunIds
+            ? inArray(approvalRequests.workflowRunId, options.workflowRunIds)
+            : undefined,
         ),
       ),
     )
     .orderBy(desc(approvalRequests.requestedAt))
     .limit(options.limit ?? 100);
-  return rows.map((r) => ({ ...r.approval, agentName: r.agentName }));
+  return rows.map((r) => ({
+    ...r.approval,
+    // Workflow approvals have no agent: show the workflow's name instead.
+    agentName: r.agentName ?? r.workflowName ?? '',
+    workflowName: r.workflowName,
+  }));
 }
 
 /** Records a decision only if the request is still pending; returns undefined otherwise. */

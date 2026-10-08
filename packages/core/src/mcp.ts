@@ -92,7 +92,13 @@ const connectionSchema = z
     /** Per-user: each member connects their own account (OAuth or token). */
     credentialMode: z.enum(['shared', 'per_user']).default('shared'),
     /** OAuth client registered beforehand, for servers without dynamic registration. */
-    oauthClientId: z.string().trim().max(500).optional(),
+    // An email here is browser autofill, never an OAuth client ID.
+    oauthClientId: z
+      .string()
+      .trim()
+      .max(500)
+      .refine((v) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), { error: 'client_id_is_email' })
+      .optional(),
     oauthClientSecret: z.string().trim().max(500).optional(),
     oauthScopes: z.string().trim().max(2000).optional(),
     oauthParams: z.record(z.string(), z.string().max(200)).default({}),

@@ -94,11 +94,15 @@ export function SignInFields({
                   htmlFor="oauthClientId"
                   error={error('oauthClientId')}
                 >
+                  {/* Not a login: keep browsers and password managers from filling it. */}
                   <Input
                     id="oauthClientId"
                     name="oauthClientId"
                     autoComplete="off"
                     spellCheck={false}
+                    data-1p-ignore
+                    data-lpignore="true"
+                    data-form-type="other"
                   />
                 </Field>
                 <Field label={t('oauthClientSecret')} htmlFor="oauthClientSecret">
@@ -106,8 +110,11 @@ export function SignInFields({
                     id="oauthClientSecret"
                     name="oauthClientSecret"
                     type="password"
-                    autoComplete="off"
+                    autoComplete="new-password"
                     spellCheck={false}
+                    data-1p-ignore
+                    data-lpignore="true"
+                    data-form-type="other"
                   />
                 </Field>
               </div>

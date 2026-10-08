@@ -4,6 +4,7 @@ export {
   QUEUES,
   createAgentQueue,
   createKnowledgeQueue,
+  createWorkflowQueue,
   createRedis,
   createSystemQueue,
 } from './queue';
@@ -165,3 +166,21 @@ export {
   requireWorkspaceAdmin,
   workspaceRole,
 } from './permissions';
+export {
+  WORKFLOW_LIMITS,
+  advanceWorkflowRun,
+  cancelWorkflowRun,
+  createWorkflow,
+  deleteWorkflow,
+  evaluateCondition,
+  parseGraph,
+  renderTemplate,
+  restoreWorkflowVersion,
+  saveWorkflow,
+  setWorkflowActive,
+  startWorkflowRun,
+  validateWorkflowGraph,
+  workflowSchedules,
+} from './workflows';
+export type { GraphIssue, TemplateScope, WorkflowDeps } from './workflows';
+export type { WorkflowJob } from './runtime';

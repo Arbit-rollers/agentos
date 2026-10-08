@@ -9,6 +9,8 @@ export const QUEUES = {
   schedules: 'schedules',
   /** Knowledge ingestion and re-indexing (PRD §11). */
   knowledge: 'knowledge',
+  /** Workflow runs: one job per advance (PRD §16). */
+  workflows: 'workflows',
 } as const;
 
 export type PingResult = { pong: true; requestedAt: string; processedAt: string };
@@ -63,6 +65,20 @@ export function createKnowledgeQueue(connection: Redis) {
       attempts: 3,
       backoff: { type: 'exponential', delay: 10_000 },
       removeOnComplete: 500,
+    },
+  });
+}
+
+export type WorkflowQueueJob = { runId: string; workspaceId: string; userId: string };
+
+/** A run being advanced elsewhere makes the job fail with `busy`: it retries shortly. */
+export function createWorkflowQueue(connection: Redis) {
+  return new Queue<WorkflowQueueJob, void, 'advance'>(QUEUES.workflows, {
+    connection,
+    defaultJobOptions: {
+      attempts: 8,
+      backoff: { type: 'exponential', delay: 2_000 },
+      removeOnComplete: 1000,
     },
   });
 }

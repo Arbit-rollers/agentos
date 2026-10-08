@@ -49,13 +49,11 @@ export function nextRunAt(
 
 const scheduleSchema = z
   .object({
-    agentId: z.uuid({ error: 'agent_required' }),
+    /** Either an agent (gets a task) or a workflow (gets a run). */
+    agentId: z.uuid({ error: 'agent_required' }).optional(),
+    workflowId: z.uuid().optional(),
     name: z.string().trim().min(1, { error: 'schedule_name_required' }).max(80),
-    objective: z
-      .string()
-      .trim()
-      .min(1, { error: 'objective_required' })
-      .max(500, { error: 'objective_too_long' }),
+    objective: z.string().trim().max(500, { error: 'objective_too_long' }).default(''),
     input: z.string().max(20_000).default(''),
     kind: z.enum(['recurring', 'once']),
     cron: z.string().trim().optional(),
@@ -63,6 +61,10 @@ const scheduleSchema = z
     runAt: z.coerce.date().optional(),
   })
   .superRefine((value, ctx) => {
+    if (!value.agentId === !value.workflowId)
+      ctx.addIssue({ code: 'custom', path: ['agentId'], message: 'agent_required' });
+    if (value.agentId && !value.objective)
+      ctx.addIssue({ code: 'custom', path: ['objective'], message: 'objective_required' });
     if (value.kind === 'recurring') {
       // Five fields only: minute granularity keeps schedules from hammering providers.
       const fields = value.cron?.split(/\s+/).filter(Boolean) ?? [];
@@ -113,10 +115,19 @@ export async function createSchedule(
   input: ScheduleInput,
 ): Promise<Schedule> {
   const data = parse(scheduleSchema, input);
-  if (!(await findAgent(db, ctx, data.agentId)))
+  if (data.agentId && !(await findAgent(db, ctx, data.agentId)))
     throw new AppError('VALIDATION', 'Unknown agent', { agentId: ['agent_required'] });
+  if (data.workflowId) {
+    const { findWorkflow } = await import('@agentos/db');
+    const workflow = await findWorkflow(db, ctx, data.workflowId);
+    if (!workflow)
+      throw new AppError('VALIDATION', 'Unknown workflow', { agentId: ['agent_required'] });
+    // Only who may run the workflow may schedule it.
+    await requireCreatorOrAdmin(db, ctx, workflow.createdBy);
+  }
   const schedule = await insertSchedule(db, ctx, {
-    agentId: data.agentId,
+    agentId: data.agentId ?? null,
+    workflowId: data.workflowId ?? null,
     name: data.name,
     objective: data.objective,
     input: data.input,
@@ -174,12 +185,13 @@ export async function fireSchedule(
   if (!schedule || (!schedule.active && !options.manual)) return null;
   // "Run now" from the UI: its creator or an admin. Timed firings run as the creator.
   if (options.manual) await requireCreatorOrAdmin(db, ctx, schedule.createdBy);
+  if (schedule.workflowId) return fireWorkflowSchedule(db, deps, ctx, schedule, options);
   const task = await createTask(
     db,
     deps,
     ctx,
     {
-      agentId: schedule.agentId,
+      agentId: schedule.agentId!,
       objective: schedule.objective,
       input: schedule.input,
       maxRetries: 2,
@@ -216,4 +228,28 @@ export async function syncSchedules(db: Database, deps: ScheduleDeps, now = new 
     await deps.scheduler.upsert(schedule);
   }
   return { registered: active.length - missed, missedFired: missed };
+}
+
+/** A schedule that starts a workflow (v0.5): skipped while the workflow is inactive. */
+async function fireWorkflowSchedule(
+  db: Database,
+  deps: ScheduleDeps,
+  ctx: TenantContext,
+  schedule: Schedule,
+  options: { manual?: boolean },
+) {
+  const { startWorkflowRun } = await import('./workflows');
+  const { findWorkflow } = await import('@agentos/db');
+  const workflow = await findWorkflow(db, ctx, schedule.workflowId!);
+  if (!workflow?.active || !deps.enqueueWorkflow) return null;
+  const run = await startWorkflowRun(db, deps as never, ctx, workflow.id, {
+    input: schedule.input,
+    trigger: 'schedule',
+  });
+  await updateSchedule(db, ctx, schedule.id, {
+    lastFiredAt: new Date(),
+    ...(schedule.kind === 'once' && !options.manual && { active: false }),
+  });
+  if (schedule.kind === 'once' && !options.manual) await deps.scheduler.remove(schedule.id);
+  return run;
 }

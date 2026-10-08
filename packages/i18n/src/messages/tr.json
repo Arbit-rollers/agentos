@@ -188,7 +188,34 @@
     "workspace_name_required": "Bir ad girin.",
     "FORBIDDEN": "Bunu yalnızca sahipler ve yöneticiler yapabilir.",
     "admin_only": "Bunu yalnızca sahipler ve yöneticiler yapabilir.",
-    "creator_or_admin": "Bunu yalnızca oluşturan kişi veya bir yönetici yapabilir."
+    "creator_or_admin": "Bunu yalnızca oluşturan kişi veya bir yönetici yapabilir.",
+    "workflow_empty": "En az bir adım ekleyin.",
+    "duplicate_step_id": "İki adımın kimliği aynı.",
+    "step_name_required": "Adıma bir ad verin.",
+    "step_name_taken": "Başka bir adım bu adı kullanıyor.",
+    "invalid_connection": "Bir bağlantı geçersiz.",
+    "no_start_step": "Başlangıç adımı yok (her adıma bir ok geliyor).",
+    "several_start_steps": "İş akışını yalnızca bir adım başlatabilir; diğerlerini bağlayın.",
+    "workflow_cycle": "Adımlar önceki bir adıma geri dönemez.",
+    "step_unreachable": "Bu adıma başlangıçtan ulaşılamıyor.",
+    "condition_branches": "Evet ve/veya Hayır dalını, her biri bir adıma bağlayın.",
+    "output_is_last": "Çıktı adımı en sonda olmalı.",
+    "step_settings_invalid": "Bu adımın ayarlarını kontrol edin.",
+    "tool_required": "Bir araç seçin.",
+    "tool_blocked": "Bu araç bu çalışma alanında engelli.",
+    "message_required": "Bir mesaj yazın.",
+    "template_required": "Metni yazın.",
+    "workflow_name_required": "İş akışına bir ad verin.",
+    "workflow_inactive": "Önce iş akışını etkinleştirin (veya Test çalıştır'ı kullanın).",
+    "approval_rejected": "Bir kişi bu adımı reddetti.",
+    "tool_error": "Araç bir hata döndürdü.",
+    "tool_unavailable": "Araç kullanılamıyor.",
+    "model_call_failed": "Model çağrısı başarısız oldu.",
+    "task_missing": "Ajanın görevi bulunamadı.",
+    "workflow_stopped": "İş akışı durdu.",
+    "step_failed": "Bir adım başarısız oldu.",
+    "google_client_id_invalid": "Bu bir Google client ID değil. .apps.googleusercontent.com ile biter (Google Cloud → Kimlik bilgileri).",
+    "client_id_is_email": "Bu bir e-posta adresi, client ID değil. Sağlayıcı size bir tane vermediyse Client ID'yi boş bırakın."
   },
   "dashboard": {
     "greetingMorning": "Günaydın, {name}",
@@ -285,7 +312,13 @@
     "member_role_changed": "Üye rolü değişti",
     "member_removed": "Üye çıkarıldı",
     "member_left": "Üye ayrıldı",
-    "workspace_renamed": "Çalışma alanı yeniden adlandırıldı"
+    "workspace_renamed": "Çalışma alanı yeniden adlandırıldı",
+    "workflow_created": "İş akışı oluşturuldu",
+    "workflow_saved": "İş akışı kaydedildi",
+    "workflow_activated": "İş akışı etkinleştirildi",
+    "workflow_deactivated": "İş akışı devre dışı bırakıldı",
+    "workflow_deleted": "İş akışı silindi",
+    "workflow_run_started": "İş akışı çalıştırması başladı"
   },
   "outcome": {
     "success": "Başarılı",
@@ -672,7 +705,7 @@
     "priceUnknown": "fiyat bilinmiyor",
     "maxToolCalls": "Görev başına en fazla araç çağrısı",
     "maxRuntimeSeconds": "Görev başına en fazla süre (saniye)",
-    "limitsHint": "Varsayılanlar: 10 araç çağrısı, 300 saniye."
+    "limitsHint": "Varsayılanlar: 25 araç çağrısı, 300 saniye."
   },
   "runs": {
     "tryTitle": "Bu ajanı dene",
@@ -917,11 +950,12 @@
         "platform": "AgentOS'un Google uygulaması",
         "own": "Kendi Google uygulamamız"
       },
-      "platformHint": "Üyeler AgentOS'un doğrulanmış Google uygulamasıyla oturum açar.",
+      "platformHint": "Herkes AgentOS'un Google uygulaması üzerinden kendi Google hesabıyla oturum açar. Kurulacak bir şey yok.",
       "platformMissing": "Bu AgentOS sunucusunda yapılandırılmamış; kendi Google uygulamanızı kullanın.",
       "ownHint": "Google Cloud'da Web application türünde bir OAuth client oluşturun ve şu yönlendirme URI'sini ekleyin: {redirect}. Seçtiğiniz hizmetlerin API'lerini ve MCP API'lerini etkinleştirin.",
       "submit": "Bağla ve oturum aç",
-      "afterFirst": "İlk hizmette oturum açtıktan sonra diğerlerini açıp Hesabımı bağla'ya tıklayın."
+      "afterFirst": "İlk hizmette oturum açtıktan sonra diğerlerini açıp Hesabımı bağla'ya tıklayın.",
+      "connectWithGoogle": "Google ile bağlan"
     }
   },
   "permissions": {
@@ -1055,7 +1089,9 @@
     "decidedBy": "Karar: {time}",
     "invalidJson": "Parametreler geçerli JSON olmalıdır.",
     "task": "Görev",
-    "notYours": "Bu çalıştırmanın adına çalıştığı kişi veya bir yönetici bekleniyor."
+    "notYours": "Bu çalıştırmanın adına çalıştığı kişi veya bir yönetici bekleniyor.",
+    "workflow": "İş akışı",
+    "message": "Mesaj"
   },
   "logs": {
     "title": "Kayıtlar",
@@ -1380,5 +1416,124 @@
       "revoked": "Bu davet geri çekildi."
     },
     "adminOnly": "Bunu yalnızca sahipler ve yöneticiler değiştirebilir. Bir değişiklik gerekiyorsa onlardan birine sorun."
+  },
+  "workflows": {
+    "title": "İş akışları",
+    "subtitle": "Ajanları, araçları ve onayları; istendiğinde veya zamanlanmış çalışan otomasyonlara bağlayın.",
+    "new": "Yeni iş akışı",
+    "name": "Ad",
+    "namePlaceholder": "örn. Haftalık havacılık içeriği",
+    "description": "Açıklama",
+    "creating": "Oluşturuluyor…",
+    "create": "İş akışı oluştur",
+    "empty": "Henüz iş akışı yok.",
+    "emptyHint": "Bir tane oluşturun, soldan adımlar ekleyin, bağlayın ve kaydedin.",
+    "status": "Durum",
+    "trigger": "Tetikleyici",
+    "updated": "Güncellendi",
+    "version": "Sürüm {version}",
+    "activeLabel": "Etkin",
+    "inactive": "Etkin değil",
+    "manual": "Elle",
+    "types": {
+      "agent": "Ajan",
+      "tool": "MCP aracı",
+      "model": "Model",
+      "condition": "Koşul",
+      "approval": "İnsan onayı",
+      "transform": "Dönüştür",
+      "delay": "Bekle",
+      "output": "Çıktı"
+    },
+    "yes": "Evet",
+    "no": "Hayır",
+    "delayMinutes": "{minutes} dk bekle",
+    "unsaved": "Kaydedilmemiş değişiklikler",
+    "testInput": "Test çalıştırması girdisi",
+    "saveFirst": "Çalıştırmadan önce kaydedin",
+    "testRun": "Test çalıştır",
+    "runNow": "Şimdi çalıştır",
+    "saving": "Kaydediliyor…",
+    "save": "İş akışını kaydet",
+    "issues": "Etkinleştirmeden önce düzeltin",
+    "palette": "Adımlar",
+    "agents": "Ajanlar",
+    "noAgents": "Henüz ajan yok.",
+    "tools": "Araçlar",
+    "logic": "Mantık",
+    "add": "Ekle",
+    "stepSettings": "Adım ayarları",
+    "removeStep": "Adımı kaldır",
+    "stepName": "Adım adı",
+    "stepNameHint": "Sonraki adımlar sonucunu '{{'steps.{label}'}}' olarak kullanabilir.",
+    "agent": "Ajan",
+    "prompt": "Talimatlar",
+    "templateHint": "Sonuçları aktarmak için '{{input}}', '{{previous}}' veya '{{steps.Ad}}' kullanın.",
+    "tool": "Araç",
+    "toolPermission": {
+      "APPROVAL_REQUIRED": "Çalışmadan önce onay ister",
+      "BLOCKED": "Bu çalışma alanında engelli"
+    },
+    "provider": "Sağlayıcı",
+    "model": "Model",
+    "subject": "Kontrol edilen",
+    "operator": "Kural",
+    "operators": {
+      "contains": "içerir",
+      "not_contains": "içermez",
+      "equals": "eşittir",
+      "matches": "desene uyar",
+      "not_empty": "boş değil"
+    },
+    "value": "Değer",
+    "branchesHint": "Yeşil (Evet) ve kırmızı (Hayır) bağlantı noktalarını sonraki adımlara bağlayın.",
+    "message": "Onaylayana mesaj",
+    "template": "Metin",
+    "minutes": "Dakika",
+    "settings": "İş akışı ayarları",
+    "schedule": "zamanlama",
+    "schedulesLabel": "Zamanlamalar",
+    "removeSchedule": "Zamanlamayı kaldır",
+    "manualOnly": "Yalnızca elle başlatıldığında çalışır.",
+    "addSchedule": "Zamanlama ekle",
+    "active": "Etkin",
+    "activeHint": "Etkin iş akışları zamanlamalarına göre çalışır. Etkin olmayanlar yalnızca test olarak çalışır.",
+    "noRuns": "Henüz çalıştırma yok. Kaydedin, sonra Test çalıştır'ı kullanın.",
+    "runs": "Çalıştırmalar",
+    "runStatus": {
+      "queued": "Sırada",
+      "running": "Çalışıyor",
+      "waiting": "Bekliyor",
+      "completed": "Tamamlandı",
+      "failed": "Başarısız",
+      "cancelled": "İptal edildi"
+    },
+    "triggers": {
+      "test": "Test çalıştırması",
+      "manual": "Çalıştırma",
+      "schedule": "Zamanlanmış"
+    },
+    "input": "Girdi",
+    "steps": "Adımlar",
+    "stepStatus": {
+      "running": "Çalışıyor",
+      "waiting": "Bekliyor",
+      "completed": "Bitti",
+      "failed": "Başarısız",
+      "skipped": "Atlandı"
+    },
+    "openTask": "Görevi aç",
+    "openApprovals": "Onayları aç",
+    "output": "Çıktı",
+    "cancelRun": "Çalıştırmayı iptal et",
+    "restore": "Geri yükle",
+    "delete": "İş akışını sil",
+    "versions": "Sürümler",
+    "current": "Geçerli",
+    "tabs": {
+      "builder": "Oluşturucu",
+      "runs": "Çalıştırmalar",
+      "versions": "Sürümler"
+    }
   }
 }
