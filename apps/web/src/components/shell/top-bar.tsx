@@ -49,16 +49,16 @@ export function TopBar({
         type="button"
         onClick={onOpenSearch}
         aria-keyshortcuts="Meta+K Control+K"
-        className="flex h-9 w-full max-w-md items-center gap-2 rounded-lg border border-border bg-surface px-3 text-sm text-text-subtle hover:border-border-strong"
+        className="flex h-9 w-full min-w-0 max-w-md items-center gap-2 rounded-lg border border-border bg-surface px-3 text-sm text-text-subtle hover:border-border-strong"
       >
-        <Search aria-hidden className="size-4" />
-        <span className="flex-1 truncate text-left">{t('shell.search')}</span>
+        <Search aria-hidden className="size-4 shrink-0" />
+        <span className="min-w-0 flex-1 truncate text-left">{t('shell.search')}</span>
         <kbd className="hidden rounded border border-border-strong px-1.5 text-xs sm:inline">
           ⌘K
         </kbd>
       </button>
 
-      <div className="ml-auto flex items-center gap-1">
+      <div className="ml-auto flex shrink-0 items-center gap-1">
         <WorkspaceSwitcher workspaces={workspaces} />
         <Menu>
           <MenuTrigger asChild>

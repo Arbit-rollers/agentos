@@ -27,6 +27,7 @@ Legend: **AC n** = acceptance criterion n in PRD §28. **Screen n** = screen n i
 | v0.4.3 | M9.7 | Role restrictions | — | 2, 15 |
 | v0.5 | M10 | Workflows | 9 | 25 |
 | v0.6 | M11 | Intelligence, Analytics, Hardening | — | 26 |
+| later | — | stdio MCP (sandboxed runner + allowlist) | — | — |
 
 **Done when v0.1 ships:** a new user registers, connects a model provider and a remote MCP server, creates an agent with a personality and model through the wizard, assigns tools with permissions, chats with the agent, sees it call tools, approves a risky call from the Approval Inbox, and inspects the run, tokens, and cost.
 
@@ -351,16 +352,25 @@ Makes multi-user workspaces real, so per-user connections and private memory mat
 
 ---
 
-## v0.6: Intelligence, Analytics, Hardening (M11)
+## v0.6: Intelligence, Analytics, Hardening (M11) ✅
 
 - Smart Router policies (cost/latency/capability-aware), fallback optimization
 - Analytics page: tokens, cost by agent/model/provider, success rates, agent performance
-- stdio MCP via sandboxed per-workspace runner + admin allowlist
+- ~~stdio MCP via sandboxed per-workspace runner + admin allowlist~~ → deferred to a later release
 - Audit coverage review: every event type in PRD §22 is verified to be recorded
 - Reliability: rate limiting, backpressure, crash recovery, backup/restore docs
 
 **Covers:** AC 26
 **DoD:** audit-coverage test enumerates every PRD §22 event type and asserts that each one produces an audit/run entry.
+
+**As built (notes and known gaps)**
+- Analytics (`/analytics`): 7 / 30 / 90-day ranges with days in the person's timezone; runs, success rate, tokens, cost (with the number of runs whose model has no known price), average run time and approvals; runs-per-day and cost-per-day charts with table views; tables by agent, model (with provider and fallback counts), tool (calls, failures, blocks, approvals) and workflow. Visible to every member of the workspace.
+- Smart Router: each chat message and task objective is classified into a task type (general, research, reasoning, fast, private, vision) by English and Turkish keywords plus length, with no extra model call. The type and the matched word are in the run log ("Task type: Research (matched “research”)"), and the run follows that type's route. "Try this agent" still uses the type picked in the form.
+- Fallback optimization: a circuit breaker per model. Three outages, rate limits or timeouts in a row move the model behind the agent's other candidates for a minute ("Will try … last" in the run log). The same applies to MCP servers: calls fail immediately during the cooldown with a message the agent can act on. The breaker memory is per process.
+- Cost/latency awareness is the existing capability and per-task cost skips plus the breaker (slow, failing models stop being waited on). There is no automatic "cheapest model" choice: routes stay what the person configured.
+- Reliability: Redis-backed rate limits on sign-in, sign-up and starting chats/tasks (on in production by default, `AGENTOS_RATE_LIMITS`); per-workspace backpressure (`AGENTOS_MAX_QUEUED_RUNS` refuses new chats/tasks, `AGENTOS_MAX_RUNNING_RUNS` gives each workspace a fair share of worker slots; schedules, delegation and workflows are never refused). Crash recovery also re-queues runs left "queued" without a queue job when the worker starts. Backup/restore and operations guide: [OPERATIONS.md](OPERATIONS.md).
+- Audit coverage: `packages/core/test/audit-coverage.test.ts` reads the PRD §22 list and drives one scenario that must leave an entry for every type. Workflow runs now also audit how they ended (`workflow.run_finished`).
+- stdio MCP is deferred: running arbitrary local commands needs a sandbox design of its own.
 
 ---
 

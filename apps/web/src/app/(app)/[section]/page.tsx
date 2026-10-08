@@ -7,17 +7,16 @@ import type { NavKey } from '@/components/shell/nav-items';
 
 // Sections that are in the navigation but not built yet, with the roadmap milestone that
 // delivers each (docs/ROADMAP.md). A real page at the same path replaces its entry here.
-const UPCOMING = {
-  analytics: { nav: 'analytics', milestone: 'v0.6' },
-} as const satisfies Record<
+// Every section is built as of v0.6; the mechanism stays for sections added later.
+const UPCOMING: Record<
   string,
   { nav: Exclude<NavKey, 'dashboard' | 'settings'>; milestone: string }
->;
+> = {};
 
 type Params = { params: Promise<{ section: string }> };
 
 function lookup(section: string) {
-  return Object.hasOwn(UPCOMING, section) ? UPCOMING[section as keyof typeof UPCOMING] : undefined;
+  return Object.hasOwn(UPCOMING, section) ? UPCOMING[section] : undefined;
 }
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
@@ -32,7 +31,10 @@ export default async function UpcomingSectionPage({ params }: Params) {
 
   return (
     <>
-      <PageHeader title={t(`nav.${entry.nav}`)} description={t(`pages.${entry.nav}.description`)} />
+      <PageHeader
+        title={t(`nav.${entry.nav}`)}
+        description={t(`pages.${entry.nav}.description` as never)}
+      />
       <Card>
         <EmptyState
           icon={<Construction />}

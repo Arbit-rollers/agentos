@@ -10,6 +10,8 @@ import {
   createSecretCipher,
   createSecretStore,
   loadEnv,
+  rateLimitsEnabled,
+  redisRateLimiter,
   type KnowledgeDeps,
   type WorkflowDeps,
   type ScheduleDeps,
@@ -43,8 +45,15 @@ function createServices() {
   /** Chat turns, tasks and approvals hand runs to the worker; schedules go to the scheduler. */
   const knowledgeQueue = createKnowledgeQueue(redis);
   const workflowQueue = createWorkflowQueue(redis);
+  /** Undefined in development and tests unless AGENTOS_RATE_LIMITS=on. */
+  const rateLimiter = rateLimitsEnabled(env) ? redisRateLimiter(redis) : undefined;
   const runtimeDeps: ScheduleDeps & KnowledgeDeps & WorkflowDeps = {
     ...mcpDeps,
+    ...(rateLimiter && { rateLimiter }),
+    limits: {
+      maxQueuedRuns: env.AGENTOS_MAX_QUEUED_RUNS,
+      maxRunningRuns: env.AGENTOS_MAX_RUNNING_RUNS,
+    },
     enqueueRun: async (job, options) =>
       void (await agentQueue.add('run', job, { delay: options?.delayMs ?? 0 })),
     scheduler: bullScheduler(createScheduleQueue(redis)),
@@ -52,7 +61,7 @@ function createServices() {
     enqueueWorkflow: async (job, options) =>
       void (await workflowQueue.add('advance', job, { delay: options?.delayMs ?? 0 })),
   };
-  return { env, db, sql, redis, secrets, providerDeps, mcpDeps, runtimeDeps };
+  return { env, db, sql, redis, secrets, providerDeps, mcpDeps, runtimeDeps, rateLimiter };
 }
 
 export function getServices() {

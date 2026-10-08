@@ -414,6 +414,8 @@ export const runs = pgTable(
   },
   (t) => [
     index('runs_workspace_started_idx').on(t.workspaceId, t.startedAt),
+    /** Backpressure counts queued and running runs per workspace (v0.6). */
+    index('runs_workspace_status_idx').on(t.workspaceId, t.status),
     index('runs_agent_started_idx').on(t.agentId, t.startedAt),
   ],
 );

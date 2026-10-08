@@ -1,4 +1,5 @@
 import { FALLBACK_KINDS, ProviderError, type ProviderErrorKind } from './errors';
+import type { ModelHealth } from './health';
 import { estimateCost, estimateTokens, type ModelCapabilities } from './registry';
 import {
   planCandidates,
@@ -10,11 +11,14 @@ import {
 import type { GenerateRequest, GenerateResult, ProviderAdapter, ProviderFallback } from './types';
 
 export type SkipReason = 'unsupported_modality' | 'context_limit' | 'cost_threshold';
+/** A model kept failing recently; it is tried only after the healthy candidates. */
+export type DeferReason = 'circuit_open';
 
 /** Everything the gateway decides is reported as an event; nothing switches silently (PRD §7.2). */
 export type GatewayEvent =
   | { type: 'model.selected'; target: ModelTarget; reason: RoutingReason }
   | { type: 'model.skipped'; target: ModelTarget; reason: SkipReason }
+  | { type: 'model.deferred'; target: ModelTarget; reason: DeferReason }
   | { type: 'model.fallback'; from: ModelTarget; reason: ProviderErrorKind; message: string }
   | { type: 'model.provider_fallback'; target: ModelTarget; fallback: ProviderFallback }
   | {
@@ -29,6 +33,8 @@ export type InvokeDeps = {
   adapterFor(target: ModelTarget): Promise<ProviderAdapter>;
   capabilitiesFor(target: ModelTarget): ModelCapabilities;
   onEvent(event: GatewayEvent): void | Promise<void>;
+  /** Shared failure memory across calls (circuit breaker); optional. */
+  health?: ModelHealth;
 };
 
 export type InvokeInput = {
@@ -85,7 +91,20 @@ function skipReason(input: InvokeInput, capabilities: ModelCapabilities): SkipRe
  * errors (bad key, unknown model) surface immediately instead of hiding behind a fallback.
  */
 export async function invokeModel(input: InvokeInput, deps: InvokeDeps): Promise<InvokeResult> {
-  const { candidates, reason } = planCandidates(input.plan, input.category);
+  const planned = planCandidates(input.plan, input.category);
+  const { reason } = planned;
+  // Models that keep failing go to the back of the line while they cool down, so a call doesn't
+  // wait on an outage it already knows about. They stay as a last resort.
+  const open = deps.health
+    ? planned.candidates.filter((target) => deps.health!.isOpen(target))
+    : [];
+  const healthy = planned.candidates.filter((target) => !open.includes(target));
+  if (healthy.length > 0) {
+    for (const target of open) {
+      await deps.onEvent({ type: 'model.deferred', target, reason: 'circuit_open' });
+    }
+  }
+  const candidates = healthy.length > 0 ? [...healthy, ...open] : planned.candidates;
   const skipped: { target: ModelTarget; reason: SkipReason }[] = [];
   let selectedOnce = false;
 
@@ -114,6 +133,7 @@ export async function invokeModel(input: InvokeInput, deps: InvokeDeps): Promise
       for (const fallback of result.providerFallbacks) {
         await deps.onEvent({ type: 'model.provider_fallback', target, fallback });
       }
+      deps.health?.recordSuccess(target);
       const costUsd = estimateCost(capabilities, result.usage);
       await deps.onEvent({
         type: 'model.completed',
@@ -125,11 +145,13 @@ export async function invokeModel(input: InvokeInput, deps: InvokeDeps): Promise
       return { result, target, reason, costUsd };
     } catch (error) {
       const isLast = index === candidates.length - 1;
-      if (error instanceof ProviderError && FALLBACK_KINDS.has(error.kind) && !isLast) {
+      const transient = error instanceof ProviderError && FALLBACK_KINDS.has(error.kind);
+      if (transient) deps.health?.recordFailure(target);
+      if (transient && !isLast) {
         await deps.onEvent({
           type: 'model.fallback',
           from: target,
-          reason: error.kind,
+          reason: (error as ProviderError).kind,
           message: error.message,
         });
         continue;

@@ -16,7 +16,11 @@ export type AppErrorCode =
   | 'AGENT_NOT_RUNNABLE'
   | 'ALREADY_DECIDED'
   /** The caller's workspace role doesn't allow this (e.g. a member managing members). */
-  | 'FORBIDDEN';
+  | 'FORBIDDEN'
+  /** Too many attempts in a short time; details.retryAfterSeconds says when to try again. */
+  | 'RATE_LIMITED'
+  /** The workspace already has too much work queued; new work waits until some finishes. */
+  | 'WORKSPACE_BUSY';
 
 /** Expected, user-facing failures. Anything else is a bug and should surface as a 500. */
 export class AppError extends Error {

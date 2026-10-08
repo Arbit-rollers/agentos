@@ -63,6 +63,20 @@ export async function RunLog({
         return t('runs.events.selected', { target: name(p.target), reason: reason(p) });
       case 'model.skipped':
         return t('runs.events.skipped', { target: name(p.target), reason: reason(p) });
+      case 'model.deferred':
+        return t('runs.events.deferred', { target: name(p.target), reason: reason(p) });
+      case 'task.classified': {
+        const signal = typeof p.signal === 'string' ? p.signal : null;
+        return t('runs.events.classified', {
+          category: translate(`brain.categories.${String(p.category)}`, String(p.category)),
+          why:
+            signal === null
+              ? t('runs.classifiedWhy.none')
+              : signal === 'short' || signal === 'long'
+                ? t(`runs.classifiedWhy.${signal}`)
+                : t('runs.classifiedWhy.matched', { signal }),
+        });
+      }
       case 'model.fallback':
         return t('runs.events.fallback', { target: name(p.from), reason: String(p.reason) });
       case 'model.provider_fallback': {

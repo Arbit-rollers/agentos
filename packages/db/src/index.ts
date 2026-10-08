@@ -21,3 +21,4 @@ export * from './repos/feedback';
 export { EMBEDDING_DIMENSIONS as DB_EMBEDDING_DIMENSIONS } from './schema/index';
 export * from './repos/team';
 export * from './repos/workflows';
+export * from './repos/analytics';

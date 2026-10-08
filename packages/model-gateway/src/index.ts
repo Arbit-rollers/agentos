@@ -7,3 +7,8 @@ export { STRATEGIES, TASK_CATEGORIES, planCandidates } from './router';
 export type { ModelPlan, ModelStrategy, ModelTarget, RoutingReason, TaskCategory } from './router';
 export { NoEligibleModelError, invokeModel } from './gateway';
 export type { GatewayEvent, InvokeDeps, InvokeInput, InvokeResult, SkipReason } from './gateway';
+export type { DeferReason } from './gateway';
+export { classifyTask } from './classify';
+export type { Classification } from './classify';
+export { createCircuitBreaker, createKeyedBreaker } from './health';
+export type { KeyedBreaker, ModelHealth } from './health';

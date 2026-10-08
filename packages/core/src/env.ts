@@ -14,9 +14,19 @@ const envSchema = z.object({
   /** Optional: AgentOS's own Google OAuth client for Google Workspace connections. */
   AGENTOS_GOOGLE_CLIENT_ID: z.string().min(1).optional(),
   AGENTOS_GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
+  /** Sign-in, sign-up and run-start rate limits; on by default only in production. */
+  AGENTOS_RATE_LIMITS: z.enum(['on', 'off']).optional(),
+  /** Backpressure per workspace: queued runs before new chats/tasks are refused. */
+  AGENTOS_MAX_QUEUED_RUNS: z.coerce.number().int().positive().default(100),
+  /** Runs one workspace may execute at once; the rest wait for a free slot. */
+  AGENTOS_MAX_RUNNING_RUNS: z.coerce.number().int().positive().default(3),
 });
 
 export type Env = z.infer<typeof envSchema>;
+
+/** Whether rate limits apply: explicitly configured, else only in production. */
+export const rateLimitsEnabled = (env: Env) =>
+  env.AGENTOS_RATE_LIMITS ? env.AGENTOS_RATE_LIMITS === 'on' : env.NODE_ENV === 'production';
 
 export function loadEnv(source: Record<string, string | undefined> = process.env): Env {
   const result = envSchema.safeParse(source);

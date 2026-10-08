@@ -4,11 +4,13 @@ import {
   findRun,
   findTask,
   insertRun,
+  insertRunEvent,
   insertTask,
   listChildTasks,
   listApprovalRequests,
   listDependentTasks,
   listRunsWithDetails,
+  listOldQueuedRuns,
   listStaleRuns,
   listTasksByIds,
   resolveApprovalRequest,
@@ -18,6 +20,7 @@ import {
   type Task,
   type TenantContext,
 } from '@agentos/db';
+import { classifyTask } from '@agentos/model-gateway';
 import { z } from 'zod';
 import { recordAudit } from './audit';
 import { recordTaskEpisode } from './memory';
@@ -25,6 +28,7 @@ import { parse } from './auth';
 import { AppError } from './errors';
 import { requireCreatorOrAdmin } from './permissions';
 import { canAgentRun } from './models';
+import { admitNewWork } from './admission';
 import type { RuntimeDeps } from './runtime';
 
 /** Run failures worth retrying automatically: the provider was briefly unavailable. */
@@ -63,14 +67,16 @@ async function startTaskRun(
   delayMs = 0,
 ) {
   const config = await findModelConfig(db, ctx, task.agentId);
+  const classified = classifyTask(task.objective);
   const run = await insertRun(db, ctx, {
     agentId: task.agentId,
     kind: 'task',
     status: 'queued',
     strategy: config?.strategy ?? null,
-    taskCategory: 'general',
+    taskCategory: classified.category,
     taskId: task.id,
   });
+  await insertRunEvent(db, ctx, run.id, 'task.classified', classified);
   await deps.enqueueRun(
     { runId: run.id, workspaceId: ctx.workspaceId, userId: ctx.userId },
     { delayMs },
@@ -95,6 +101,7 @@ export async function createTask(
   const data = parse(taskSchema, input);
   const agent = await findAgent(db, ctx, data.agentId);
   if (!agent) throw new AppError('VALIDATION', 'Unknown agent', { agentId: ['agent_required'] });
+  if (origin.kind === 'manual' && !origin.scheduleId) await admitNewWork(db, deps, ctx);
   const dependencies = await listTasksByIds(db, ctx, [...new Set(data.dependsOn)]);
   if (dependencies.length !== new Set(data.dependsOn).size) {
     throw new AppError('VALIDATION', 'Unknown dependency', { dependsOn: ['unknown_task'] });
@@ -347,6 +354,25 @@ export async function recoverStaleRuns(
     await deps.enqueueRun({ runId: run.id, workspaceId: run.workspaceId, userId: ctx.userId });
   }
   return stale.length;
+}
+
+/**
+ * Worker start: runs the database still calls "queued" long after any retry delay (30 min at
+ * most) lost their queue job, e.g. after Redis was restored from an older snapshot. They go
+ * back on the queue; a run that does have a job is claimed only once, so duplicates are harmless.
+ */
+export async function requeueOrphanedRuns(
+  db: Database,
+  deps: RuntimeDeps,
+  olderThanMs = 45 * 60_000,
+  now = new Date(),
+) {
+  const orphans = await listOldQueuedRuns(db, new Date(now.getTime() - olderThanMs));
+  for (const run of orphans) {
+    const userId = (await ownerOf(db, run)) ?? '';
+    await deps.enqueueRun({ runId: run.id, workspaceId: run.workspaceId, userId });
+  }
+  return orphans.length;
 }
 
 async function ownerOf(db: Database, run: { workspaceId: string; agentId: string }) {

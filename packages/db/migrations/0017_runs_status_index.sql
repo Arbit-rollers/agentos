@@ -1,0 +1,1 @@
+CREATE INDEX "runs_workspace_status_idx" ON "runs" USING btree ("workspace_id","status");

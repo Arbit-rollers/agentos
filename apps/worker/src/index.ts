@@ -19,6 +19,7 @@ import {
   loadEnv,
   logger,
   recoverStaleRuns,
+  requeueOrphanedRuns,
   refreshMcpConnection,
   reindexWorkspace,
   syncSchedules,
@@ -52,6 +53,8 @@ const deps: ScheduleDeps & KnowledgeDeps & WorkflowDeps = {
   enqueueKnowledge: async (job) => void (await knowledgeQueue.add(job.kind, job)),
   enqueueWorkflow: async (job, options) =>
     void (await workflowQueue.add('advance', job, { delay: options?.delayMs ?? 0 })),
+  // Fair share between workspaces; queue limits are applied where people start work (web).
+  limits: { maxRunningRuns: env.AGENTOS_MAX_RUNNING_RUNS },
 };
 
 const systemWorker = new Worker<SystemJobData, SystemJobResult, SystemJobName>(
@@ -173,6 +176,7 @@ await systemQueue.upsertJobScheduler(
 
 // The database is the source of truth for schedules; make Redis match it.
 log.info('schedules synced', await syncSchedules(db, deps));
+log.info('orphaned queued runs re-queued', { count: await requeueOrphanedRuns(db, deps) });
 
 // Liveness for Docker and the E2E harness.
 const healthPort = Number(process.env.WORKER_HEALTH_PORT ?? 4030);
