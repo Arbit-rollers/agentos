@@ -40,7 +40,7 @@ import { parse } from './auth';
 import { AppError } from './errors';
 import { accessFor } from './mcp';
 import { requireCreatorOrAdmin } from './permissions';
-import { adapterForConnection } from './providers';
+import { adapterForConnection, modelHealthFor } from './providers';
 import type { RuntimeDeps, WorkflowJob } from './runtime';
 import { cancelTask, createTask } from './tasks';
 
@@ -559,6 +559,7 @@ export async function advanceWorkflowRun(
       error: failed.error ?? 'step_failed',
       endedAt: now,
     });
+    await auditRunFinished(db, ctx, run, 'failed', failed.error ?? 'step_failed');
   } else if (all.some((s) => s.status === 'waiting')) {
     await updateWorkflowRun(db, ctx, run.id, { status: 'waiting' });
   } else {
@@ -579,9 +580,28 @@ export async function advanceWorkflowRun(
         .slice(0, WORKFLOW_LIMITS.outputChars),
       endedAt: now,
     });
+    await auditRunFinished(db, ctx, run, 'completed');
   }
   return findWorkflowRun(db, ctx, run.id);
 }
+
+/** Workflow execution in the audit trail (PRD §22): how each run ended. */
+const auditRunFinished = (
+  db: Database,
+  ctx: TenantContext,
+  run: WorkflowRun,
+  status: 'completed' | 'failed',
+  error?: string,
+) =>
+  recordAudit(db, {
+    workspaceId: ctx.workspaceId,
+    actorUserId: ctx.userId,
+    action: 'workflow.run_finished',
+    targetType: 'workflow',
+    targetId: run.workflowId,
+    outcome: status === 'completed' ? 'success' : 'failure',
+    metadata: { runId: run.id, status, ...(error && { error }) },
+  });
 
 type Save = (
   node: WorkflowNode,
@@ -649,6 +669,7 @@ async function runStep(
                 connection.models.find((m) => m.id === t.model),
               ),
             onEvent: () => undefined,
+            health: modelHealthFor(deps),
           },
         );
         return done(outcome.result.text, prompt);

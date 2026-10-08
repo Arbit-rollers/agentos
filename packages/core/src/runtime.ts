@@ -2,6 +2,7 @@ import {
   addRunUsage,
   agentSpendSince,
   claimRun,
+  countRuns,
   createConversation,
   filterActiveMemoryIds,
   filterReadySourceIds,
@@ -52,6 +53,7 @@ import {
   NoEligibleModelError,
   ProviderError,
   describeModel,
+  classifyTask,
   invokeModel,
   type ChatMessage,
   type GatewayEvent,
@@ -72,13 +74,15 @@ import { Ajv } from 'ajv';
 import { recordAudit } from './audit';
 import { AppError } from './errors';
 import { requireCreatorOrAdmin } from './permissions';
-import { accessFor, type McpDeps } from './mcp';
+import { accessFor, mcpHealthFor, type McpDeps } from './mcp';
 import { buildSystemPrompt, canAgentRun } from './models';
 import type { ProviderDeps } from './providers';
 import { formatContext, retrieveContext, type RetrievedContext } from './knowledge';
 import { ACTIVE, createTask, onTaskRunFinished, resumeDelegatingRun } from './tasks';
 import { describeNow } from './time';
-import { adapterForConnection } from './providers';
+import { adapterForConnection, modelHealthFor } from './providers';
+import { admitNewWork, type WorkspaceLimits } from './admission';
+import type { RateLimiter } from './rate-limit';
 import { redact } from './redact';
 
 export type RunJob = { runId: string; workspaceId: string; userId: string };
@@ -91,6 +95,10 @@ export type RuntimeDeps = ProviderDeps &
     /** Hands a workflow run to the worker's `workflows` queue (v0.5). */
     enqueueWorkflow?(job: WorkflowJob, options?: { delayMs?: number }): Promise<void>;
     now?: () => Date;
+    /** Per-person limits on starting work (v0.6); unset in tests and scripts. */
+    rateLimiter?: RateLimiter;
+    /** Backpressure per workspace (v0.6); each limit is off when unset. */
+    limits?: WorkspaceLimits;
   };
 
 /** Defaults when the agent's budget policy leaves a limit unset (PRD §18). */
@@ -308,6 +316,7 @@ export async function startChatTurn(
     throw new AppError('AGENT_NOT_RUNNABLE', 'This agent cannot run right now');
   }
   const config = await findModelConfig(db, ctx, agentId);
+  await admitNewWork(db, deps, ctx);
 
   const ids = await withTransaction(db, async (tx) => {
     let conversationId = input.conversationId;
@@ -325,15 +334,17 @@ export async function startChatTurn(
       objective: text.slice(0, 500),
       state: 'queued',
     });
+    const classified = classifyTask(text);
     const run = await insertRun(tx, ctx, {
       agentId,
       kind: 'chat',
       status: 'queued',
       strategy: config!.strategy,
-      taskCategory: 'general',
+      taskCategory: classified.category,
       taskId: task.id,
       conversationId,
     });
+    await insertRunEvent(tx, ctx, run.id, 'task.classified', classified);
     await insertMessage(tx, ctx, { conversationId, role: 'user', content: text, runId: run.id });
     return { conversationId, runId: run.id, taskId: task.id };
   });
@@ -690,16 +701,29 @@ async function runTool(c: Ctx, tool: McpTool, args: Record<string, unknown>) {
     isError: true,
     text: `The person you are working for has not connected their own account to "${connection.name}". Tell them to open MCP Hub → ${connection.name} → Connect my account, then ask again. Do not try to get the data another way.`,
   };
+  // A server that just failed several times in a row isn't waited on again (30 s timeouts)
+  // until its cooldown ends; the agent hears why and can carry on without it.
+  const health = mcpHealthFor(c.deps);
+  if (health.isOpen(connection.id)) {
+    return {
+      isError: true,
+      text: `The MCP server "${connection.name}" is not responding: it failed several times in a row just now. It will be tried again in about a minute; continue without it or tell the person.`,
+    };
+  }
   try {
     const result = await callTool(
       await accessFor(c.db, c.deps, c.ctx, connection),
       tool.name,
       args,
     );
+    health.recordSuccess(connection.id);
     return { isError: result.isError, text: result.text };
   } catch (error) {
     if (error instanceof AppError && error.code === 'MCP_NEEDS_USER_AUTH') return connectFirst;
     if (!(error instanceof McpGatewayError)) throw error;
+    if (error.kind === 'unavailable' || error.kind === 'timeout') {
+      health.recordFailure(connection.id);
+    }
     // Their sign-in was revoked or expired for good: ask them to connect again.
     if (error.kind === 'auth' && connection.credentialMode === 'per_user') {
       await upsertMyMcpCredential(c.db, c.ctx, connection.id, { status: 'needs_auth' });
@@ -1119,7 +1143,7 @@ async function loop(c: Ctx) {
       outcome = await invokeModel(
         {
           plan: toPlan(c.config, connections),
-          category: 'general',
+          category: c.run.taskCategory as TaskCategory,
           request: {
             system: systemPrompt(
               c.agent,
@@ -1148,6 +1172,7 @@ async function loop(c: Ctx) {
             const { type, ...payload } = e;
             return event(c, type, payload);
           },
+          health: modelHealthFor(c.deps),
         },
       );
     } catch (error) {
@@ -1254,6 +1279,18 @@ export async function executeRun(
   ctx: TenantContext,
   runId: string,
 ): Promise<void> {
+  // Fair share: a workspace at its running limit waits its turn instead of taking every
+  // worker slot. Approximate under races (two workers may both see a free slot), which is fine.
+  const maxRunning = deps.limits?.maxRunningRuns;
+  if (maxRunning !== undefined && (await findRun(db, ctx, runId))?.status === 'queued') {
+    if ((await countRuns(db, ctx, ['running'])) >= maxRunning) {
+      await deps.enqueueRun(
+        { runId, workspaceId: ctx.workspaceId, userId: ctx.userId },
+        { delayMs: deps.limits?.slotWaitMs ?? 5_000 },
+      );
+      return;
+    }
+  }
   const run = await claimRun(db, ctx, runId, ['queued']);
   if (!run) return;
   if (run.taskId) await updateTaskState(db, ctx, run.taskId, 'running');

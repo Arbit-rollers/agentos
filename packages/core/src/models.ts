@@ -32,7 +32,7 @@ import { recordAudit } from './audit';
 import { parse } from './auth';
 import { AppError } from './errors';
 import { requireAgentManager } from './permissions';
-import { adapterForConnection, type ProviderDeps } from './providers';
+import { adapterForConnection, modelHealthFor, type ProviderDeps } from './providers';
 import { redact } from './redact';
 
 const target = z.object({
@@ -277,6 +277,7 @@ export async function runAgentPrompt(
             connections.get(t.connectionId)?.models.find((m) => m.id === t.model),
           ),
         onEvent: (event) => insertRunEvent(db, ctx, run.id, event.type, eventPayload(event)),
+        health: modelHealthFor(deps),
       },
     );
     await finishRun(db, ctx, run.id, {

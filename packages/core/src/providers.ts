@@ -13,6 +13,8 @@ import {
   PROVIDERS,
   ProviderError,
   createAdapter,
+  createCircuitBreaker,
+  type ModelHealth,
   type ProviderAccess,
   type ProviderAdapter,
   type ProviderKind,
@@ -30,7 +32,15 @@ export type ProviderDeps = {
   secrets: SecretStore;
   /** Overridable in tests. */
   createAdapter?: AdapterFactory;
+  /** Which models keep failing; defaults to one breaker per process. */
+  modelHealth?: ModelHealth;
 };
+
+const processModelHealth = createCircuitBreaker();
+
+/** The circuit breaker model calls share (fallback optimization, v0.6). */
+export const modelHealthFor = (deps: ProviderDeps): ModelHealth =>
+  deps.modelHealth ?? processModelHealth;
 
 const NEEDS_KEY: ReadonlySet<ProviderKind> = new Set(['openai', 'anthropic', 'google']);
 const NEEDS_ENDPOINT: ReadonlySet<ProviderKind> = new Set(['ollama', 'openai_compatible']);

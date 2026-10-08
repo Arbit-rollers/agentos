@@ -215,7 +215,9 @@
     "workflow_stopped": "İş akışı durdu.",
     "step_failed": "Bir adım başarısız oldu.",
     "google_client_id_invalid": "Bu bir Google client ID değil. .apps.googleusercontent.com ile biter (Google Cloud → Kimlik bilgileri).",
-    "client_id_is_email": "Bu bir e-posta adresi, client ID değil. Sağlayıcı size bir tane vermediyse Client ID'yi boş bırakın."
+    "client_id_is_email": "Bu bir e-posta adresi, client ID değil. Sağlayıcı size bir tane vermediyse Client ID'yi boş bırakın.",
+    "RATE_LIMITED": "Çok fazla deneme yapıldı. Birkaç dakika bekleyip tekrar deneyin.",
+    "WORKSPACE_BUSY": "Bu çalışma alanında zaten çok fazla bekleyen iş var. Bir kısmı bittikten sonra tekrar deneyin."
   },
   "dashboard": {
     "greetingMorning": "Günaydın, {name}",
@@ -681,7 +683,7 @@
     "addFallback": "Yedek ekle",
     "remove": "Kaldır",
     "routes": "Yönlendirmeler",
-    "routesHint": "Ana modeli kullanmak için görev türünü boş bırakın.",
+    "routesHint": "Her isteğin görev türü ifadesinden anlaşılır (ör. “araştır”, “analiz”, “gizli”; kısa mesajlar hızlı sayılır) ve çalıştırma kaydında gösterilir. Ana modeli kullanmak için bir görev türünü boş bırakın.",
     "useDefault": "Ana modeli kullan",
     "categories": {
       "general": "Genel",
@@ -751,7 +753,9 @@
       "context_keyword": " (anahtar kelime araması)",
       "delegation_started": "{agent} ajanına devredildi: {objective}",
       "delegation_finished": "{agent} tamamladı: {state}",
-      "delegation_refused": "Devretme reddedildi: {reason}"
+      "delegation_refused": "Devretme reddedildi: {reason}",
+      "classified": "Görev türü: {category} ({why})",
+      "deferred": "{target} en son denenecek: {reason}"
     },
     "reasons": {
       "fixed": "sabit model",
@@ -760,7 +764,8 @@
       "default_route": "{category} için yönlendirme yok, ana model kullanılıyor",
       "unsupported_modality": "bu görev türünü işleyemiyor",
       "context_limit": "girdi çok büyük",
-      "cost_threshold": "görev bütçesinin üzerinde"
+      "cost_threshold": "görev bütçesinin üzerinde",
+      "circuit_open": "son zamanlarda art arda birkaç kez başarısız oldu"
     },
     "aiBrainNotSet": "Henüz model seçilmedi.",
     "configureBrain": "Model seç",
@@ -768,7 +773,13 @@
     "routesLabel": "Yönlendirmeler",
     "budgetLabel": "Bütçe",
     "perTask": "Görev başına {amount}",
-    "daily": "Günlük {amount}"
+    "daily": "Günlük {amount}",
+    "classifiedWhy": {
+      "matched": "“{signal}” eşleşti",
+      "short": "kısa istek",
+      "long": "uzun istek",
+      "none": "belirgin bir işaret yok"
+    }
   },
   "mcp": {
     "title": "MCP Merkezi",
@@ -1536,5 +1547,56 @@
       "runs": "Çalıştırmalar",
       "versions": "Sürümler"
     }
+  },
+  "analytics": {
+    "title": "Analitik",
+    "subtitle": "Çalıştırmalar, token, maliyet ve ajanlarınızla araçlarınızın performansı.",
+    "range": "Zaman aralığı",
+    "lastDays": "Son {days} gün",
+    "kpi": {
+      "runs": "Çalıştırma",
+      "failed": "{count} başarısız",
+      "successRate": "Başarı oranı",
+      "tokens": "Token",
+      "tokenSplit": "{input} giriş · {output} çıkış",
+      "cost": "Maliyet",
+      "unpriced": "Fiyatı bilinmeyen {count} çalıştırma",
+      "avgRunTime": "Ortalama çalışma süresi",
+      "approvals": "Onaylar",
+      "pending": "{count} bekliyor",
+      "medianDecision": "medyan karar süresi {time}"
+    },
+    "runsPerDay": "Günlük çalıştırma",
+    "runsPerDayCaption": "Son {days} günde günlük tamamlanan ve başarısız çalıştırmalar",
+    "costPerDay": "Günlük maliyet",
+    "costPerDayCaption": "Son {days} günde ABD doları cinsinden günlük model maliyeti",
+    "completed": "Tamamlandı",
+    "failed": "Başarısız",
+    "cost": "Maliyet",
+    "noRuns": "Bu dönemde çalıştırma yok.",
+    "noCost": "Bu dönemde maliyet yok.",
+    "byAgent": "Ajana göre",
+    "byModel": "Modele göre",
+    "byTool": "Araca göre",
+    "byWorkflow": "İş akışları",
+    "agent": "Ajan",
+    "model": "Model",
+    "provider": "Sağlayıcı",
+    "tool": "Araç",
+    "server": "Sunucu",
+    "workflow": "İş akışı",
+    "runs": "Çalıştırma",
+    "successRate": "Başarı",
+    "toolCalls": "Araç çağrısı",
+    "tokens": "Token",
+    "avgRunTime": "Ort. süre",
+    "fallbacks": "Yedeğe geçiş",
+    "fallbacksHint": "Yedeğe geçiş: bu modelin başarısız olup çalıştırmanın ajanın yedek listesindeki bir sonraki modelle devam ettiği sayı.",
+    "calls": "Çağrı",
+    "succeeded": "Başarılı",
+    "blocked": "Engellendi",
+    "neededApproval": "Onay gerekti",
+    "noTools": "Bu dönemde araç çağrısı yok.",
+    "noWorkflows": "Bu dönemde iş akışı çalıştırması yok."
   }
 }

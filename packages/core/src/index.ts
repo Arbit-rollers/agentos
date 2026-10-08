@@ -1,4 +1,4 @@
-export { loadEnv } from './env';
+export { loadEnv, rateLimitsEnabled } from './env';
 export type { Env } from './env';
 export {
   QUEUES,
@@ -88,6 +88,7 @@ export {
   createTask,
   onTaskRunFinished,
   recoverStaleRuns,
+  requeueOrphanedRuns,
   retryDelayMs,
   retryTask,
 } from './tasks';
@@ -184,3 +185,9 @@ export {
 } from './workflows';
 export type { GraphIssue, TemplateScope, WorkflowDeps } from './workflows';
 export type { WorkflowJob } from './runtime';
+export { ANALYTICS_RANGES, getAnalytics } from './analytics';
+export type { AnalyticsRange, AnalyticsReport } from './analytics';
+export { admitNewWork } from './admission';
+export type { WorkspaceLimits } from './admission';
+export { RATE_LIMITS, enforceRateLimit, memoryRateLimiter, redisRateLimiter } from './rate-limit';
+export type { RateLimitRule, RateLimiter } from './rate-limit';

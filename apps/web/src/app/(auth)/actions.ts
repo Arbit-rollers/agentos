@@ -1,8 +1,8 @@
 'use server';
 
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { AppError, login, logout, register } from '@agentos/core';
+import { AppError, enforceRateLimit, login, logout, register } from '@agentos/core';
 import { isLocale } from '@agentos/i18n';
 import { LOCALE_COOKIE, resolveLocale } from '@/i18n/locale';
 import { safeNext } from '@/lib/safe-next';
@@ -37,28 +37,40 @@ async function signIn(start: () => ReturnType<typeof login>, formData: FormData)
   redirect(safeNext(formData.get('next')));
 }
 
+/**
+ * The client's address for rate limits. Behind a reverse proxy this is the first
+ * X-Forwarded-For entry, which a client can spoof without one, so sign-in is also limited
+ * per email address.
+ */
+async function clientAddress(): Promise<string> {
+  const list = await headers();
+  return list.get('x-forwarded-for')?.split(',')[0]?.trim() || list.get('x-real-ip') || 'unknown';
+}
+
 export async function loginAction(_: AuthFormState, formData: FormData): Promise<AuthFormState> {
-  const db = getServices().db;
-  return signIn(
-    () => login(db, { email: formData.get('email'), password: formData.get('password') }),
-    formData,
-  );
+  const { db, rateLimiter } = getServices();
+  const ip = await clientAddress();
+  return signIn(async () => {
+    await enforceRateLimit(rateLimiter, 'loginIp', ip);
+    await enforceRateLimit(rateLimiter, 'loginEmail', text(formData.get('email')).toLowerCase());
+    return login(db, { email: formData.get('email'), password: formData.get('password') });
+  }, formData);
 }
 
 export async function registerAction(_: AuthFormState, formData: FormData): Promise<AuthFormState> {
-  const db = getServices().db;
+  const { db, rateLimiter } = getServices();
   // New accounts start in the language the visitor is currently seeing.
   const locale = await resolveLocale();
-  return signIn(
-    () =>
-      register(db, {
-        displayName: formData.get('displayName'),
-        email: formData.get('email'),
-        password: formData.get('password'),
-        locale,
-      }),
-    formData,
-  );
+  const ip = await clientAddress();
+  return signIn(async () => {
+    await enforceRateLimit(rateLimiter, 'register', ip);
+    return register(db, {
+      displayName: formData.get('displayName'),
+      email: formData.get('email'),
+      password: formData.get('password'),
+      locale,
+    });
+  }, formData);
 }
 
 export async function logoutAction() {

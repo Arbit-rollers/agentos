@@ -215,7 +215,9 @@
     "workflow_stopped": "The workflow stopped.",
     "step_failed": "A step failed.",
     "google_client_id_invalid": "That isn't a Google client ID. It ends in .apps.googleusercontent.com (Google Cloud → Credentials).",
-    "client_id_is_email": "That's an email address, not a client ID. Leave Client ID empty unless the provider gave you one."
+    "client_id_is_email": "That's an email address, not a client ID. Leave Client ID empty unless the provider gave you one.",
+    "RATE_LIMITED": "Too many attempts. Wait a few minutes and try again.",
+    "WORKSPACE_BUSY": "This workspace already has a lot of work queued. Try again once some of it has finished."
   },
   "dashboard": {
     "greetingMorning": "Good morning, {name}",
@@ -681,7 +683,7 @@
     "addFallback": "Add fallback",
     "remove": "Remove",
     "routes": "Routes",
-    "routesHint": "Leave a task type empty to use the primary model.",
+    "routesHint": "Each request's task type is detected from its wording (e.g. “research”, “analyze”, “confidential”; short messages count as fast) and shown in the run log. Leave a task type empty to use the primary model.",
     "useDefault": "Use primary",
     "categories": {
       "general": "General",
@@ -751,7 +753,9 @@
       "context_keyword": " (keyword search)",
       "delegation_started": "Delegated to {agent}: {objective}",
       "delegation_finished": "{agent} finished: {state}",
-      "delegation_refused": "Delegation refused: {reason}"
+      "delegation_refused": "Delegation refused: {reason}",
+      "classified": "Task type: {category} ({why})",
+      "deferred": "Will try {target} last: {reason}"
     },
     "reasons": {
       "fixed": "fixed model",
@@ -760,7 +764,8 @@
       "default_route": "no route for {category}, using primary",
       "unsupported_modality": "can't handle this task type",
       "context_limit": "input too large",
-      "cost_threshold": "over the per-task budget"
+      "cost_threshold": "over the per-task budget",
+      "circuit_open": "it failed several times in a row recently"
     },
     "aiBrainNotSet": "No model chosen yet.",
     "configureBrain": "Choose a model",
@@ -768,7 +773,13 @@
     "routesLabel": "Routes",
     "budgetLabel": "Budget",
     "perTask": "{amount} per task",
-    "daily": "{amount} per day"
+    "daily": "{amount} per day",
+    "classifiedWhy": {
+      "matched": "matched “{signal}”",
+      "short": "short request",
+      "long": "long request",
+      "none": "no specific signals"
+    }
   },
   "mcp": {
     "title": "MCP Hub",
@@ -1536,5 +1547,56 @@
       "runs": "Runs",
       "versions": "Versions"
     }
+  },
+  "analytics": {
+    "title": "Analytics",
+    "subtitle": "Runs, tokens, cost and how your agents and tools perform.",
+    "range": "Time range",
+    "lastDays": "Last {days} days",
+    "kpi": {
+      "runs": "Runs",
+      "failed": "{count} failed",
+      "successRate": "Success rate",
+      "tokens": "Tokens",
+      "tokenSplit": "{input} in · {output} out",
+      "cost": "Cost",
+      "unpriced": "{count, plural, one {# run} other {# runs}} without a known price",
+      "avgRunTime": "Average run time",
+      "approvals": "Approvals",
+      "pending": "{count} pending",
+      "medianDecision": "median decision {time}"
+    },
+    "runsPerDay": "Runs per day",
+    "runsPerDayCaption": "Completed and failed runs per day, last {days} days",
+    "costPerDay": "Cost per day",
+    "costPerDayCaption": "Model cost in US dollars per day, last {days} days",
+    "completed": "Completed",
+    "failed": "Failed",
+    "cost": "Cost",
+    "noRuns": "No runs in this period.",
+    "noCost": "No cost in this period.",
+    "byAgent": "By agent",
+    "byModel": "By model",
+    "byTool": "By tool",
+    "byWorkflow": "Workflows",
+    "agent": "Agent",
+    "model": "Model",
+    "provider": "Provider",
+    "tool": "Tool",
+    "server": "Server",
+    "workflow": "Workflow",
+    "runs": "Runs",
+    "successRate": "Success",
+    "toolCalls": "Tool calls",
+    "tokens": "Tokens",
+    "avgRunTime": "Avg. time",
+    "fallbacks": "Fallbacks",
+    "fallbacksHint": "Fallbacks: times this model failed and the run continued on the next model in the agent's fallback list.",
+    "calls": "Calls",
+    "succeeded": "Succeeded",
+    "blocked": "Blocked",
+    "neededApproval": "Needed approval",
+    "noTools": "No tool calls in this period.",
+    "noWorkflows": "No workflow runs in this period."
   }
 }

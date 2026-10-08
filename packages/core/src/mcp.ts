@@ -50,6 +50,7 @@ import {
   type PermissionMode,
   type RiskCategory,
 } from '@agentos/policy';
+import { createKeyedBreaker, type KeyedBreaker } from '@agentos/model-gateway';
 import { z } from 'zod';
 import { recordAudit } from './audit';
 import { parse } from './auth';
@@ -63,7 +64,14 @@ export type McpDeps = {
   appUrl: string;
   /** AgentOS's own Google OAuth client, offered to tenants for Google Workspace (optional). */
   googleClient?: { id: string; secret: string };
+  /** Which MCP servers keep failing; defaults to one breaker per process. */
+  mcpHealth?: KeyedBreaker;
 };
+
+const processMcpHealth = createKeyedBreaker();
+
+/** Circuit breaker for MCP servers: three outages or timeouts in a row pause calls for a minute. */
+export const mcpHealthFor = (deps: McpDeps): KeyedBreaker => deps.mcpHealth ?? processMcpHealth;
 
 const HEADER_NAME = /^[A-Za-z0-9!#$%&'*+.^_`|~-]+$/;
 const FORBIDDEN_HEADERS = new Set(['host', 'content-length', 'connection', 'transfer-encoding']);

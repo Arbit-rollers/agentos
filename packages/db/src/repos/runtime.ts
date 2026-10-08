@@ -308,6 +308,19 @@ export async function claimRun(
   return row;
 }
 
+/** How many of the workspace's runs are in one of `statuses` (backpressure, v0.6). */
+export async function countRuns(
+  db: Executor,
+  ctx: TenantContext,
+  statuses: Run['status'][],
+): Promise<number> {
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(runs)
+    .where(tenantScope(ctx, runs, inArray(runs.status, statuses)));
+  return row?.count ?? 0;
+}
+
 export async function updateRun(
   db: Executor,
   ctx: TenantContext,
@@ -367,6 +380,14 @@ export async function listStaleRuns(db: Executor, staleBefore: Date) {
         or(isNull(runs.heartbeatAt), lt(runs.heartbeatAt, staleBefore)),
       ),
     );
+}
+
+/** Runs still queued since before `queuedBefore`, across workspaces (orphan recovery). */
+export async function listOldQueuedRuns(db: Executor, queuedBefore: Date) {
+  return db
+    .select({ id: runs.id, workspaceId: runs.workspaceId, agentId: runs.agentId })
+    .from(runs)
+    .where(and(eq(runs.status, 'queued'), lt(runs.startedAt, queuedBefore)));
 }
 
 /** Estimated spend of an agent's runs since `since` (daily budget, PRD §18). */

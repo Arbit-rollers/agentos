@@ -2,6 +2,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   EMBEDDING_DIMENSIONS,
   NoEligibleModelError,
+  classifyTask,
+  createCircuitBreaker,
   ProviderError,
   createAdapter,
   describeModel,
@@ -449,5 +451,126 @@ describe('embeddings', () => {
 
   it('has no embed method for Anthropic', () => {
     expect(createAdapter({ provider: 'anthropic', apiKey: 'k' }).embed).toBeUndefined();
+  });
+});
+
+describe('circuit breaker (fallback optimization)', () => {
+  it('defers a model after repeated outages, then probes it again after the cooldown', async () => {
+    let clock = 0;
+    const health = createCircuitBreaker({ threshold: 2, cooldownMs: 1_000, now: () => clock });
+    const down = target('c1', 'fake-down');
+    const up = target('c2', 'fake-echo');
+    const plan: ModelPlan = {
+      strategy: 'fallback_chain',
+      primary: down,
+      routes: [],
+      fallbacks: [up],
+    };
+    const call = async () => {
+      const events: GatewayEvent[] = [];
+      await invokeModel({ plan, category: 'general', request }, { ...deps(events), health });
+      return events.map((e) => e.type);
+    };
+
+    // Two outages open the circuit…
+    expect(await call()).toEqual(['model.selected', 'model.fallback', 'model.completed']);
+    expect(await call()).toEqual(['model.selected', 'model.fallback', 'model.completed']);
+    expect(health.isOpen(down)).toBe(true);
+    // …so the next call goes straight to the healthy model, and says so.
+    const events: GatewayEvent[] = [];
+    const outcome = await invokeModel(
+      { plan, category: 'general', request },
+      { ...deps(events), health },
+    );
+    expect(outcome.target).toEqual(up);
+    expect(events[0]).toMatchObject({
+      type: 'model.deferred',
+      target: down,
+      reason: 'circuit_open',
+    });
+    expect(events.map((e) => e.type)).toEqual([
+      'model.deferred',
+      'model.selected',
+      'model.completed',
+    ]);
+
+    // After the cooldown the primary is tried again; one more failure reopens it at once.
+    clock = 1_001;
+    expect(health.isOpen(down)).toBe(false);
+    expect(await call()).toEqual(['model.selected', 'model.fallback', 'model.completed']);
+    expect(health.isOpen(down)).toBe(true);
+  });
+
+  it('a success closes the circuit; an open model is still the last resort', async () => {
+    const health = createCircuitBreaker({ threshold: 1 });
+    const echo = target('c3', 'fake-echo');
+    health.recordFailure(echo);
+    expect(health.isOpen(echo)).toBe(true);
+    // Only candidate: it is tried anyway rather than failing the call.
+    const outcome = await invokeModel(
+      {
+        plan: { strategy: 'fixed', primary: echo, routes: [], fallbacks: [] },
+        category: 'general',
+        request,
+      },
+      { ...deps(), health },
+    );
+    expect(outcome.target).toEqual(echo);
+    expect(health.isOpen(echo)).toBe(false);
+  });
+
+  it('configuration errors do not count as outages', async () => {
+    const health = createCircuitBreaker({ threshold: 1 });
+    const missing = target('c4', 'no-such-model');
+    await expect(
+      invokeModel(
+        {
+          plan: { strategy: 'fixed', primary: missing, routes: [], fallbacks: [] },
+          category: 'general',
+          request,
+        },
+        {
+          ...deps(),
+          health,
+          adapterFor: async () => {
+            throw new ProviderError('auth', 'bad key', 401);
+          },
+        },
+      ),
+    ).rejects.toMatchObject({ kind: 'auth' });
+    expect(health.isOpen(missing)).toBe(false);
+  });
+});
+
+describe('classifyTask (Smart Router task types)', () => {
+  it.each([
+    ['Research the latest trends in electric aviation', 'research', 'research'],
+    ['Rakiplerimizin Instagram hesaplarını araştır', 'research', 'araştır'],
+    ['Analyze our Q3 numbers and recommend a strategy', 'reasoning', 'analy'],
+    ['Bu planı adım adım değerlendir', 'reasoning', 'adım adım'],
+    ['Summarise this confidential salary report for the board', 'private', 'confidential'],
+    ['Şifremi unuttum, gizli notlarımı özetle', 'private', 'gizli'],
+    ['Describe what is in this screenshot of the dashboard', 'vision', 'screenshot'],
+    ['Hi!', 'fast', 'short'],
+    [
+      'Draft a friendly reply to the email from Ayşe about next week, keeping it under five sentences and warm in tone.',
+      'general',
+      null,
+    ],
+  ] as const)('%s → %s', (text, category, signal) => {
+    expect(classifyTask(text)).toEqual({ category, signal });
+  });
+
+  it('does not match inside other words', () => {
+    expect(
+      classifyTask(
+        'Tell me about the planet Mars, its two small moons and how long a day lasts there.',
+      ).category,
+    ).toBe('general');
+    expect(classifyTask('Write a short poem about a researcher').category).toBe('research');
+  });
+
+  it('treats very long requests as reasoning', () => {
+    expect(classifyTask('word '.repeat(500))).toEqual({ category: 'reasoning', signal: 'long' });
   });
 });
