@@ -1164,7 +1164,8 @@
     "delegatedBy": "Delegated by {agent}",
     "delegatedTo": "Handed to the team",
     "noDelegation": "This task didn't delegate any work.",
-    "openParent": "Open the delegating task"
+    "openParent": "Open the delegating task",
+    "waitingApproval": "Waiting for approval"
   },
   "taskStates": {
     "draft": "Draft",

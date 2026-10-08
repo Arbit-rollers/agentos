@@ -167,6 +167,32 @@ async function delegationTeam(
   return team;
 }
 
+type UnavailableReport = { name: string; reason: 'archived' | 'paused' | 'draft' | 'no_model' };
+
+/** Direct reports that can't take work right now, and why (told to the leader, not offered). */
+async function unavailableReports(
+  db: Database,
+  ctx: TenantContext,
+  agent: Agent,
+): Promise<UnavailableReport[]> {
+  if (!DELEGATORS.includes(agent.agentType)) return [];
+  const out: UnavailableReport[] = [];
+  for (const report of await listChildAgents(db, ctx, agent.id)) {
+    if (report.status === 'archived' || report.status === 'paused' || report.status === 'draft')
+      out.push({ name: report.name, reason: report.status });
+    else if (!(await canAgentRun(db, ctx, report.id)))
+      out.push({ name: report.name, reason: 'no_model' });
+  }
+  return out;
+}
+
+const UNAVAILABLE_WHY: Record<UnavailableReport['reason'], string> = {
+  archived: 'archived',
+  paused: 'paused',
+  draft: 'still a draft',
+  no_model: 'has no working AI model',
+};
+
 const delegateSchema = (team: TeamMember[]) => ({
   type: 'object',
   properties: {
@@ -199,8 +225,18 @@ const delegateSpec = (team: TeamMember[]): ToolSpec => ({
   inputSchema: delegateSchema(team),
 });
 
-function teamSection(team: TeamMember[]) {
-  if (team.length === 0) return '';
+function teamSection(team: TeamMember[], unavailable: UnavailableReport[] = []) {
+  if (team.length === 0 && unavailable.length === 0) return '';
+  const away = unavailable.length
+    ? [
+        '',
+        'These direct reports are unavailable right now and cannot be given work:',
+        ...unavailable.map((u) => `- ${u.name} (${UNAVAILABLE_WHY[u.reason]})`),
+        'If the request is for one of them, or needs what only they do, do not hand it to another',
+        'agent instead: tell the user who is unavailable and why, so they can restore or fix it.',
+      ]
+    : [];
+  if (team.length === 0) return ['## Your team', ...away.slice(1)].join('\n');
   return [
     '## Your team',
     `You lead these agents. Use ${DELEGATE_TOOL} to hand them focused subtasks, in parallel when`,
@@ -212,6 +248,8 @@ function teamSection(team: TeamMember[]) {
       (m) =>
         `- ${m.label}: ${m.agent.role || m.agent.agentType}${m.agent.description ? ` — ${m.agent.description.replace(/\s+/g, ' ').slice(0, 300)}` : ''}`,
     ),
+    'Only hand a task to the team member it was meant for; when none fits, do it yourself or say so.',
+    ...away,
   ].join('\n');
 }
 
@@ -1069,6 +1107,7 @@ async function loop(c: Ctx) {
     if (c.state.modelCalls >= MAX_MODEL_CALLS) return finish(c, 'failed', 'too_many_steps');
 
     const team = await delegationTeam(c.db, c.ctx, c.agent);
+    const unavailable = await unavailableReports(c.db, c.ctx, c.agent);
     const tools = [
       ...(await offeredTools(c.db, c.ctx, c.agent.id, c.state)),
       ...(team.length > 0 ? [delegateSpec(team)] : []),
@@ -1088,7 +1127,7 @@ async function loop(c: Ctx) {
                 .filter(Boolean)
                 .join('\n\n'),
               await liveContext(c),
-              teamSection(team),
+              teamSection(team, unavailable),
             ),
             messages: c.state.messages,
             tools,

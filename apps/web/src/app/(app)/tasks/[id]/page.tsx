@@ -8,9 +8,12 @@ import {
   findTask,
   listRunsWithDetails,
   listTaskHistory,
+  listApprovalRequests,
   listTasksByIds,
 } from '@agentos/db';
 import { Card, CardContent, CardHeader, CardTitle, StatusBadge } from '@agentos/ui';
+import { ApprovalCard } from '@/components/approvals/approval-card';
+import { toApprovalView } from '@/components/approvals/approval-view';
 import { Markdown } from '@/components/markdown';
 import { RunLog } from '@/components/runs/run-log';
 import { DelegationTree, loadDelegationTree } from '@/components/tasks/delegation-tree';
@@ -28,7 +31,7 @@ async function load(id: string) {
   const { ctx } = session;
   const task = isUuid(id) ? await findTask(getServices().db, ctx, id) : undefined;
   if (!task) notFound();
-  return { ctx, task, manage: canManageItem(session, task.createdBy) };
+  return { session, ctx, task, manage: canManageItem(session, task.createdBy) };
 }
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
@@ -37,7 +40,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
 /** Task detail: output, state history and runs (PRD §14, §22). */
 export default async function TaskPage({ params }: Params) {
-  const { ctx, task, manage } = await load((await params).id);
+  const { session, ctx, task, manage } = await load((await params).id);
   const db = getServices().db;
   const t = await getTranslations();
   const format = await getFormatter();
@@ -50,6 +53,18 @@ export default async function TaskPage({ params }: Params) {
     task.parentTaskId ? findTask(db, ctx, task.parentTaskId) : undefined,
   ]);
   const parentAgent = parent ? await findAgent(db, ctx, parent.agentId) : undefined;
+  // Approvals this task, or anything it delegated, is waiting on: decided right here.
+  const creators = new Map<string, string | null>([[task.id, task.createdBy]]);
+  const walk = (nodes: typeof delegated) => {
+    for (const node of nodes) {
+      creators.set(node.id, node.createdBy);
+      walk(node.children);
+    }
+  };
+  walk(delegated);
+  const waiting = (await listApprovalRequests(db, ctx, { status: 'pending', limit: 200 })).filter(
+    (a) => a.taskId && creators.has(a.taskId),
+  );
   const active = ['queued', 'running', 'waiting_for_agent', 'waiting_for_approval'].includes(
     task.state,
   );
@@ -121,6 +136,18 @@ export default async function TaskPage({ params }: Params) {
         )}
       </div>
 
+      {waiting.length > 0 && (
+        <section aria-label={t('tasksPage.waitingApproval')} className="mb-6 space-y-3">
+          <h2 className="text-sm font-semibold text-warning">{t('tasksPage.waitingApproval')}</h2>
+          {waiting.map((approval) => (
+            <ApprovalCard
+              key={approval.id}
+              approval={toApprovalView(approval)}
+              canDecide={canManageItem(session, creators.get(approval.taskId!))}
+            />
+          ))}
+        </section>
+      )}
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="space-y-6">
           {task.input && (
