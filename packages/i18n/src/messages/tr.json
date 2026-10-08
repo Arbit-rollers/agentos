@@ -1164,7 +1164,8 @@
     "delegatedBy": "{agent} tarafından devredildi",
     "delegatedTo": "Ekibe verilen işler",
     "noDelegation": "Bu görev iş devretmedi.",
-    "openParent": "Devreden görevi aç"
+    "openParent": "Devreden görevi aç",
+    "waitingApproval": "Onay bekleniyor"
   },
   "taskStates": {
     "draft": "Taslak",

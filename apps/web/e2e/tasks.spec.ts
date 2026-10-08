@@ -77,6 +77,27 @@ test.describe('tasks and schedules (v0.2)', () => {
     await expect(page.getByRole('button', { name: 'Cancel' })).toBeVisible();
   });
 
+  test('a waiting approval can be decided on the task page', async ({ page }) => {
+    const id = await setupWorkingAgent(page);
+    await page.goto(`/agents/${id}?tab=tasks`);
+    await newTask(page, 'Send the note', '<<call:gmail:{"to":"a@example.com","body":"note"}>>');
+    await openTask(page, 'Send the note');
+    const box = page.getByRole('region', { name: 'Waiting for approval' });
+    await expect(async () => {
+      await page.reload();
+      await expect(box).toBeVisible({ timeout: 1000 });
+    }).toPass({ timeout: 20_000 });
+    await expect(box).toContainText('a@example.com');
+    await box.getByRole('button', { name: 'Approve once' }).click();
+    await expect(async () => {
+      await page.reload();
+      await expect(page.getByRole('list', { name: 'History' })).toContainText('Completed', {
+        timeout: 1000,
+      });
+    }).toPass({ timeout: 20_000 });
+    await expect(page.getByRole('region', { name: 'Waiting for approval' })).toHaveCount(0);
+  });
+
   test('schedules: create, run now, pause and delete', async ({ page }) => {
     await setupWorkingAgent(page);
     await page.goto('/schedules');

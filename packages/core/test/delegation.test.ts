@@ -154,6 +154,24 @@ describe('multi-agent orchestration (PRD §15, AC 19–20)', () => {
     ]);
   });
 
+  it('tells the leader which reports are unavailable instead of offering them', async () => {
+    const { ctx, agent } = await team();
+    const boss = await agent('Orchestrator', 'master_orchestrator', null);
+    await agent('Researcher', 'specialist', boss.id);
+    const gone = await agent('Archivist', 'specialist', boss.id);
+    await changeAgentStatus(fx.db, ctx, gone.id, 'archive');
+    await startChatTurn(fx.db, fx.deps, ctx, boss.id, { message: 'Who can help?' });
+    await fx.drain(ctx);
+    const [lead] = requestsFor('Who can help?');
+    const system = lead!.messages[0]!.content;
+    expect(system).toContain('- Archivist (archived)');
+    expect(system).toContain('tell the user who is unavailable and why');
+    const tool = lead!.tools!.find((t) => t.function.name === DELEGATE_TOOL) as unknown as {
+      function: { parameters: { properties: { agent: { enum: string[] } } } };
+    };
+    expect(tool.function.parameters.properties.agent.enum).toEqual(['Researcher']);
+  });
+
   it('runs across three agents with one approval step (ROADMAP v0.4 DoD)', async () => {
     const { ctx, agent } = await team();
     const boss = await agent('Orchestrator', 'master_orchestrator', null);
