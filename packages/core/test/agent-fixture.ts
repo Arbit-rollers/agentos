@@ -9,7 +9,8 @@ import { createSecretCipher } from '../src/crypto';
 import { createMcpConnection, setAgentPermissions, setAgentTools } from '../src/mcp';
 import { saveAgentModelConfig, type ModelConfigInput } from '../src/models';
 import { createProviderConnection } from '../src/providers';
-import { executeRun, type RunJob, type RuntimeDeps } from '../src/runtime';
+import { executeRun, type RunJob, type RuntimeDeps, type WorkflowJob } from '../src/runtime';
+import { advanceWorkflowRun, type WorkflowDeps } from '../src/workflows';
 import { createSecretStore } from '../src/secrets';
 import { createUser, useTestDb } from './helpers';
 
@@ -28,19 +29,44 @@ export function useAgentFixture() {
   });
 
   const queue: (RunJob & { delayMs: number })[] = [];
-  // Each test starts with an empty queue (the database is reset by useTestDb).
+  const workflowQueue: (WorkflowJob & { delayMs: number })[] = [];
+  // Each test starts with empty queues (the database is reset by useTestDb).
   beforeEach(() => {
     queue.length = 0;
+    workflowQueue.length = 0;
   });
   const deps: RuntimeDeps = {
     secrets: createSecretStore(db, createSecretCipher(Buffer.alloc(32, 7).toString('base64'))),
     appUrl: 'http://localhost:3000',
     enqueueRun: async (job, options) => void queue.push({ ...job, delayMs: options?.delayMs ?? 0 }),
+    enqueueWorkflow: async (job, options) =>
+      void workflowQueue.push({ ...job, delayMs: options?.delayMs ?? 0 }),
   };
 
-  /** Runs every queued job (delays are ignored), as the worker would. */
-  async function drain(ctx: { workspaceId: string; userId: string }) {
-    while (queue.length > 0) await executeRun(db, deps, ctx, queue.shift()!.runId);
+  /**
+   * Runs every queued agent and workflow job, as the worker would. Delayed workflow jobs run
+   * only with `{ delays: true }` (pass `now` to have the engine see time move on).
+   */
+  async function drain(
+    ctx: { workspaceId: string; userId: string },
+    options: { delays?: boolean; now?: Date } = {},
+  ) {
+    for (;;) {
+      if (queue.length > 0) {
+        await executeRun(db, deps, ctx, queue.shift()!.runId);
+        continue;
+      }
+      const index = workflowQueue.findIndex((j) => options.delays || j.delayMs === 0);
+      if (index === -1) return;
+      const [job] = workflowQueue.splice(index, 1);
+      await advanceWorkflowRun(
+        db,
+        deps as WorkflowDeps,
+        { workspaceId: job!.workspaceId, userId: job!.userId },
+        job!.runId,
+        options.now,
+      );
+    }
   }
 
   async function setup(
@@ -98,5 +124,5 @@ export function useAgentFixture() {
     return { ...user, agent, tools, provider };
   }
 
-  return { db, sql, llm, mcp, queue, deps, drain, setup };
+  return { db, sql, llm, mcp, queue, workflowQueue, deps: deps as WorkflowDeps, drain, setup };
 }

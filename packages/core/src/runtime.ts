@@ -15,6 +15,7 @@ import {
   findSchedule,
   findTask,
   findUserById,
+  findWorkflowRun,
   upsertMyMcpCredential,
   findToolCall,
   insertApprovalRequest,
@@ -81,16 +82,19 @@ import { adapterForConnection } from './providers';
 import { redact } from './redact';
 
 export type RunJob = { runId: string; workspaceId: string; userId: string };
+export type WorkflowJob = RunJob;
 
 export type RuntimeDeps = ProviderDeps &
   McpDeps & {
     /** Hands a run to the worker queue (tests run it inline). */
     enqueueRun(job: RunJob, options?: { delayMs?: number }): Promise<void>;
+    /** Hands a workflow run to the worker's `workflows` queue (v0.5). */
+    enqueueWorkflow?(job: WorkflowJob, options?: { delayMs?: number }): Promise<void>;
     now?: () => Date;
   };
 
 /** Defaults when the agent's budget policy leaves a limit unset (PRD §18). */
-export const DEFAULT_LIMITS = { maxToolCalls: 10, maxRuntimeSeconds: 300 } as const;
+export const DEFAULT_LIMITS = { maxToolCalls: 25, maxRuntimeSeconds: 300 } as const;
 /** Hard ceiling on model calls in one run, whatever the budget says. */
 const MAX_MODEL_CALLS = 25;
 const MAX_TOOL_OUTPUT = 20_000;
@@ -116,6 +120,8 @@ type LoopState = {
   pendingBudget?: { approvalId: string; kind: BudgetKind };
   /** IANA timezone for "today" in the prompt: the schedule's, else the person's, else UTC. */
   timezone?: string;
+  /** Who started the task, when no person is in the conversation to answer questions. */
+  unattended?: 'delegation' | 'workflow' | 'schedule';
   /** Memory and knowledge retrieved when the run started (PRD §25 items 9–11). */
   context?: Pick<RetrievedContext, 'knowledge' | 'memories'>;
 };
@@ -320,6 +326,28 @@ function systemPrompt(agent: AgentWithPersonality, now: string, context = '', te
   return [buildSystemPrompt(agent), RUNTIME_RULES, now, team, context].filter(Boolean).join('\n\n');
 }
 
+/**
+ * Delegated, workflow and scheduled tasks have nobody to answer questions mid-task: a
+ * reply asking "shall I proceed?" just ends the task (and a delegating agent may resend it,
+ * looping). Actions that need a person's OK pause for approval by themselves.
+ */
+function unattendedSection(kind: LoopState['unattended']) {
+  if (!kind) return '';
+  const by = {
+    delegation: 'another agent handed you this task',
+    workflow: 'a workflow step gave you this task',
+    schedule: 'a schedule started this task',
+  }[kind];
+  return [
+    '## Working without a person in the loop',
+    `Nobody can answer questions while you work: ${by}. Do the task now instead of asking`,
+    'for confirmation. When something is unclear, choose a reasonable option, say which one,',
+    "and finish. Tools that need a person's approval (for example because they cost money or",
+    'send something) pause for approval automatically: just call them. Only stop without doing',
+    "the task when it truly can't be done, and then say exactly what is missing.",
+  ].join('\n');
+}
+
 /** Whose clock the run follows: a scheduled task's timezone, else the person's, else UTC. */
 async function runTimezone(c: Ctx): Promise<string> {
   const task = c.run.taskId ? await findTask(c.db, c.ctx, c.run.taskId) : undefined;
@@ -336,6 +364,14 @@ async function runTimezone(c: Ctx): Promise<string> {
  */
 async function prepareContext(c: Ctx) {
   if (!c.state.timezone) c.state.timezone = await runTimezone(c);
+  if (c.state.unattended === undefined && c.run.taskId) {
+    const task = await findTask(c.db, c.ctx, c.run.taskId);
+    if (
+      task &&
+      (task.origin === 'delegation' || task.origin === 'workflow' || task.origin === 'schedule')
+    )
+      c.state.unattended = task.origin;
+  }
   if (c.state.context) return;
   const query = [...c.state.messages].reverse().find((m) => m.role === 'user')?.content ?? '';
   try {
@@ -1048,7 +1084,9 @@ async function loop(c: Ctx) {
           request: {
             system: systemPrompt(
               c.agent,
-              describeNow(now(), c.state.timezone ?? 'UTC'),
+              [describeNow(now(), c.state.timezone ?? 'UTC'), unattendedSection(c.state.unattended)]
+                .filter(Boolean)
+                .join('\n\n'),
               await liveContext(c),
               teamSection(team),
             ),
@@ -1223,9 +1261,11 @@ export async function decideApproval(
   const approval = await findApprovalRequest(db, ctx, approvalId);
   if (!approval) throw new AppError('NOT_FOUND', 'Approval not found');
   // The person the run works for decides, or an owner/admin.
-  const requestedFor = approval.taskId
-    ? (await findTask(db, ctx, approval.taskId))?.createdBy
-    : null;
+  const requestedFor = approval.workflowRunId
+    ? (await findWorkflowRun(db, ctx, approval.workflowRunId))?.triggeredBy
+    : approval.taskId
+      ? (await findTask(db, ctx, approval.taskId))?.createdBy
+      : null;
   await requireCreatorOrAdmin(db, ctx, requestedFor);
   if (approval.status !== 'pending') throw new AppError('ALREADY_DECIDED', 'Already decided');
 
@@ -1272,18 +1312,26 @@ export async function decideApproval(
       kind: approval.kind,
       tool: (approval.payload as { tool?: string }).tool,
       runId: approval.runId,
+      workflowRunId: approval.workflowRunId,
     },
   });
-  await insertRunEvent(db, ctx, approval.runId, 'approval.decided', {
+  if (approval.workflowRunId || !approval.runId) {
+    if (approval.workflowRunId && deps.enqueueWorkflow) {
+      const { onWorkflowApprovalDecided } = await import('./workflows');
+      await onWorkflowApprovalDecided(db, deps as never, ctx, approval.workflowRunId);
+    }
+    return;
+  }
+  const runId = approval.runId;
+  await insertRunEvent(db, ctx, runId, 'approval.decided', {
     approvalId: approval.id,
     decision: approved ? 'approved' : 'rejected',
     edited: Boolean(approved && input.editedArguments),
   });
 
-  const stillPending = (
-    await listApprovalRequests(db, ctx, { runIds: [approval.runId], status: 'pending' })
-  ).length;
-  const run = await findRun(db, ctx, approval.runId);
+  const stillPending = (await listApprovalRequests(db, ctx, { runIds: [runId], status: 'pending' }))
+    .length;
+  const run = await findRun(db, ctx, runId);
   if (stillPending === 0 && run?.status === 'waiting_approval') {
     await updateRun(db, ctx, run.id, { status: 'queued' });
     if (run.taskId) await updateTaskState(db, ctx, run.taskId, 'queued');

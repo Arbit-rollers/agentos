@@ -89,7 +89,8 @@ export async function createTask(
   input: TaskInput,
   origin:
     | { kind: 'manual' | 'schedule'; scheduleId?: string }
-    | { kind: 'delegation'; parentTaskId: string; parentRunId: string } = { kind: 'manual' },
+    | { kind: 'delegation'; parentTaskId: string; parentRunId: string }
+    | { kind: 'workflow' } = { kind: 'manual' },
 ): Promise<Task> {
   const data = parse(taskSchema, input);
   const agent = await findAgent(db, ctx, data.agentId);
@@ -108,7 +109,8 @@ export async function createTask(
     agentId: agent.id,
     origin: origin.kind,
     createdBy: ctx.userId,
-    ...(origin.kind !== 'delegation' && origin.scheduleId && { scheduleId: origin.scheduleId }),
+    ...((origin.kind === 'manual' || origin.kind === 'schedule') &&
+      origin.scheduleId && { scheduleId: origin.scheduleId }),
     ...(origin.kind === 'delegation' && {
       parentTaskId: origin.parentTaskId,
       parentRunId: origin.parentRunId,
@@ -131,7 +133,8 @@ export async function createTask(
     outcome: 'success',
     metadata: {
       origin: origin.kind,
-      ...(origin.kind !== 'delegation' && origin.scheduleId && { scheduleId: origin.scheduleId }),
+      ...((origin.kind === 'manual' || origin.kind === 'schedule') &&
+        origin.scheduleId && { scheduleId: origin.scheduleId }),
       ...(origin.kind === 'delegation' && { parentTaskId: origin.parentTaskId }),
     },
   });
@@ -177,6 +180,7 @@ export async function onTaskRunFinished(
     await updateTaskState(db, ctx, task.id, 'completed', { output: outcome.output, error: null });
     await remember('completed', { output: outcome.output, error: null });
     await resumeDelegatingRun(db, deps, ctx, task.parentRunId);
+    await wakeWorkflow(db, deps, ctx, task);
     for (const dependent of await listDependentTasks(db, ctx, task.id)) {
       const blockers = await listTasksByIds(db, ctx, dependent.dependsOn);
       if (blockers.every((b) => b.state === 'completed'))
@@ -197,6 +201,14 @@ export async function onTaskRunFinished(
   await failTask(db, ctx, task, outcome.error);
   await remember('failed', { output: null, error: outcome.error });
   await resumeDelegatingRun(db, deps, ctx, task.parentRunId);
+  await wakeWorkflow(db, deps, ctx, task);
+}
+
+/** A task given by a workflow step wakes its run when it ends (v0.5). */
+async function wakeWorkflow(db: Database, deps: RuntimeDeps, ctx: TenantContext, task: Task) {
+  if (task.origin !== 'workflow' || !deps.enqueueWorkflow) return;
+  const { onWorkflowTaskFinished } = await import('./workflows');
+  await onWorkflowTaskFinished(db, deps as never, ctx, task.id);
 }
 
 /**

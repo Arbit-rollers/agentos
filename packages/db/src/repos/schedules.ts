@@ -1,6 +1,6 @@
 import { and, asc, eq } from 'drizzle-orm';
 import type { Executor } from '../client';
-import { agents, schedules } from '../schema/index';
+import { agents, schedules, workflows } from '../schema/index';
 import { tenantScope, type TenantContext } from '../tenant';
 
 export type Schedule = typeof schedules.$inferSelect;
@@ -11,7 +11,8 @@ export async function insertSchedule(
   values: Pick<
     Schedule,
     'agentId' | 'name' | 'objective' | 'input' | 'kind' | 'cron' | 'timezone' | 'runAt'
-  >,
+  > &
+    Partial<Pick<Schedule, 'workflowId'>>,
 ): Promise<Schedule> {
   const [row] = await db
     .insert(schedules)
@@ -23,14 +24,19 @@ export async function insertSchedule(
 export async function listSchedules(
   db: Executor,
   ctx: TenantContext,
-): Promise<(Schedule & { agentName: string })[]> {
+): Promise<(Schedule & { agentName: string | null; workflowName: string | null })[]> {
   const rows = await db
-    .select({ schedule: schedules, agentName: agents.name })
+    .select({ schedule: schedules, agentName: agents.name, workflowName: workflows.name })
     .from(schedules)
-    .innerJoin(agents, eq(agents.id, schedules.agentId))
+    .leftJoin(agents, eq(agents.id, schedules.agentId))
+    .leftJoin(workflows, eq(workflows.id, schedules.workflowId))
     .where(tenantScope(ctx, schedules))
     .orderBy(asc(schedules.createdAt));
-  return rows.map((r) => ({ ...r.schedule, agentName: r.agentName }));
+  return rows.map((r) => ({
+    ...r.schedule,
+    agentName: r.agentName,
+    workflowName: r.workflowName,
+  }));
 }
 
 export async function findSchedule(

@@ -61,7 +61,13 @@ const inputSchema = z
   .object({
     services: z.array(z.enum(GOOGLE_SERVICES)).min(1, { error: 'google_service_required' }),
     client: z.enum(['platform', 'own']),
-    clientId: z.string().trim().max(500).optional(),
+    // Google client IDs look like 1234-abc.apps.googleusercontent.com (never an email).
+    clientId: z
+      .string()
+      .trim()
+      .max(500)
+      .regex(/^[\w.-]+\.apps\.googleusercontent\.com$/, { error: 'google_client_id_invalid' })
+      .optional(),
     clientSecret: z.string().trim().max(500).optional(),
   })
   .superRefine((value, ctx) => {

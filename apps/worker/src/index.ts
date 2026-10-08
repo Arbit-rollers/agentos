@@ -6,6 +6,7 @@ import {
   bullScheduler,
   createAgentQueue,
   createKnowledgeQueue,
+  createWorkflowQueue,
   createRedis,
   createScheduleQueue,
   createSecretCipher,
@@ -14,6 +15,7 @@ import {
   executeRun,
   fireSchedule,
   ingestKnowledgeSource,
+  advanceWorkflowRun,
   loadEnv,
   logger,
   recoverStaleRuns,
@@ -23,6 +25,8 @@ import {
   type AgentRunJob,
   type KnowledgeDeps,
   type KnowledgeJob,
+  type WorkflowDeps,
+  type WorkflowJob,
   type ScheduleDeps,
   type ScheduleJob,
   type SystemJobData,
@@ -38,13 +42,16 @@ const secrets = createSecretStore(db, createSecretCipher(env.AGENTOS_MASTER_KEY)
 const agentQueue = createAgentQueue(connection);
 const scheduleQueue = createScheduleQueue(connection);
 const knowledgeQueue = createKnowledgeQueue(connection);
-const deps: ScheduleDeps & KnowledgeDeps = {
+const workflowQueue = createWorkflowQueue(connection);
+const deps: ScheduleDeps & KnowledgeDeps & WorkflowDeps = {
   secrets,
   appUrl: env.APP_URL,
   enqueueRun: async (job, options) =>
     void (await agentQueue.add('run', job, { delay: options?.delayMs ?? 0 })),
   scheduler: bullScheduler(scheduleQueue),
   enqueueKnowledge: async (job) => void (await knowledgeQueue.add(job.kind, job)),
+  enqueueWorkflow: async (job, options) =>
+    void (await workflowQueue.add('advance', job, { delay: options?.delayMs ?? 0 })),
 };
 
 const systemWorker = new Worker<SystemJobData, SystemJobResult, SystemJobName>(
@@ -126,7 +133,20 @@ const knowledgeWorker = new Worker<KnowledgeJob>(
   { connection, concurrency: 2 },
 );
 
-for (const worker of [systemWorker, agentWorker, scheduleWorker, knowledgeWorker]) {
+/**
+ * Workflow runs (PRD §16): each job advances one run as far as it can, as the person it acts
+ * for. Waiting steps (agents, approvals, delays) wake it again with a new job.
+ */
+const workflowWorker = new Worker<WorkflowJob>(
+  workflowQueue.name,
+  async (job) => {
+    const { runId, workspaceId, userId } = job.data;
+    await advanceWorkflowRun(db, deps, { workspaceId, userId }, runId);
+  },
+  { connection, concurrency: 4 },
+);
+
+for (const worker of [systemWorker, agentWorker, scheduleWorker, knowledgeWorker, workflowWorker]) {
   worker.on('ready', () => log.info('listening', { queue: worker.name }));
   worker.on('failed', (job, error) =>
     log.error('job failed', { queue: worker.name, jobId: job?.id, job: job?.name, error }),
@@ -169,12 +189,14 @@ async function shutdown(signal: string) {
     agentWorker.close(),
     scheduleWorker.close(),
     knowledgeWorker.close(),
+    workflowWorker.close(),
   ]);
   await Promise.all([
     systemQueue.close(),
     agentQueue.close(),
     scheduleQueue.close(),
     knowledgeQueue.close(),
+    workflowQueue.close(),
   ]);
   await sql.end();
   connection.disconnect();

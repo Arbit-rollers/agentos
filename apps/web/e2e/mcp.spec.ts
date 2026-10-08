@@ -30,7 +30,10 @@ test.describe('MCP Hub (M5)', () => {
     // Changing a workspace default sticks.
     await page.getByRole('combobox', { name: 'Default permission: read_document' }).click();
     await page.getByRole('option', { name: 'Approval required' }).click();
-    // Let the save finish before reloading.
+    // The saved value comes back from the server; only then reload.
+    await expect(
+      page.getByRole('combobox', { name: 'Default permission: read_document' }),
+    ).toHaveText('Approval required');
     await page.waitForLoadState('networkidle');
     await page.reload();
     await expect(

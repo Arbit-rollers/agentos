@@ -758,12 +758,15 @@ export const approvalRequests = pgTable(
     workspaceId: uuid('workspace_id')
       .notNull()
       .references(() => workspaces.id, { onDelete: 'cascade' }),
-    agentId: uuid('agent_id')
-      .notNull()
-      .references(() => agents.id, { onDelete: 'cascade' }),
-    runId: uuid('run_id')
-      .notNull()
-      .references(() => runs.id, { onDelete: 'cascade' }),
+    /** Null for a workflow approval step. */
+    agentId: uuid('agent_id').references(() => agents.id, { onDelete: 'cascade' }),
+    /** The agent run that asked; null for workflow approvals. */
+    runId: uuid('run_id').references(() => runs.id, { onDelete: 'cascade' }),
+    /** The workflow run that asked (Human Approval step, or an approval-required tool step). */
+    workflowRunId: uuid('workflow_run_id').references((): AnyPgColumn => workflowRuns.id, {
+      onDelete: 'cascade',
+    }),
+    workflowStepId: text('workflow_step_id'),
     taskId: uuid('task_id').references(() => tasks.id, { onDelete: 'set null' }),
     toolCallId: uuid('tool_call_id').references(() => toolCalls.id, { onDelete: 'cascade' }),
     kind: text('kind').notNull(),
@@ -820,9 +823,12 @@ export const schedules = pgTable(
     workspaceId: uuid('workspace_id')
       .notNull()
       .references(() => workspaces.id, { onDelete: 'cascade' }),
-    agentId: uuid('agent_id')
-      .notNull()
-      .references(() => agents.id, { onDelete: 'cascade' }),
+    /** The agent that gets the task; null when the schedule starts a workflow. */
+    agentId: uuid('agent_id').references(() => agents.id, { onDelete: 'cascade' }),
+    /** The workflow to run (v0.5); null for agent schedules. */
+    workflowId: uuid('workflow_id').references((): AnyPgColumn => workflows.id, {
+      onDelete: 'cascade',
+    }),
     createdBy: uuid('created_by')
       .notNull()
       .references(() => users.id),
@@ -1009,5 +1015,159 @@ export const feedbackEvents = pgTable(
   (t) => [
     index('feedback_events_agent_idx').on(t.workspaceId, t.agentId, t.createdAt),
     index('feedback_events_message_idx').on(t.messageId),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// v0.5: Workflows (PRD §16)
+// ---------------------------------------------------------------------------
+
+export const WORKFLOW_NODE_TYPES = [
+  'agent',
+  'tool',
+  'model',
+  'condition',
+  'approval',
+  'transform',
+  'delay',
+  'output',
+] as const;
+export type WorkflowNodeType = (typeof WORKFLOW_NODE_TYPES)[number];
+
+export type WorkflowNode = {
+  id: string;
+  type: WorkflowNodeType;
+  /** Short name shown on the canvas and usable in templates as {{steps.<label>}}. */
+  label: string;
+  position: { x: number; y: number };
+  config: Record<string, unknown>;
+};
+export type WorkflowEdge = {
+  id: string;
+  source: string;
+  target: string;
+  /** For condition steps: which branch this edge leaves from. */
+  branch?: 'true' | 'false';
+};
+export type WorkflowGraph = { nodes: WorkflowNode[]; edges: WorkflowEdge[] };
+
+export const workflows = pgTable(
+  'workflows',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => users.id),
+    name: text('name').notNull(),
+    description: text('description').notNull().default(''),
+    /** Active workflows run on their schedule; inactive ones only run as tests. */
+    active: boolean('active').notNull().default(false),
+    /** The version runs use (the latest saved). */
+    currentVersionId: uuid('current_version_id'),
+    createdAt: createdAt(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('workflows_workspace_idx').on(t.workspaceId)],
+);
+
+/** Every save is a new, immutable version (PRD §16 "version"). */
+export const workflowVersions = pgTable(
+  'workflow_versions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    workflowId: uuid('workflow_id')
+      .notNull()
+      .references(() => workflows.id, { onDelete: 'cascade' }),
+    version: integer('version').notNull(),
+    graph: jsonb('graph').$type<WorkflowGraph>().notNull(),
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => users.id),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex('workflow_versions_key').on(t.workflowId, t.version)],
+);
+
+export const workflowRunStatus = pgEnum('workflow_run_status', [
+  'queued',
+  'running',
+  'waiting',
+  'completed',
+  'failed',
+  'cancelled',
+]);
+
+export const workflowRuns = pgTable(
+  'workflow_runs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    workflowId: uuid('workflow_id')
+      .notNull()
+      .references(() => workflows.id, { onDelete: 'cascade' }),
+    versionId: uuid('version_id')
+      .notNull()
+      .references(() => workflowVersions.id),
+    /** The person the run acts for: who started it, or the schedule's creator. */
+    triggeredBy: uuid('triggered_by')
+      .notNull()
+      .references(() => users.id),
+    trigger: text('trigger').$type<'manual' | 'test' | 'schedule'>().notNull(),
+    status: workflowRunStatus('status').notNull().default('queued'),
+    input: text('input').notNull().default(''),
+    output: text('output'),
+    error: text('error'),
+    startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
+    endedAt: timestamp('ended_at', { withTimezone: true }),
+  },
+  (t) => [index('workflow_runs_workflow_idx').on(t.workflowId, t.startedAt)],
+);
+
+export const workflowStepStatus = pgEnum('workflow_step_status', [
+  'running',
+  'waiting',
+  'completed',
+  'failed',
+  'skipped',
+]);
+
+/** One row per executed step: the run's log (PRD §16 "logs"). */
+export const workflowRunSteps = pgTable(
+  'workflow_run_steps',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    runId: uuid('run_id')
+      .notNull()
+      .references(() => workflowRuns.id, { onDelete: 'cascade' }),
+    nodeId: text('node_id').notNull(),
+    nodeType: text('node_type').$type<WorkflowNodeType>().notNull(),
+    label: text('label').notNull(),
+    status: workflowStepStatus('status').notNull(),
+    input: text('input'),
+    output: text('output'),
+    error: text('error'),
+    /** Agent steps: the task given to the agent. */
+    taskId: uuid('task_id').references(() => tasks.id, { onDelete: 'set null' }),
+    /** Approval steps (and approval-required tools): the request in the inbox. */
+    approvalId: uuid('approval_id'),
+    /** Delay steps: when to continue. */
+    resumeAt: timestamp('resume_at', { withTimezone: true }),
+    startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
+    endedAt: timestamp('ended_at', { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex('workflow_run_steps_key').on(t.runId, t.nodeId),
+    index('workflow_run_steps_task_idx').on(t.taskId),
   ],
 );

@@ -4,12 +4,14 @@ import {
   bullScheduler,
   createAgentQueue,
   createKnowledgeQueue,
+  createWorkflowQueue,
   createRedis,
   createScheduleQueue,
   createSecretCipher,
   createSecretStore,
   loadEnv,
   type KnowledgeDeps,
+  type WorkflowDeps,
   type ScheduleDeps,
 } from '@agentos/core';
 
@@ -40,12 +42,15 @@ function createServices() {
   const agentQueue = createAgentQueue(redis);
   /** Chat turns, tasks and approvals hand runs to the worker; schedules go to the scheduler. */
   const knowledgeQueue = createKnowledgeQueue(redis);
-  const runtimeDeps: ScheduleDeps & KnowledgeDeps = {
+  const workflowQueue = createWorkflowQueue(redis);
+  const runtimeDeps: ScheduleDeps & KnowledgeDeps & WorkflowDeps = {
     ...mcpDeps,
     enqueueRun: async (job, options) =>
       void (await agentQueue.add('run', job, { delay: options?.delayMs ?? 0 })),
     scheduler: bullScheduler(createScheduleQueue(redis)),
     enqueueKnowledge: async (job) => void (await knowledgeQueue.add(job.kind, job)),
+    enqueueWorkflow: async (job, options) =>
+      void (await workflowQueue.add('advance', job, { delay: options?.delayMs ?? 0 })),
   };
   return { env, db, sql, redis, secrets, providerDeps, mcpDeps, runtimeDeps };
 }
